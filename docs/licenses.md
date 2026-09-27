@@ -111,6 +111,8 @@ The upstream Limbo schema uses C2SP/x509-limbo data under Apache 2.0
 and go-jsonschema generator templates under MIT. Generated packages that
 include this schema receive both notices from the embedded overlay license.
 The CIDR parser adapts Go `src/net/ip.go` and retains its BSD notice.
+TCP fallback and partial deadlines retain Go `src/net/dial.go` and
+`ipsock.go`, `tcpsock_posix.go`, and `hook.go` declarations with their BSD notices.
 TCP listener address conversion adapts Go `src/net/ipsock_posix.go`.
 Its overlay source retains the Go BSD notice.
 Resolver fixtures retain Go `src/net/main_test.go` setup inputs from a native SDK execution.

@@ -600,14 +600,19 @@ func ListenPacket(network, address string) (PacketConn, error) {
 //
 // `Control` and `ControlContext` each take a `syscall.RawConn`,
 // and `dart:io` gives no file descriptor.
-// `FallbackDelay` and `DualStack` each tune the 2 dials of Happy Eyeballs.
-// 1 dial of Dart resolves the name and opens the socket. `MultipathTCP`
-// and `SetMultipathTCP` name a transport of Linux that Dart never opens. The
-// overlay omits these controls.
+// `MultipathTCP` and `SetMultipathTCP` require a transport that Dart does not expose.
+// The overlay omits these controls.
 //
 // `DialIP` stays out too. It gives an `*IPConn`, and `dart:io` opens no raw
 // socket.
 type Dialer struct {
+	// DualStack has no effect. Fast fallback is enabled by default.
+	//
+	// Deprecated: Set FallbackDelay to a negative value to disable fast fallback.
+	DualStack bool
+	// FallbackDelay sets the delay before the other address family starts.
+	// A zero value selects 300 ms. A negative value disables fast fallback.
+	FallbackDelay time.Duration
 	// LocalAddr selects the local TCP address. Other networks return an error.
 	LocalAddr       Addr
 	KeepAlive       time.Duration
@@ -726,6 +731,19 @@ func (d *Dialer) DialContext(ctx context.Context, network, address string) (Conn
 				return nil, &OpError{Op: "dial", Net: network, Err: &AddrError{Err: "no suitable address found", Addr: local.String()}}
 			}
 		}
+	}
+	if network == "tcp" || network == "tcp4" || network == "tcp6" {
+		addrs := make(addrList, 0, len(list))
+		for _, address := range list {
+			host, port, _ := hostPort(address)
+			addrs = append(addrs, tcpAddrOf(host, port))
+		}
+		sd := &sysDialer{Dialer: *d, network: network, address: address}
+		primaries, fallbacks := addrs, addrList(nil)
+		if d.dualStack() && network == "tcp" {
+			primaries, fallbacks = addrs.partition(isIPv4)
+		}
+		return sd.dialParallel(ctx, primaries, fallbacks)
 	}
 	trace := traceOf(ctx)
 	var first error

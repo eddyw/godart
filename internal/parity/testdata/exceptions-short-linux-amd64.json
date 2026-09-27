@@ -13748,5 +13748,13 @@
       "reason": "The original test requires the Go race detector. Both ordinary runs retain its upstream skip.",
       "test": "TestPanicNilRace"
     }
+  ],
+  "net-dial-fallback": [
+    {
+      "test": "TestDialerFallbackDelay",
+      "native": "skip",
+      "gart": "skip",
+      "reason": "The original upstream test requires external network access and skips short mode."
+    }
   ]
 }

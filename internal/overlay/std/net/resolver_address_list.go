@@ -104,3 +104,36 @@ func (r *Resolver) internetAddrList(ctx context.Context, net, addr string) (addr
 }
 
 type addrList []Addr
+
+// isIPv4 reports whether addr contains an IPv4 address.
+func isIPv4(addr Addr) bool {
+	switch addr := addr.(type) {
+	case *TCPAddr:
+		return addr.IP.To4() != nil
+	case *UDPAddr:
+		return addr.IP.To4() != nil
+	case *IPAddr:
+		return addr.IP.To4() != nil
+	}
+	return false
+}
+
+// partition divides an address list into two categories, using a
+// strategy function to assign a boolean label to each address.
+// The first address, and any with a matching label, are returned as
+// primaries, while addresses with the opposite label are returned
+// as fallbacks. For non-empty inputs, primaries is guaranteed to be
+// non-empty.
+func (addrs addrList) partition(strategy func(Addr) bool) (primaries, fallbacks addrList) {
+	var primaryLabel bool
+	for i, addr := range addrs {
+		label := strategy(addr)
+		if i == 0 || label == primaryLabel {
+			primaryLabel = label
+			primaries = append(primaries, addr)
+		} else {
+			fallbacks = append(fallbacks, addr)
+		}
+	}
+	return
+}
