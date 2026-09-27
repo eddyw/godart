@@ -46,6 +46,8 @@ file metadata, TLS configuration, or runtime inspection APIs.
 Linux and macOS support `os.File.Fd` for regular files, directories, and
 standard streams. The file owns the descriptor. Call `Close` explicitly.
 Automatic file closure through Go finalizers remains unsupported.
+Gart does not raise the inherited open-file limit at startup.
+Programs can reach that limit sooner than native Go programs.
 Directory creation on Linux and macOS applies permission bits and the process umask at creation.
 Temporary directories request mode `0700`.
 Directory descriptors retain their identity after a rename or removal.
