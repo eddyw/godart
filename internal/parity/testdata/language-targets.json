@@ -55,5 +55,13 @@
   "defer",
   "closure2",
   "abi/named_results",
-  "abi/defer_recover_results"
+  "abi/defer_recover_results",
+  "reorder",
+  "reorder2",
+  "chan/select3",
+  "chan/select4",
+  "chan/select6",
+  "chan/select7",
+  "chan/sendstmt",
+  "chan/zerosize"
 ]
