@@ -3,12 +3,13 @@ The source retains the original Go BSD header.
 
 --- roundtrip.go
 +++ roundtrip.go
-@@ -7,6 +7,15 @@
+@@ -7,6 +7,16 @@
  package http
  
  import _ "unsafe" // for linkname
 +import "runtime"
 +import (
++	"context"
 +	"errors"
 +	"io"
 +	"net/url"
@@ -19,7 +20,7 @@ The source retains the original Go BSD header.
  
  // RoundTrip should be an internal detail,
  // but widely used packages access it using linkname.
-@@ -30,5 +39,116 @@
+@@ -30,5 +40,122 @@
  	if t == nil {
  		panic("transport is nil")
  	}
@@ -38,6 +39,12 @@ The source retains the original Go BSD header.
 +// Client never runs there, and the host also decodes the gzip form. Go gives
 +// the same 2 answers under GOOS=js.
 +func (t *Transport) fetchRoundTrip(req *Request) (*Response, error) {
++	select {
++	case <-req.Context().Done():
++		req.closeBody()
++		return nil, context.Cause(req.Context())
++	default:
++	}
 +	var body []byte
 +	if req.Body != nil {
 +		read, err := io.ReadAll(req.Body)
