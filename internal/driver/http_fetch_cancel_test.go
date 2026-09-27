@@ -19,6 +19,14 @@ func TestHTTPFetchContextCancellation(t *testing.T) {
 			case "/ok":
 				io.WriteString(w, "ok")
 				return
+			case "/failure":
+				conn, _, err := w.(http.Hijacker).Hijack()
+				if err != nil {
+					t.Errorf("hijack: %v", err)
+					return
+				}
+				conn.Close()
+				return
 			case "/headers":
 				close(started)
 			case "/ready":
@@ -52,14 +60,29 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 )
 
-func main() {
-	base := os.Args[1]
+func runRequests(base, kind string) {
 	cause := errors.New("caller canceled")
-	ctx, cancel := context.WithCancelCause(context.Background())
-	req, _ := http.NewRequestWithContext(ctx, "GET", base+"/headers", nil)
+	newRequest := func(path string) (*http.Request, func()) {
+		req, _ := http.NewRequest("GET", base+path, nil)
+		if kind == "context" {
+			ctx, cancel := context.WithCancelCause(context.Background())
+			return req.WithContext(ctx), func() { cancel(cause) }
+		}
+		cancelc := make(chan struct{})
+		req.Cancel = cancelc
+		return req, func() { close(cancelc) }
+	}
+	isCanceled := func(err error) bool {
+		if kind == "context" {
+			return errors.Is(err, cause)
+		}
+		return err != nil && strings.Contains(err.Error(), "net/http: request canceled")
+	}
+	req, cancel := newRequest("/headers")
 	result := make(chan error, 1)
 	go func() {
 		res, err := http.DefaultClient.Do(req)
@@ -73,20 +96,18 @@ func main() {
 		panic(err)
 	}
 	ready.Body.Close()
-	cancel(cause)
-	fmt.Println("headers", errors.Is(<-result, cause))
-	ctx, cancel = context.WithCancelCause(context.Background())
-	req, _ = http.NewRequestWithContext(ctx, "GET", base+"/body", nil)
+	cancel()
+	fmt.Println(kind, "headers", isCanceled(<-result))
+	req, cancel = newRequest("/body")
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		panic(err)
 	}
-	cancel(cause)
+	cancel()
 	_, err = io.ReadAll(res.Body)
 	res.Body.Close()
-	fmt.Println("body", errors.Is(err, cause))
-	ctx, cancel = context.WithCancelCause(context.Background())
-	req, _ = http.NewRequestWithContext(ctx, "GET", base+"/read", nil)
+	fmt.Println(kind, "body", isCanceled(err))
+	req, cancel = newRequest("/read")
 	res, err = http.DefaultClient.Do(req)
 	if err != nil {
 		panic(err)
@@ -94,12 +115,11 @@ func main() {
 	if _, err = io.ReadFull(res.Body, make([]byte, 5)); err != nil {
 		panic(err)
 	}
-	go func() { time.Sleep(20 * time.Millisecond); cancel(cause) }()
+	go func() { time.Sleep(20 * time.Millisecond); cancel() }()
 	_, err = io.ReadAll(res.Body)
 	res.Body.Close()
-	fmt.Println("read", errors.Is(err, cause))
-	ctx, cancel = context.WithCancelCause(context.Background())
-	req, _ = http.NewRequestWithContext(ctx, "GET", base+"/ok", nil)
+	fmt.Println(kind, "read", isCanceled(err))
+	req, cancel = newRequest("/ok")
 	res, err = http.DefaultClient.Do(req)
 	if err != nil {
 		panic(err)
@@ -108,15 +128,35 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("normal", string(data))
-	cancel(cause)
+	fmt.Println(kind, "normal", string(data))
+	cancel()
 	_, err = res.Body.Read(make([]byte, 1))
-	fmt.Println("eof", err == io.EOF)
+	fmt.Println(kind, "eof", err == io.EOF)
 	res.Body.Close()
+	req, cancel = newRequest("/failure")
+	res, err = http.DefaultClient.Do(req)
+	cancel()
+	if res != nil {
+		res.Body.Close()
+	}
+	fmt.Println(kind, "failure", err != nil && !errors.Is(err, cause) && !strings.Contains(err.Error(), "request completed"))
 }
+func main() { runRequests(os.Args[1], "context"); runRequests(os.Args[2], "channel") }
 `)
-	want := runProgram(t, dir, "go", "run", ".", server())
-	if want != "headers true\nbody true\nread true\nnormal ok\neof true" {
+	want := runProgram(t, dir, "go", "run", ".", server(), server())
+	const expected = `context headers true
+context body true
+context read true
+context normal ok
+context eof true
+context failure true
+channel headers true
+channel body true
+channel read true
+channel normal ok
+channel eof true
+channel failure true`
+	if want != expected {
 		t.Fatalf("native cancellation result: %q", want)
 	}
 	if err := driver.Build(driver.Options{Dir: dir, Patterns: []string{"."}, Out: out, Runtime: runtimeDir(t)}); err != nil {
@@ -127,9 +167,9 @@ func main() {
 		t.Run(target, func(t *testing.T) {
 			var got programResult
 			if target == "vm" {
-				got = programOutcome(t, dir, "dart", filepath.Join(out, "bin/main.dart"), server())
+				got = programOutcome(t, dir, "dart", filepath.Join(out, "bin/main.dart"), server(), server())
 			} else {
-				got = runUpstreamTarget(t, target, out, "bin/main.dart", dir, []string{server()})
+				got = runUpstreamTarget(t, target, out, "bin/main.dart", dir, []string{server(), server()})
 			}
 			if got.Exit != 0 || got.Text != want {
 				t.Fatalf("native: %s\nGart: %s\nexit: %d", want, got.Text, got.Exit)

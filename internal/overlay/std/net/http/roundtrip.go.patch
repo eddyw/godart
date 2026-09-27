@@ -20,7 +20,7 @@ The source retains the original Go BSD header.
  
  // RoundTrip should be an internal detail,
  // but widely used packages access it using linkname.
-@@ -30,5 +40,145 @@
+@@ -30,5 +40,155 @@
  	if t == nil {
  		panic("transport is nil")
  	}
@@ -45,11 +45,16 @@ The source retains the original Go BSD header.
 +		return nil, context.Cause(req.Context())
 +	default:
 +	}
++	ctx, cancel := context.WithCancelCause(req.Context())
++	if req.Cancel != nil {
++		go awaitLegacyCancel(ctx, cancel, req)
++	}
 +	var body []byte
 +	if req.Body != nil {
 +		read, err := io.ReadAll(req.Body)
 +		req.Body.Close()
 +		if err != nil {
++			cancel(err)
 +			return nil, err
 +		}
 +		body = read
@@ -61,13 +66,18 @@ The source retains the original Go BSD header.
 +		}
 +	}
 +	handle := dart.FetchOpen()
-+	stop := context.AfterFunc(req.Context(), func() { dart.FetchCancel(handle) })
++	stopAbort := context.AfterFunc(ctx, func() { dart.FetchCancel(handle) })
++	stop := func() {
++		stopAbort()
++		cancel(errRequestDone)
++	}
 +	_, code, head, moved, cause := dart.FetchStart(
 +		handle, req.Method, req.URL.String(), fields, body, fetchDeadline(req))
 +	if cause != "" {
++		err := context.Cause(ctx)
 +		stop()
 +		dart.FetchClose(handle)
-+		if err := context.Cause(req.Context()); err != nil {
++		if err != nil {
 +			return nil, err
 +		}
 +		return nil, errors.New("net/http: fetch() failed: " + cause)
@@ -107,7 +117,7 @@ The source retains the original Go BSD header.
 +		Header:        header,
 +		ContentLength: length,
 +		Uncompressed:  uncompressed,
-+		Body:          &fetchBody{handle: handle, ctx: req.Context(), stop: stop},
++		Body:          &fetchBody{handle: handle, ctx: ctx, stop: stop},
 +		Request:       req,
 +	}, nil
 +}
@@ -124,7 +134,7 @@ The source retains the original Go BSD header.
 +// fetchBody reads the body of an answer of the fetch API.
 +type fetchBody struct {
 +	ctx context.Context
-+	stop func() bool
++	stop func()
 +	handle int
 +	closed bool
 +	eof bool
