@@ -90,3 +90,31 @@ func Truncate(path string, length int64) error {
 	}
 	return nil
 }
+
+func Fchdir(fd int) error {
+	if errno := dart.DirectoryChdir(fd); errno != 0 {
+		return Errno(errno)
+	}
+	return nil
+}
+
+func Fchmod(fd int, mode uint32) error {
+	if errno := dart.FileChmod(fd, int(mode)); errno != 0 {
+		return Errno(errno)
+	}
+	return nil
+}
+
+func Fchown(fd, uid, gid int) error {
+	if errno := dart.FileChown(fd, uid, gid); errno != 0 {
+		return Errno(errno)
+	}
+	return nil
+}
+
+func Ftruncate(fd int, length int64) error {
+	if errno := dart.NativeFtruncate(fd, length); errno != 0 {
+		return Errno(errno)
+	}
+	return nil
+}
