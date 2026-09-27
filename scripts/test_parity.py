@@ -316,6 +316,23 @@ class ParityTest(unittest.TestCase):
             parity.save(path, report)
             self.assertEqual(parity.language_behavior([root])[0]["counts"], {"unobserved": 1})
 
+    def test_empty_language_reports_preserve_completion(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            for complete in [False, True]:
+                for contract in [None, "runoutput"]:
+                    with self.subTest(complete=complete, contract=contract):
+                        report = dict(kind="language", contract=contract,
+                                      complete=complete, outcomes=None, shard=2, shards=8)
+                        parity.save(root / "language.json", report)
+                        group = parity.language_behavior([root])[0]
+                        self.assertEqual(group["configuration"]["contract"], contract or "run")
+                        self.assertEqual(group["outcomes"], [])
+                        self.assertEqual(group["counts"], {})
+                        self.assertEqual(group["reports"][0]["complete"], complete)
+                        self.assertEqual(group["reports"][0]["shard"], 2)
+                        self.assertEqual(group["reports"][0]["shards"], 8)
+
     def test_directory_diagnostics_require_ordered_compilation_and_matchers(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

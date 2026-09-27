@@ -697,7 +697,8 @@ def language_behavior(paths):
             config.update(origin)
             if config.get("compiler_snapshot"):
                 config.pop("manifest")
-            config["contract"] = report.get("contract") or next((c["contract"] for c in report["outcomes"] if c.get("contract")), "run")
+            outcomes = report["outcomes"] or []
+            config["contract"] = report.get("contract") or next((c["contract"] for c in outcomes if c.get("contract")), "run")
             key = json.dumps(config, sort_keys=True)
             if (key, stamp) in seen:
                 continue
@@ -705,7 +706,7 @@ def language_behavior(paths):
             group = groups.setdefault(key,
                                       dict(configuration=config, reports=[], outcomes={}, problems=[]))
             local = set()
-            for case in report["outcomes"]:
+            for case in outcomes:
                 name = case["fixture"]["name"]
                 if name in local:
                     group["problems"].append(f"{path}: duplicate fixture {name}")
