@@ -347,7 +347,7 @@
   {
     "package": "crypto/internal/sysrand",
     "status": "compile-blocked",
-    "diagnostic": "undefined: testingOnlyFailRead",
+    "diagnostic": "undefined: urandomFile",
     "blocker_cause": "private-test-dependency",
     "blocker_reason": "The suite injects native random-source failures through private hooks and errno values."
   },
@@ -893,7 +893,10 @@
     "status": "compile-blocked",
     "diagnostic": "undefined: FD",
     "blocker_cause": "runtime-boundary",
-    "blocker_reason": "The suite requires Go's native file descriptors, fdMutex, and runtime poller. The overlay retains only the closed-network error."
+    "blocker_reason": "The suite requires Go's native file descriptors, fdMutex, and runtime poller. The overlay retains only the closed-network error.",
+    "platform_diagnostics": {
+      "linux-amd64": "undefined: poll.ErrNotPollable"
+    }
   },
   {
     "package": "internal/race",
@@ -902,7 +905,7 @@
   {
     "package": "internal/reflectlite",
     "status": "compile-blocked",
-    "diagnostic": "undefined: ValueOf",
+    "diagnostic": "undefined: Value",
     "blocker_cause": "private-test-dependency",
     "blocker_reason": "The overlay does not retain private reflectlite implementation names used by its tests."
   },
@@ -1169,11 +1172,11 @@
   {
     "package": "os/exec",
     "status": "compile-blocked",
-    "diagnostic": "undefined: syscall.SysProcAttr",
+    "diagnostic": "cmd.SysProcAttr undefined (type *exec.Cmd has no field or method SysProcAttr)",
     "blocker_cause": "public-api-gap",
-    "blocker_reason": "The complete suite requires native process attributes. Linux also requires syscall.NsecToTimespec.",
+    "blocker_reason": "The complete suite requires native process attributes. Linux also requires syscall.Nanosleep.",
     "platform_diagnostics": {
-      "linux-amd64": "undefined: syscall.NsecToTimespec"
+      "linux-amd64": "undefined: syscall.Nanosleep"
     }
   },
   {
@@ -1269,31 +1272,31 @@
   {
     "package": "sync",
     "status": "compile-blocked",
-    "diagnostic": "undefined: runtime_procPin",
+    "diagnostic": "undefined: runtime_Semacquire",
     "blocker_cause": "runtime-boundary",
-    "blocker_reason": "The suite pins goroutines to native Go execution threads through runtime_procPin."
+    "blocker_reason": "The suite requires Go's native semaphore and thread-pinning runtime functions."
   },
   {
     "package": "sync/atomic",
     "status": "compile-blocked",
-    "diagnostic": "undefined: CompareAndSwapPointer",
+    "diagnostic": "undefined: SwapPointer",
     "blocker_cause": "runtime-boundary",
     "blocker_reason": "The suite requires atomic operations on unsafe native pointers."
   },
   {
     "package": "syscall",
     "status": "compile-blocked",
-    "diagnostic": "undefined: syscall.Open",
+    "diagnostic": "undefined: syscall.Getpgid",
     "platform_diagnostics": {
-      "linux-amd64": "undefined: syscall.ParseSocketControlMessage"
+      "linux-amd64": "undefined: syscall.Socketpair"
     },
     "blocker_cause": "runtime-boundary",
-    "blocker_reason": "The suite requires raw native file descriptors through syscall.Open."
+    "blocker_reason": "The complete suite requires native process groups, socket pairs, and raw file descriptors."
   },
   {
     "package": "testing",
     "status": "compile-blocked",
-    "diagnostic": "undefined: highPrecisionTimeNow",
+    "diagnostic": "undefined: highPrecisionTime",
     "blocker_cause": "private-test-dependency",
     "blocker_reason": "The native harness tests require private clock and harness dependencies beyond the portable benchmark result API."
   },
@@ -1347,9 +1350,9 @@
   {
     "package": "time",
     "status": "compile-blocked",
-    "diagnostic": "undefined: absDays",
+    "diagnostic": "undefined: absYday",
     "blocker_cause": "private-test-dependency",
-    "blocker_reason": "The original suite references private native time types, including absDays, that the Dart time overlay does not implement. Selected public assertions execute separately."
+    "blocker_reason": "The original suite references private native time types that the Dart time overlay does not implement. Selected public assertions execute separately."
   },
   {
     "package": "time/tzdata",
