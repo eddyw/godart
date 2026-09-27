@@ -4,7 +4,8 @@ package net
 
 import (
 	"context"
-	"net/netip"
+	"internal/singleflight"
+
 	"strconv"
 	"strings"
 	"sync"
@@ -14,6 +15,7 @@ import (
 
 // A Resolver resolves host names and service names.
 type Resolver struct {
+	lookupGroup  singleflight.Group
 	PreferGo     bool
 	StrictErrors bool
 	// Dial opens the connection to 1 server. A nil field takes Dial of this
@@ -24,58 +26,6 @@ type Resolver struct {
 // DefaultResolver is the resolver that each package level Lookup function
 // reads.
 var DefaultResolver = &Resolver{}
-
-// LookupHost gives each address of a host, as text.
-func (r *Resolver) LookupHost(ctx context.Context, host string) ([]string, error) {
-	if ip := ParseIP(host); ip != nil {
-		return []string{host}, nil
-	}
-	addrs, err := r.LookupIPAddr(ctx, host)
-	if err != nil {
-		return nil, err
-	}
-	out := make([]string, 0, len(addrs))
-	for _, a := range addrs {
-		out = append(out, a.IP.String())
-	}
-	return out, nil
-}
-
-// LookupIPAddr gives each address of a host.
-func (r *Resolver) LookupIPAddr(ctx context.Context, host string) ([]IPAddr, error) {
-	ips, err := r.LookupIP(ctx, "ip", host)
-	if err != nil {
-		return nil, err
-	}
-	out := make([]IPAddr, 0, len(ips))
-	for _, ip := range ips {
-		out = append(out, IPAddr{IP: ip})
-	}
-	return out, nil
-}
-
-// LookupIP gives each address of a host. The network takes ip, ip4, or ip6.
-func (r *Resolver) LookupIP(ctx context.Context, network, host string) ([]IP, error) {
-	switch network {
-	case "ip", "ip4", "ip6":
-	default:
-		return nil, UnknownNetworkError(network)
-	}
-	// A numeric address needs no lookup, thus it reports no event. Go holds
-	// the same order.
-	if ip := ParseIP(host); ip != nil {
-		if keepIP(network, ip) {
-			return []IP{ip}, nil
-		}
-		return nil, &DNSError{Err: errNoSuchHost.Error(), Name: host, IsNotFound: true}
-	}
-	trace := traceOf(ctx)
-	traceDNSStart(trace, host)
-	order, conf := systemConf().hostLookupOrder(r, host)
-	out, err := r.lookupIP(ctx, network, host, order, conf)
-	traceDNSDone(trace, out, err)
-	return out, err
-}
 
 // lookupAddrs reads each address of a host name through the resolver of the
 // system, and it gives the addresses in the order that the system holds.
@@ -127,21 +77,21 @@ func systemLookupIP(network, host string) ([]IP, error) {
 	return out, nil
 }
 
-func (r *Resolver) lookupIP(ctx context.Context, network, host string, order hostLookupOrder, conf *dnsConfig) ([]IP, error) {
+func (r *Resolver) lookupIP(ctx context.Context, network, host string) ([]IPAddr, error) {
+	order, conf := systemConf().hostLookupOrder(r, host)
 	if order == hostLookupCgo {
-		return systemLookupIP(network, host)
+		ips, err := systemLookupIP(network, host)
+		if err != nil {
+			return nil, err
+		}
+		out := make([]IPAddr, len(ips))
+		for i, ip := range ips {
+			out[i] = IPAddr{IP: ip}
+		}
+		return out, nil
 	}
 	addresses, _, err := r.goLookupIPCNAMEOrder(ctx, network, host, order, conf)
-	if err != nil {
-		return nil, err
-	}
-	out := make([]IP, 0, len(addresses))
-	for _, address := range addresses {
-		if keepIP(network, address.IP) {
-			out = append(out, address.IP)
-		}
-	}
-	return out, nil
+	return addresses, err
 }
 
 // keepIP reports whether the address fits the network.
@@ -153,21 +103,6 @@ func keepIP(network string, ip IP) bool {
 		return ip.To4() == nil && len(ip.To16()) == 16
 	}
 	return true
-}
-
-// LookupNetIP gives each address of a host, in the form of net/netip.
-func (r *Resolver) LookupNetIP(ctx context.Context, network, host string) ([]netip.Addr, error) {
-	ips, err := r.LookupIP(ctx, network, host)
-	if err != nil {
-		return nil, err
-	}
-	out := make([]netip.Addr, 0, len(ips))
-	for _, ip := range ips {
-		if a, ok := netip.AddrFromSlice(ip); ok {
-			out = append(out, a.Unmap())
-		}
-	}
-	return out, nil
 }
 
 // LookupPort gives the port of a service. A service that holds a number gives
@@ -336,11 +271,6 @@ func readServices() {
 // LookupHost gives each address of a host, as text.
 func LookupHost(host string) ([]string, error) {
 	return DefaultResolver.LookupHost(context.Background(), host)
-}
-
-// LookupIP gives each address of a host.
-func LookupIP(host string) ([]IP, error) {
-	return DefaultResolver.LookupIP(context.Background(), "ip", host)
 }
 
 // LookupCNAME gives the canonical name of a host.

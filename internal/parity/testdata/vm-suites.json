@@ -703,5 +703,9 @@
   {
     "package": "internal/godebugs",
     "run": ""
+  },
+  {
+    "package": "internal/singleflight",
+    "run": ""
   }
 ]

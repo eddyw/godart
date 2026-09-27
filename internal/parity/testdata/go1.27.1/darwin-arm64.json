@@ -28760,6 +28760,52 @@
       "seeds": null
     },
     {
+      "path": "internal/singleflight",
+      "tests": [
+        {
+          "name": "TestDo",
+          "file": "singleflight_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestDoAndForgetUnsharedRace",
+          "file": "singleflight_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestDoDupSuppress",
+          "file": "singleflight_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestDoErr",
+          "file": "singleflight_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestForgetUnshared",
+          "file": "singleflight_test.go",
+          "kind": "Test",
+          "eligible": true
+        }
+      ],
+      "files": [
+        {
+          "path": "singleflight.go",
+          "sha256": "582ef7cfe2bdac797afea4706dc605a80234db69870a80ef492df7c9e1ea1df4"
+        },
+        {
+          "path": "singleflight_test.go",
+          "sha256": "e35b81a3254a56584331730c1c79c4e73ec76a080488ecf5ff07229e115b51a3"
+        }
+      ],
+      "seeds": null
+    },
+    {
       "path": "internal/syslist",
       "tests": null,
       "files": [

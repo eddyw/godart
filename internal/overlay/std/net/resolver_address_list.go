@@ -1,0 +1,106 @@
+//go:build dart
+
+// Copyright 2009 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+package net
+
+import (
+	"context"
+)
+
+// filterAddrList applies a filter to a list of IP addresses,
+// yielding a list of Addr objects. Known filters are nil, ipv4only,
+// and ipv6only. It returns every address when the filter is nil.
+// The result contains at least one address when error is nil.
+func filterAddrList(filter func(IPAddr) bool, ips []IPAddr, inetaddr func(IPAddr) Addr, originalAddr string) (addrList, error) {
+	var addrs addrList
+	for _, ip := range ips {
+		if filter == nil || filter(ip) {
+			addrs = append(addrs, inetaddr(ip))
+		}
+	}
+	if len(addrs) == 0 {
+		return nil, &AddrError{Err: "no suitable address found", Addr: originalAddr}
+	}
+	return addrs, nil
+}
+
+// ipv4only reports whether addr is an IPv4 address.
+func ipv4only(addr IPAddr) bool {
+	return addr.IP.To4() != nil
+}
+
+// ipv6only reports whether addr is an IPv6 address except IPv4-mapped IPv6 address.
+func ipv6only(addr IPAddr) bool {
+	return len(addr.IP) == IPv6len && addr.IP.To4() == nil
+}
+
+// internetAddrList resolves addr, which may be a literal IP
+// address or a DNS name, and returns a list of internet protocol
+// family addresses. The result contains at least one address when
+// error is nil.
+func (r *Resolver) internetAddrList(ctx context.Context, net, addr string) (addrList, error) {
+	var (
+		err        error
+		host, port string
+		portnum    int
+	)
+	switch net {
+	case "tcp", "tcp4", "tcp6", "udp", "udp4", "udp6":
+		if addr != "" {
+			if host, port, err = SplitHostPort(addr); err != nil {
+				return nil, err
+			}
+			if portnum, err = r.LookupPort(ctx, net, port); err != nil {
+				return nil, err
+			}
+		}
+	case "ip", "ip4", "ip6":
+		if addr != "" {
+			host = addr
+		}
+	default:
+		return nil, UnknownNetworkError(net)
+	}
+	inetaddr := func(ip IPAddr) Addr {
+		switch net {
+		case "tcp", "tcp4", "tcp6":
+			return &TCPAddr{IP: ip.IP, Port: portnum, Zone: ip.Zone}
+		case "udp", "udp4", "udp6":
+			return &UDPAddr{IP: ip.IP, Port: portnum, Zone: ip.Zone}
+		case "ip", "ip4", "ip6":
+			return &IPAddr{IP: ip.IP, Zone: ip.Zone}
+		default:
+			panic("unexpected network: " + net)
+		}
+	}
+	if host == "" {
+		return addrList{inetaddr(IPAddr{})}, nil
+	}
+
+	// Try as a literal IP address, then as a DNS name.
+	ips, err := r.lookupIPAddr(ctx, net, host)
+	if err != nil {
+		return nil, err
+	}
+	// Issue 18806: if the machine has halfway configured
+	// IPv6 such that it can bind on "::" (IPv6unspecified)
+	// but not connect back to that same address, fall
+	// back to dialing 0.0.0.0.
+	if len(ips) == 1 && ips[0].IP.Equal(IPv6unspecified) {
+		ips = append(ips, IPAddr{IP: IPv4zero})
+	}
+
+	var filter func(IPAddr) bool
+	if net != "" && net[len(net)-1] == '4' {
+		filter = ipv4only
+	}
+	if net != "" && net[len(net)-1] == '6' {
+		filter = ipv6only
+	}
+	return filterAddrList(filter, ips, inetaddr, host)
+}
+
+type addrList []Addr

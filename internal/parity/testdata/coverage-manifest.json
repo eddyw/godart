@@ -911,6 +911,15 @@
     "status": "vm-suite"
   },
   {
+    "package": "internal/singleflight",
+    "status": "vm-suite",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ]
+  },
+  {
     "package": "internal/syslist",
     "status": "no-runnable-tests"
   },

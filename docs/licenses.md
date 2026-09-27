@@ -124,6 +124,9 @@ The resolver source preserves their BSD notices.
 DNS transport and record validation retain Go `src/net/dnsclient_unix.go`,
 `dnsclient.go`, `lookup.go`, and `net.go` declarations with their BSD notices.
 The DNS message codec uses the SDK vendored `golang.org/x/net/dns/dnsmessage` source.
+Resolver lookup coordination retains Go `src/net/lookup.go`, `ipsock.go`,
+`dnsclient_unix.go`, and `hook.go` declarations with their BSD notices.
+The shared lookup group uses native Go `src/internal/singleflight` source.
 The host cache retains Go `src/net/hosts.go` and selected `dnsclient.go` declarations.
 Its source preserves the Go BSD notice.
 IP protocol validation adapts Go `src/net/dial.go`, `parse.go`,

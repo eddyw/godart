@@ -29,6 +29,7 @@ var native = []string{
 	"net/http/internal/httpcommon",
 	"net/http/internal/httpsfv",
 	"internal/nettest",
+	"internal/singleflight",
 	"internal/gate",
 	"internal/godebugs",
 	"vendor/golang.org/x/net/http2/hpack",
