@@ -34,3 +34,59 @@ func Seek(fd int, offset int64, whence int) (int64, error) {
 	}
 	return position, nil
 }
+
+func Chdir(path string) error {
+	if errno := dart.NativeChdir(path); errno != 0 {
+		return Errno(errno)
+	}
+	return nil
+}
+
+func Chmod(path string, mode uint32) error {
+	if errno := dart.NativeChmod(path, int(mode)); errno != 0 {
+		return Errno(errno)
+	}
+	return nil
+}
+
+func Chown(path string, uid, gid int) error {
+	if errno := dart.NativeChown(path, uid, gid, true); errno != 0 {
+		return Errno(errno)
+	}
+	return nil
+}
+
+func Lchown(path string, uid, gid int) error {
+	if errno := dart.NativeChown(path, uid, gid, false); errno != 0 {
+		return Errno(errno)
+	}
+	return nil
+}
+
+func Link(oldpath, newpath string) error {
+	if errno := dart.NativeLink(oldpath, newpath); errno != 0 {
+		return Errno(errno)
+	}
+	return nil
+}
+
+func Symlink(oldpath, newpath string) error {
+	if errno := dart.NativeSymlink(oldpath, newpath); errno != 0 {
+		return Errno(errno)
+	}
+	return nil
+}
+
+func Rename(oldpath, newpath string) error {
+	if errno := dart.NativeRename(oldpath, newpath); errno != 0 {
+		return Errno(errno)
+	}
+	return nil
+}
+
+func Truncate(path string, length int64) error {
+	if errno := dart.NativeTruncate(path, length); errno != 0 {
+		return Errno(errno)
+	}
+	return nil
+}
