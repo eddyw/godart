@@ -669,6 +669,34 @@
     "status": "vm-suite"
   },
   {
+    "package": "go/importer",
+    "status": "vm-suite",
+    "targets": [
+      "aot"
+    ]
+  },
+  {
+    "package": "go/internal/gccgoimporter",
+    "status": "vm-suite",
+    "targets": [
+      "aot"
+    ]
+  },
+  {
+    "package": "go/internal/gcimporter",
+    "status": "vm-suite",
+    "targets": [
+      "aot"
+    ]
+  },
+  {
+    "package": "go/internal/srcimporter",
+    "status": "vm-suite",
+    "targets": [
+      "aot"
+    ]
+  },
+  {
     "package": "go/parser",
     "status": "vm-suite"
   },
@@ -826,6 +854,10 @@
     "status": "vm-suite"
   },
   {
+    "package": "internal/exportdata",
+    "status": "no-runnable-tests"
+  },
+  {
     "package": "internal/fmtsort",
     "status": "compile-blocked",
     "diagnostic": "the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
@@ -883,6 +915,15 @@
   {
     "package": "internal/oserror",
     "status": "no-runnable-tests"
+  },
+  {
+    "package": "internal/pkgbits",
+    "status": "vm-suite",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ]
   },
   {
     "package": "internal/platform",
@@ -944,10 +985,10 @@
   },
   {
     "package": "internal/types/errors",
-    "status": "compile-blocked",
-    "diagnostic": "the package go/importer is outside the supported surface (the standard library surface is curated)",
-    "blocker_cause": "private-test-dependency",
-    "blocker_reason": "The suite depends on go/importer, which remains outside the surface."
+    "status": "vm-suite",
+    "targets": [
+      "aot"
+    ]
   },
   {
     "package": "internal/xcoff",

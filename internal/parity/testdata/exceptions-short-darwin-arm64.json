@@ -13730,5 +13730,49 @@
       "gart": "skip",
       "reason": "The original upstream test requires external network access and skips short mode."
     }
+  ],
+  "go/importer": [
+    {
+      "test": "TestForCompiler/LookupCustom",
+      "native": "skip",
+      "gart": "skip",
+      "reason": "The original Go suite excludes custom lookup for unified IR."
+    }
+  ],
+  "go/internal/gccgoimporter": [
+    {
+      "test": "TestInstallationImporter",
+      "native": "skip",
+      "gart": "skip",
+      "reason": "The original Go suite requires an installed gccgo compiler."
+    },
+    {
+      "test": "TestObjImporter",
+      "native": "skip",
+      "gart": "skip",
+      "reason": "The original Go suite requires an installed gccgo compiler."
+    }
+  ],
+  "go/internal/srcimporter": [
+    {
+      "test": "TestImportStdLib",
+      "native": "skip",
+      "gart": "skip",
+      "reason": "The original Go suite excludes this test in short mode."
+    }
+  ],
+  "go/internal/gcimporter": [
+    {
+      "test": "TestImportStdLib",
+      "native": "skip",
+      "gart": "skip",
+      "reason": "The original Go suite excludes this test in short mode."
+    },
+    {
+      "test": "TestImportTypeparamTests",
+      "native": "skip",
+      "gart": "skip",
+      "reason": "The original Go suite excludes this test in short mode."
+    }
   ]
 }

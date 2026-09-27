@@ -121,6 +121,58 @@ class ParityTest(unittest.TestCase):
             mutate(changed)
             self.assertFalse(parity.generator_recipe_valid(changed))
 
+    def test_importer_inputs_preserve_assertions_and_sdk_identity(self):
+        import hashlib
+        digest = lambda text: hashlib.sha256(text.encode()).hexdigest()
+        template = r'{{with context}}{{printf "{\"compiler\":%q,\"goos\":%q,\"goarch\":%q,\"goroot\":%q,\"cgo_enabled\":%t" .Compiler .GOOS .GOARCH .GOROOT .CgoEnabled}},"build_tags":[{{range $i, $tag := .BuildTags}}{{if $i}},{{end}}{{printf "%q" $tag}}{{end}}],"tool_tags":[{{range $i, $tag := .ToolTags}}{{if $i}},{{end}}{{printf "%q" $tag}}{{end}}],"release_tags":[{{range $i, $tag := .ReleaseTags}}{{if $i}},{{end}}{{printf "%q" $tag}}{{end}}]}{{end}}'
+        guard = '\tif runtime.Compiler != "gc" {\n\t\tt.Skipf("gc-built packages not available (compiler = %s)", runtime.Compiler)\n\t}'
+        initializer = "var importer = New(&build.Default, token.NewFileSet(), make(map[string]*types.Package))"
+        assertion = "if answer != 42 { t.Fatal(answer) }"
+        context = dict(compiler="gc", goos="darwin", goarch="arm64", goroot="/sdk", cgo_enabled=True,
+                       build_tags=[], tool_tags=["arm64.v8.0"], release_tags=["go1." + str(n) for n in range(1, 28)])
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            for pkg in ["go/internal/gcimporter", "go/internal/srcimporter"]:
+                if pkg.endswith("/gcimporter"):
+                    source = '\n\t"runtime"\n' + guard + "\n" + assertion
+                    adapted = source.replace(guard, guard.replace("runtime.Compiler", '"gc"')).replace('\n\t"runtime"\n', "\n")
+                else:
+                    source = 'func TestCgo(t *testing.T) { testenv.MustHaveCGO(t) }\n' + initializer + "\n" + assertion
+                    setup = ('var _ = func() bool {\n\tbuild.Default.Compiler = "gc"\n\tbuild.Default.GOARCH = "arm64"\n'
+                             '\tbuild.Default.CgoEnabled = true\n\tbuild.Default.BuildTags = []string{}\n'
+                             '\tbuild.Default.ToolTags = []string{"arm64.v8.0"}\n\tbuild.Default.ReleaseTags = []string{' +
+                             ", ".join(json.dumps(v) for v in context["release_tags"]) + '}\n\treturn true\n}()\n\n')
+                    adapted = source.replace(initializer, setup + initializer).replace(
+                        "testenv.MustHaveCGO(t)", 'if !build.Default.CgoEnabled { t.Skip("selected Go SDK has no cgo") }')
+                name = pkg.rsplit("/", 1)[1] + "_test.go"
+                fixture = dict(command=["go", "list", "-f=" + template, "runtime"], output=json.dumps(context),
+                               context=context, source=dict(path="src/" + pkg + "/" + name, source=source,
+                               sha256=digest(source), adapted=adapted, adapted_sha256=digest(adapted)))
+                report = dict(package=pkg, go_version="go1.27.1", goos="darwin", goarch="arm64",
+                              environment=dict(GOROOT="/sdk"), importer_inputs=fixture, cgo=True, build_tags=[], tool_tags=["arm64.v8.0"])
+                inventory = dict(packages=[dict(path=pkg, files=[dict(path=name, sha256=digest(source))])])
+                parity.save(root / "go1.27.1/darwin-arm64.json", inventory)
+                self.assertIsNone(parity.importer_input_problem(report, root))
+                for mutate in [
+                    lambda r: r.pop("importer_inputs"),
+                    lambda r: r["importer_inputs"].update(command=["echo", "gc"]),
+                    lambda r: r["importer_inputs"].update(output="invalid json"),
+                    lambda r: r["importer_inputs"].update(context=dict(context, compiler="gart")),
+                    lambda r: r["importer_inputs"].update(context=dict(context, cgo_enabled=False)),
+                    lambda r: r["importer_inputs"].update(context=dict(context, tool_tags=[])),
+                    lambda r: r["environment"].update(GOROOT="/other"),
+                    lambda r: r["importer_inputs"]["source"].update(path="src/other.go"),
+                    lambda r: r["importer_inputs"]["source"].update(source="changed assertions"),
+                    lambda r: r["importer_inputs"]["source"].update(adapted="changed assertions"),
+                    lambda r: r["importer_inputs"]["source"].update(adapted=adapted.replace("42", "41"),
+                                                                          adapted_sha256=digest(adapted.replace("42", "41"))),
+                    lambda r: r["importer_inputs"]["source"].update(source=source.replace("42", "41"),
+                                                                          sha256=digest(source.replace("42", "41"))),
+                ]:
+                    changed = copy.deepcopy(report)
+                    mutate(changed)
+                    self.assertIsNotNone(parity.importer_input_problem(changed, root))
+
     def test_resolver_inputs_preserve_native_setup(self):
         import copy
         import hashlib

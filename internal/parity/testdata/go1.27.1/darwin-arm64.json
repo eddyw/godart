@@ -21843,6 +21843,278 @@
       "seeds": null
     },
     {
+      "path": "go/importer",
+      "tests": [
+        {
+          "name": "TestForCompiler",
+          "file": "importer_test.go",
+          "kind": "Test",
+          "eligible": true
+        }
+      ],
+      "files": [
+        {
+          "path": "importer.go",
+          "sha256": "16912312914849ec2563fa2c24e1e06293eff03763a0d25ee95010de21c1fb6f"
+        },
+        {
+          "path": "importer_test.go",
+          "sha256": "25b3e65f1e7a4c02e5ccf34feb3a026a56e91a4c44b5d878588aadcb16f30826"
+        }
+      ],
+      "seeds": null
+    },
+    {
+      "path": "go/internal/gccgoimporter",
+      "tests": [
+        {
+          "name": "TestInstallationImporter",
+          "file": "gccgoinstallation_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestGoxImporter",
+          "file": "importer_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestObjImporter",
+          "file": "importer_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTypeParser",
+          "file": "parser_test.go",
+          "kind": "Test",
+          "eligible": true
+        }
+      ],
+      "files": [
+        {
+          "path": "ar.go",
+          "sha256": "5021d88e5c91935c704a00676e68f8179d81bd275b5d3e474f2c2b710f485ac2"
+        },
+        {
+          "path": "gccgoinstallation.go",
+          "sha256": "8180eb79c302de5539aeb244718b729bf1da0b28fab5b0561f1311a393e4a1e0"
+        },
+        {
+          "path": "gccgoinstallation_test.go",
+          "sha256": "c21965525ad83f08366f9edcb776d91ff097cfc819114c154ffc782464433bee"
+        },
+        {
+          "path": "importer.go",
+          "sha256": "fe8349c395ee0b34c53e1b99842c88cd7070150007727d67cab503e4a4cf000c"
+        },
+        {
+          "path": "importer_test.go",
+          "sha256": "255f935424c295af728be89c7bcb8c0234e990665feb140f9b5c85ce050ca011"
+        },
+        {
+          "path": "parser.go",
+          "sha256": "3d64de0424d5edfb6339362ebcc527f6f14fe677fd089804189fe604ba479d5a"
+        },
+        {
+          "path": "parser_test.go",
+          "sha256": "f7c4eb64d1897cc370c634c7390bc453f5f6e506e734c9b379d97026c8a83433"
+        }
+      ],
+      "seeds": null
+    },
+    {
+      "path": "go/internal/gcimporter",
+      "tests": [
+        {
+          "name": "TestCorrectMethodPackage",
+          "file": "gcimporter_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestGenMeth",
+          "file": "gcimporter_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestImportStdLib",
+          "file": "gcimporter_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestImportTestdata",
+          "file": "gcimporter_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestImportTypeparamTests",
+          "file": "gcimporter_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestImportedTypes",
+          "file": "gcimporter_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestIssue13566",
+          "file": "gcimporter_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestIssue13898",
+          "file": "gcimporter_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestIssue15517",
+          "file": "gcimporter_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestIssue15920",
+          "file": "gcimporter_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestIssue20046",
+          "file": "gcimporter_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestIssue25301",
+          "file": "gcimporter_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestIssue25596",
+          "file": "gcimporter_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestIssue57015",
+          "file": "gcimporter_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestIssue5815",
+          "file": "gcimporter_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestIssue69912",
+          "file": "gcimporter_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestTypeNamingOrder",
+          "file": "gcimporter_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestVersionHandling",
+          "file": "gcimporter_test.go",
+          "kind": "Test",
+          "eligible": true
+        }
+      ],
+      "files": [
+        {
+          "path": "gcimporter.go",
+          "sha256": "7bc7c29b172e07fb2e6131c4ff8dbbfc182995d0b7ee10cfd2993dce4883e8e7"
+        },
+        {
+          "path": "gcimporter_test.go",
+          "sha256": "f87016e103683fd2874ac60969fe0c6db8d267233bd2d6d801b14b6c57d19c6b"
+        },
+        {
+          "path": "support.go",
+          "sha256": "a71e5876d0ff208383019ed1d9ae7f4788b23313e221e781af48e3eaa63858ea"
+        },
+        {
+          "path": "ureader.go",
+          "sha256": "f3c670ead88d1b323e9ca206338e2db3852372592260609f12a337b53a58ab77"
+        }
+      ],
+      "seeds": null
+    },
+    {
+      "path": "go/internal/srcimporter",
+      "tests": [
+        {
+          "name": "TestCgo",
+          "file": "srcimporter_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestImportStdLib",
+          "file": "srcimporter_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestImportedTypes",
+          "file": "srcimporter_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestIssue20855",
+          "file": "srcimporter_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestIssue23092",
+          "file": "srcimporter_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestIssue24392",
+          "file": "srcimporter_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestReimport",
+          "file": "srcimporter_test.go",
+          "kind": "Test",
+          "eligible": true
+        }
+      ],
+      "files": [
+        {
+          "path": "srcimporter.go",
+          "sha256": "acf579cf5366663606d2e3ab3e4f580d69935b46f51ab12ff470ac3d33f5a699"
+        },
+        {
+          "path": "srcimporter_test.go",
+          "sha256": "b5b70e085c07c17d9f44baca5b508a46992faa16ec928c3e84b2ffdc312d6bdf"
+        }
+      ],
+      "seeds": null
+    },
+    {
       "path": "go/parser",
       "tests": [
         {
@@ -27475,6 +27747,21 @@
       "seeds": null
     },
     {
+      "path": "internal/exportdata",
+      "tests": null,
+      "files": [
+        {
+          "path": "exportdata.go",
+          "sha256": "211ea378502da1265359addf4676bee119a5c69815c6fb4f5526369c3a76fda0"
+        },
+        {
+          "path": "support.go",
+          "sha256": "3c8a5407d37039049175961b7ac4e90cd6b84a7af9a3fca83835cb696237e58f"
+        }
+      ],
+      "seeds": null
+    },
+    {
       "path": "internal/fmtsort",
       "tests": [
         {
@@ -28134,6 +28421,70 @@
         {
           "path": "errors.go",
           "sha256": "4c6ff8e18d1fe326e8b27350b60cdb55e79757452ef79355cc5b9f5ddfde5920"
+        }
+      ],
+      "seeds": null
+    },
+    {
+      "path": "internal/pkgbits",
+      "tests": [
+        {
+          "name": "TestRoundTrip",
+          "file": "pkgbits_test.go",
+          "kind": "Test",
+          "eligible": true
+        },
+        {
+          "name": "TestVersions",
+          "file": "pkgbits_test.go",
+          "kind": "Test",
+          "eligible": true
+        }
+      ],
+      "files": [
+        {
+          "path": "codes.go",
+          "sha256": "5c461c53bbb51051b771cdf19529769d1f2ebfc477a55d79c577cec8d9fb36b8"
+        },
+        {
+          "path": "decoder.go",
+          "sha256": "7b404c9b4c1262bfd357879aa77f5a9f24068c8eb9326e7c2d0e0b9f6d662f0c"
+        },
+        {
+          "path": "doc.go",
+          "sha256": "3ac8d5c8dceed683fe0178cd0b54bdfc61ae56ef80d49523b2c1f0d8b051e70d"
+        },
+        {
+          "path": "encoder.go",
+          "sha256": "bed71a63557444c2b53c8b0d5fb476b2e597bc915fdca2e0b486de475c3de9ac"
+        },
+        {
+          "path": "flags.go",
+          "sha256": "4f999d54f9614c9c2aa162e048fdec78158bbcafebeef188a2fef9a347a8e488"
+        },
+        {
+          "path": "pkgbits_test.go",
+          "sha256": "c0b442e0713eb6b10d16fbc73cb07badaa7e2993e52012cd13ce64787d8dd6bd"
+        },
+        {
+          "path": "reloc.go",
+          "sha256": "b66a4b6084c1d6e115f5938e22d79e191eb6c8310450effd11687c76550e4226"
+        },
+        {
+          "path": "support.go",
+          "sha256": "b21d95c059b9f6c697d2e5a4fe6907650402d26bd6d0207f2297906cd7753543"
+        },
+        {
+          "path": "sync.go",
+          "sha256": "4f6b2ae8d2bef0eced46e8baf60c4b0f096615fbd8e1c10ca351e2c1e181de7d"
+        },
+        {
+          "path": "syncmarker_string.go",
+          "sha256": "058fd8e5788a86c8381abd2c81a7ab81b0d6e3f58b4a93d8897534081f9e9c05"
+        },
+        {
+          "path": "version.go",
+          "sha256": "690c4421a76b95b9377a65f43cdca5bd336fe62a28143478a31cf74f37e7b40c"
         }
       ],
       "seeds": null

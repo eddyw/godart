@@ -4,6 +4,10 @@ The root `LICENSE` covers project-authored code. Upstream terms still apply
 to copied or adapted material. A generated package does not change the
 license of its input code.
 
+The importer input adapters retain Go `gcimporter` and `srcimporter` test setup.
+The import configuration helper retains Go `internal/testenv/testenv.go`.
+Their sources retain the Go BSD notices and use the overlay license.
+
 The signal context adapter preserves the NotifyContext declarations from
 Go 1.27.1 `src/os/signal/signal.go`. Its source retains the Go BSD header.
 

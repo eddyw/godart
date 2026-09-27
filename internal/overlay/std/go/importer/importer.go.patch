@@ -1,0 +1,28 @@
+--- a/importer.go
++++ b/importer.go
+@@ -20,7 +20,6 @@
+ 	"go/token"
+ 	"go/types"
+ 	"io"
+-	"runtime"
+ )
+ 
+ // A Lookup function returns a reader to access package data for
+@@ -87,7 +86,7 @@
+ 	return ForCompiler(token.NewFileSet(), compiler, lookup)
+ }
+ 
+-// Default returns an Importer for the compiler that built the running binary.
++// Default returns an Importer for the selected Go SDK export format.
+ // If available, the result implements [types.ImporterFrom].
+ //
+ // Default may be convenient for use in the simplest of cases, but
+@@ -96,7 +95,7 @@
+ // information derived from the Importer will be incorrect and
+ // misleading. See also the package documentation.
+ func Default() types.Importer {
+-	return For(runtime.Compiler, nil)
++	return For("gc", nil)
+ }
+ 
+ // gc importer

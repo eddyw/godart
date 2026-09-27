@@ -58,7 +58,16 @@ func TestUpstreamTargets(t *testing.T) {
 			t.Parallel()
 			dir := filepath.Join(runtime.GOROOT(), "src", filepath.FromSlash(pkg))
 			out := t.TempDir()
-			stats, err := driver.BuildWithStats(driver.Options{Dir: dir, Patterns: []string{"."}, Out: out, Runtime: runtimeDir(t), Tests: true, TrimPath: true, Trace: traceBuild(t)})
+			options := driver.Options{Dir: dir, Patterns: []string{"."}, Out: out, Runtime: runtimeDir(t), Tests: true, TrimPath: true, Trace: traceBuild(t)}
+			importer := prepareImporterInputs(t, pkg)
+			if importer != nil {
+				options.TestSources = importer.TestSources
+			}
+			var env []string
+			if importer != nil || pkg == "go/importer" || pkg == "go/internal/gccgoimporter" || pkg == "internal/types/errors" {
+				env = append(os.Environ(), "GOROOT="+build.Default.GOROOT)
+			}
+			stats, err := driver.BuildWithStats(options)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -92,8 +101,8 @@ func TestUpstreamTargets(t *testing.T) {
 					if !testing.Short() {
 						nodeArgs = c.FullNodeArgs
 					}
-					result := runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, args, nodeArgs...)
-					compareUpstreamInventory(t, pkg, pkg, filter, target, dir, result.Text, result.Exit, inventory, nil, nil, c.Exclude[target])
+					result := runUpstreamTargetEnv(t, target, out, stats.Binaries[0].Entry, dir, args, env, nodeArgs...)
+					compareUpstreamSDKInventory(t, pkg, pkg, filter, target, dir, result.Text, result.Exit, inventory, nil, nil, c.Exclude[target], importer)
 
 				})
 			}
@@ -103,6 +112,11 @@ func TestUpstreamTargets(t *testing.T) {
 
 func runUpstreamTarget(t *testing.T, target, out, entry, dir string, args []string, nodeArgs ...string) programResult {
 	t.Helper()
+	return runUpstreamTargetEnv(t, target, out, entry, dir, args, nil, nodeArgs...)
+}
+
+func runUpstreamTargetEnv(t *testing.T, target, out, entry, dir string, args, env []string, nodeArgs ...string) programResult {
+	t.Helper()
 	encoded, _ := json.Marshal(args)
 	writeFile(t, filepath.Join(out, "runner.dart"), "import '"+filepath.ToSlash(entry)+"' as tests;\nvoid main() { tests.main("+strings.ReplaceAll(string(encoded), "$", `\$`)+"); }\n")
 
@@ -111,11 +125,11 @@ func runUpstreamTarget(t *testing.T, target, out, entry, dir string, args []stri
 	case "aot":
 		exe := filepath.Join(out, "tests.exe")
 		run(t, out, "dart", "compile", "exe", "runner.dart", "-o", exe)
-		result = programOutcomeWithLimit(t, dir, upstreamLimit(), exe)
+		result = programOutcomeWithLimitEnv(t, dir, env, upstreamLimit(), exe)
 	case "js":
 		run(t, out, "dart", "compile", "js", "runner.dart", "-o", "main.js")
 		writeFile(t, filepath.Join(out, "run.js"), "globalThis.self = globalThis;\nrequire('./main.js');\n")
-		result = programOutcomeWithLimit(t, dir, upstreamLimit(), "node", append(slices.Clone(nodeArgs), filepath.Join(out, "run.js"))...)
+		result = programOutcomeWithLimitEnv(t, dir, env, upstreamLimit(), "node", append(slices.Clone(nodeArgs), filepath.Join(out, "run.js"))...)
 	case "wasm":
 		compiled := programOutcomeWithLimit(t, out, 16*time.Minute, "dart", "compile", "wasm", "runner.dart", "-o", "main.wasm")
 		if compiled.Exit != 0 {
@@ -127,7 +141,7 @@ const app = await compile(await readFile(new URL('./main.wasm', import.meta.url)
 const instance = await app.instantiate({});
 instance.invokeMain();
 `)
-		result = programOutcomeWithLimit(t, dir, upstreamLimit(), "node", append(slices.Clone(nodeArgs), filepath.Join(out, "run.mjs"))...)
+		result = programOutcomeWithLimitEnv(t, dir, env, upstreamLimit(), "node", append(slices.Clone(nodeArgs), filepath.Join(out, "run.mjs"))...)
 	}
 	return result
 }

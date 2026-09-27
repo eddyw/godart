@@ -707,5 +707,29 @@
   {
     "package": "internal/singleflight",
     "run": ""
+  },
+  {
+    "package": "go/importer",
+    "run": ""
+  },
+  {
+    "package": "go/internal/gcimporter",
+    "run": ""
+  },
+  {
+    "package": "go/internal/gccgoimporter",
+    "run": ""
+  },
+  {
+    "package": "go/internal/srcimporter",
+    "run": ""
+  },
+  {
+    "package": "internal/pkgbits",
+    "run": ""
+  },
+  {
+    "package": "internal/types/errors",
+    "run": ""
   }
 ]

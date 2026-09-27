@@ -350,10 +350,14 @@ func TestTestsOfGoroot(t *testing.T) {
 				inputs = prepareX509SuiteInputs(t, dir)
 				options.TestSources = inputs.TestSources
 			}
+			importer := prepareImporterInputs(t, c.Package)
+			if importer != nil {
+				options.TestSources = importer.TestSources
+			}
 			stats, err := driver.BuildWithStats(options)
 			if err != nil {
 				t.Logf("upstream test build failed: %v", err)
-				compareUpstreamInputs(t, c.name, c.Package, c.Run, "vm", dir, "the test build failed: "+err.Error(), 1, inputs, nil)
+				compareUpstreamSDKInputs(t, c.name, c.Package, c.Run, "vm", dir, "the test build failed: "+err.Error(), 1, inputs, nil, importer)
 				return
 			}
 			if len(stats.Binaries) != 1 {
@@ -368,14 +372,14 @@ func TestTestsOfGoroot(t *testing.T) {
 				images = append(images, prepareUpstreamNativeImage(t, dir, outDir, stats.Binaries[0].Entry))
 			}
 			var env []string
-			if c.Package == "go/build" || c.Package == "debug/buildinfo" || c.Package == "crypto/x509" || c.Package == "internal/testenv" || c.Package == "internal/godebug" || c.Package == "internal/godebugs" {
+			if c.Package == "go/build" || c.Package == "debug/buildinfo" || c.Package == "crypto/x509" || c.Package == "internal/testenv" || c.Package == "internal/godebug" || c.Package == "internal/godebugs" || importer != nil || c.Package == "go/importer" || c.Package == "go/internal/gccgoimporter" || c.Package == "internal/types/errors" {
 				env = append(os.Environ(), "GOROOT="+build.Default.GOROOT)
 			}
 			args := []string{filepath.Join(outDir, stats.Binaries[0].Entry), "-test.v", fmt.Sprintf("-test.short=%t", testing.Short()), "-test.run=" + c.Run, "-test.skip=" + upstreamSkip(t, c.Package)}
 			args = append(args, upstreamExtraArgs(c.Package)...)
 			text, execErr, finished := output(dir, env, upstreamLimit(), "dart", args...)
 			if !finished {
-				compareUpstreamInputs(t, c.name, c.Package, c.Run, "vm", dir, string(text), 124, inputs, nil, images...)
+				compareUpstreamSDKInputs(t, c.name, c.Package, c.Run, "vm", dir, string(text), 124, inputs, nil, importer, images...)
 				return
 			}
 			code := 0
@@ -388,7 +392,7 @@ func TestTestsOfGoroot(t *testing.T) {
 			}
 			got := string(text)
 			t.Logf("upstream results:\n%s", got)
-			compareUpstreamInputs(t, c.name, c.Package, c.Run, "vm", dir, got, code, inputs, nil, images...)
+			compareUpstreamSDKInputs(t, c.name, c.Package, c.Run, "vm", dir, got, code, inputs, nil, importer, images...)
 
 		})
 	}

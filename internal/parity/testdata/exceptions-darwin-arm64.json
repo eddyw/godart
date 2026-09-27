@@ -13512,5 +13512,27 @@
       "gart": "skip",
       "reason": "The original assertion skips Darwin because its resolver does not select hostLookupFiles."
     }
+  ],
+  "go/importer": [
+    {
+      "test": "TestForCompiler/LookupCustom",
+      "native": "skip",
+      "gart": "skip",
+      "reason": "The original Go suite excludes custom lookup for unified IR."
+    }
+  ],
+  "go/internal/gccgoimporter": [
+    {
+      "test": "TestInstallationImporter",
+      "native": "skip",
+      "gart": "skip",
+      "reason": "The original Go suite requires an installed gccgo compiler."
+    },
+    {
+      "test": "TestObjImporter",
+      "native": "skip",
+      "gart": "skip",
+      "reason": "The original Go suite requires an installed gccgo compiler."
+    }
   ]
 }

@@ -29,9 +29,9 @@
       "sources": [
         "go/importer/importer.go"
       ],
-      "reason": "Explicit gc export-data lookup can be portable. Default compiler identity, source discovery, and gccgo process lookup need separate adapters.",
-      "next_action": "Audit gcimporter, gccgoimporter, and srcimporter dependencies. Preserve caller-supplied lookup behavior.",
-      "targets": "Byte-based import can work on all targets. SDK files and compiler subprocesses require VM/AOT."
+      "reason": "The package uses the Go gc, gccgo, and source importer implementations. Default selects the gc export format of the selected SDK. Source imports use the caller build context.",
+      "next_action": "Preserve byte-based custom lookup and selected SDK source inputs. Review full importer suites and future SDK export formats.",
+      "targets": "Custom gc export-data lookup uses caller-supplied bytes on all targets. SDK files and compiler subprocesses require VM/AOT. Source analysis can use SDK cgo tools. Gart cgo execution remains unsupported."
     },
     {
       "package": "net/http/fcgi",

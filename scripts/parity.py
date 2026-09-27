@@ -159,6 +159,68 @@ def resolver_input_problem(report, selection):
     return None
 
 
+def importer_input_problem(report, manifests):
+    pkg = report["package"]
+    fixture = report.get("importer_inputs")
+    packages = {"go/internal/gcimporter", "go/internal/srcimporter"}
+    if fixture is None:
+        return "missing importer SDK input evidence" if pkg in packages else None
+    if pkg not in packages:
+        return "unexpected importer SDK inputs"
+    template = r'{{with context}}{{printf "{\"compiler\":%q,\"goos\":%q,\"goarch\":%q,\"goroot\":%q,\"cgo_enabled\":%t" .Compiler .GOOS .GOARCH .GOROOT .CgoEnabled}},"build_tags":[{{range $i, $tag := .BuildTags}}{{if $i}},{{end}}{{printf "%q" $tag}}{{end}}],"tool_tags":[{{range $i, $tag := .ToolTags}}{{if $i}},{{end}}{{printf "%q" $tag}}{{end}}],"release_tags":[{{range $i, $tag := .ReleaseTags}}{{if $i}},{{end}}{{printf "%q" $tag}}{{end}}]}{{end}}'
+    if fixture["command"] != ["go", "list", "-f=" + template, "runtime"]:
+        return "importer context did not come from the SDK"
+    try:
+        context = json.loads(fixture["output"])
+    except ValueError:
+        return "invalid importer SDK context"
+    expected = dict(compiler="gc", goos=report["goos"], goarch=report["goarch"],
+                    goroot=report.get("environment", {}).get("GOROOT"), cgo_enabled=report["cgo"],
+                    build_tags=report.get("build_tags") or [], tool_tags=report["tool_tags"],
+                    release_tags=["go1." + str(n) for n in range(1, int(report["go_version"].split(".")[1]) + 1)])
+    if not expected["goroot"] or context != expected or fixture["context"] != expected:
+        return "importer context differs from the selected SDK"
+    source = fixture["source"]
+    digest_text = lambda text: hashlib.sha256(text.encode()).hexdigest()
+    if digest_text(source["source"]) != source["sha256"] or digest_text(source["adapted"]) != source["adapted_sha256"]:
+        return "importer source identity differs"
+    name = pkg.rsplit("/", 1)[1] + "_test.go"
+    if source["path"] != "src/" + pkg + "/" + name:
+        return "importer source path differs"
+    inventory = read(manifests / report["go_version"] / (report["goos"] + "-" + report["goarch"] + ".json"))
+    original = [f["sha256"] for p in inventory["packages"] if p["path"] == pkg
+                for f in p["files"] if f["path"] == name]
+    if original != [source["sha256"]]:
+        return "importer source differs from the SDK inventory"
+    text = source["source"]
+    if pkg == "go/internal/gcimporter":
+        guard = '\tif runtime.Compiler != "gc" {\n\t\tt.Skipf("gc-built packages not available (compiler = %s)", runtime.Compiler)\n\t}'
+        if guard not in text:
+            return "importer compiler availability guard changed"
+        text = text.replace(guard, guard.replace("runtime.Compiler", json.dumps(context["compiler"])))
+        if "runtime." in text or text.count('\n\t"runtime"\n') != 1:
+            return "importer adapter changes another runtime input"
+        text = text.replace('\n\t"runtime"\n', "\n", 1)
+    else:
+        declaration = "var importer = New(&build.Default, token.NewFileSet(), make(map[string]*types.Package))"
+        if text.count(declaration) != 1:
+            return "source importer initializer changed"
+        guard = "testenv.MustHaveCGO(t)"
+        if text.count(guard) != 1:
+            return "source importer cgo availability guard changed"
+        setup = ("var _ = func() bool {\n\tbuild.Default.Compiler = " + json.dumps(context["compiler"]) +
+                 "\n\tbuild.Default.GOARCH = " + json.dumps(context["goarch"]) +
+                 "\n\tbuild.Default.CgoEnabled = " + json.dumps(context["cgo_enabled"]) + "\n")
+        for name, key in [("BuildTags", "build_tags"), ("ToolTags", "tool_tags"), ("ReleaseTags", "release_tags")]:
+            setup += "\tbuild.Default." + name + " = []string{" + ", ".join(map(json.dumps, context[key])) + "}\n"
+        setup += "\treturn true\n}()\n\n"
+        text = text.replace(declaration, setup + declaration, 1)
+        text = text.replace(guard, 'if !build.Default.CgoEnabled { t.Skip("selected Go SDK has no cgo") }', 1)
+    if text != source["adapted"]:
+        return "importer adapter changed original assertions"
+    return None
+
+
 def behavior(paths, manifests=MANIFESTS):
     groups = {}
     seen = set()
@@ -191,6 +253,9 @@ def behavior(paths, manifests=MANIFESTS):
             if input_problem:
                 problems.append(input_problem)
             input_problem = resolver_input_problem(report, report.get("selection") or path.name.split(".")[0])
+            if input_problem:
+                problems.append(input_problem)
+            input_problem = importer_input_problem(report, manifests)
             if input_problem:
                 problems.append(input_problem)
             if report["native"]["exit"] != 0 or report["gart"]["exit"] != 0:

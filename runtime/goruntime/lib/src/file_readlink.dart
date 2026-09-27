@@ -5,8 +5,8 @@
 import 'dart:ffi';
 import 'dart:io';
 
-import 'string.dart';
 import 'slice.dart';
+import 'string.dart';
 
 final _libc = DynamicLibrary.process();
 final _malloc = _libc

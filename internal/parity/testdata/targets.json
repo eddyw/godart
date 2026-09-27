@@ -259,5 +259,43 @@
       "js",
       "wasm"
     ]
+  },
+  {
+    "package": "go/importer",
+    "targets": [
+      "aot"
+    ]
+  },
+  {
+    "package": "go/internal/gcimporter",
+    "targets": [
+      "aot"
+    ]
+  },
+  {
+    "package": "go/internal/gccgoimporter",
+    "targets": [
+      "aot"
+    ]
+  },
+  {
+    "package": "go/internal/srcimporter",
+    "targets": [
+      "aot"
+    ]
+  },
+  {
+    "package": "internal/pkgbits",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ]
+  },
+  {
+    "package": "internal/types/errors",
+    "targets": [
+      "aot"
+    ]
   }
 ]

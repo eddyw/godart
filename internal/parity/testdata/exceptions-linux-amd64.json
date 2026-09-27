@@ -13529,5 +13529,27 @@
       "reason": "The original test requires the Go race detector. Both ordinary runs retain its upstream skip.",
       "test": "TestPanicNilRace"
     }
+  ],
+  "go/importer": [
+    {
+      "test": "TestForCompiler/LookupCustom",
+      "native": "skip",
+      "gart": "skip",
+      "reason": "The original Go suite excludes custom lookup for unified IR."
+    }
+  ],
+  "go/internal/gccgoimporter": [
+    {
+      "test": "TestInstallationImporter",
+      "native": "skip",
+      "gart": "skip",
+      "reason": "The original Go suite requires an installed gccgo compiler."
+    },
+    {
+      "test": "TestObjImporter",
+      "native": "skip",
+      "gart": "skip",
+      "reason": "The original Go suite requires an installed gccgo compiler."
+    }
   ]
 }

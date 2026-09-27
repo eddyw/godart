@@ -108,8 +108,13 @@ func programOutcome(t *testing.T, dir, name string, args ...string) programResul
 
 func programOutcomeWithLimit(t *testing.T, dir string, limit time.Duration, name string, args ...string) programResult {
 	t.Helper()
+	return programOutcomeWithLimitEnv(t, dir, nil, limit, name, args...)
+}
+
+func programOutcomeWithLimitEnv(t *testing.T, dir string, env []string, limit time.Duration, name string, args ...string) programResult {
+	t.Helper()
 	start := time.Now()
-	text, err, ok := output(dir, nil, limit, name, args...)
+	text, err, ok := output(dir, env, limit, name, args...)
 	t.Logf("command=%s %v duration=%.3fs", name, args, time.Since(start).Seconds())
 	if !ok {
 		t.Fatalf("%s %v exceeded %v:\n%s", name, args, limit, text)
