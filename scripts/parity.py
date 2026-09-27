@@ -339,7 +339,8 @@ def child_buildrun_valid(case, go_version, gcflags):
 def directory_language_valid(case, go_version):
     fixture = case["fixture"]
     contract = case["contract"]
-    reject = contract == "errorcheckdir"
+    combined = contract == "errorcheckandrundir"
+    reject = contract == "errorcheckdir" or combined
     separate = contract in ("compiledir", "errorcheckdir") and fixture.get("recipe") == contract + " -s"
     compiler_flags = {
         ("compiledir", "compiledir -c=2"): ["-c=2"],
@@ -351,7 +352,7 @@ def directory_language_valid(case, go_version):
     adapted = case.get("adapted_sources") or {}
     compiled = case.get("native_compile") or []
     module = case.get("module_source", "")
-    if ((fixture.get("recipe") != contract and not separate and not compiler_flags and not linker_flags) or fixture.get("adapter") != "directory-packages"
+    if ((fixture.get("recipe") != contract and not separate and not compiler_flags and not linker_flags and not (combined and fixture.get("recipe") == "errorcheckandrundir -1")) or fixture.get("adapter") != "directory-packages"
             or not packages or len(compiled) != len(packages) or (not reject and case.get("build_error"))
             or not case.get("importcfg_sha256") or not go_version
             or module != "module test\n\ngo " + go_version.removeprefix("go") + "\n"
@@ -363,6 +364,9 @@ def directory_language_valid(case, go_version):
     consumed = set()
     imports = []
     remap = any(not p.get("path", "").isascii() for p in packages)
+    reject_index = len(packages) - (2 if combined else 1)
+    if combined and (len(packages) < 2 or fixture.get("recipe") != "errorcheckandrundir -1"):
+        return False
     for index, (package, execution) in enumerate(zip(packages, compiled)):
         files = package.get("files") or []
         path = package.get("path", "")
@@ -370,7 +374,7 @@ def directory_language_valid(case, go_version):
                 or (separate and len(files) != 1) or path != "test/" + files[0][:-3]
                 or not execution.get("ran") or execution.get("timed_out")):
             return False
-        if reject and index == len(packages) - 1:
+        if reject and index == reject_index:
             if execution.get("exit", 0) <= 0:
                 return False
         elif execution.get("exit") != 0:
@@ -398,7 +402,28 @@ def directory_language_valid(case, go_version):
     source_files = {p for p in original if p.startswith(prefix) and "/" not in p[len(prefix):] and p.endswith(".go")}
     if consumed != source_files or set(adapted) != expected or any(not isinstance(s, str) or not s for s in adapted.values()):
         return False
-    if reject:
+    if combined:
+        repeated = case.get("native_recompile") or []
+        rejection = case.get("gart_reject") or {}
+        empty = hashlib.sha256(b"").hexdigest()
+        if (len(repeated) != len(compiled) or not case.get("build_error")
+                or not re.fullmatch(r"[0-9a-f]{64}", case.get("wrapper_sha256", ""))
+                or not rejection.get("ran") or rejection.get("exit", 0) <= 0 or rejection.get("timed_out")):
+            return False
+        for index, (first, repeat) in enumerate(zip(compiled, repeated)):
+            if (not repeat.get("ran") or repeat.get("timed_out")
+                    or repeat.get("command") != first.get("command")
+                    or repeat.get("exit") != first.get("exit")
+                    or repeat.get("output_sha256") != first.get("output_sha256")
+                    or index != reject_index and first.get("output_sha256") != empty):
+                return False
+        for name, execution in [("native", compiled[reject_index]), ("gart", rejection)]:
+            diagnostics = case.get(name + "_diagnostics", "")
+            matcher = case.get(name + "_match") or {}
+            if (not diagnostics or hashlib.sha256(diagnostics.encode()).hexdigest() != execution.get("output_sha256")
+                    or not matcher.get("ran") or matcher.get("exit") != 0 or matcher.get("timed_out")):
+                return False
+    elif reject:
         return case.get("native") == compiled[-1]
     if contract == "compiledir":
         wrapper = "\n".join(imports) + "\nvoid main() {}\n"
@@ -576,7 +601,7 @@ def language_behavior(paths):
                     expected = case.get("expected_sha256")
                     executed = all(case[k]["ran"] and case[k]["exit"] == 0 and not case[k]["timed_out"]
                                    for k in ("native", "gart"))
-                    if case.get("contract") in {"compiledir", "rundir"}:
+                    if case.get("contract") in {"compiledir", "rundir", "errorcheckandrundir"}:
                         valid = executed and directory_language_valid(case, report.get("go_version"))
                     elif case.get("contract") == "buildrun":
                         valid = executed and child_buildrun_valid(case, report.get("go_version", ""), (report.get("environment") or {}).get("GO_GCFLAGS", ""))
@@ -724,7 +749,7 @@ def language_behavior(paths):
                                      and case["native"]["environment"] == case["gart"].get("environment")
                                      and not case.get("build_error"))
                     valid = valid and (status == "passed" or case.get("contract") in {"reject", "errorcheckoutput", "errorcheckdir"})
-                    valid = valid and config["contract"] in {"run", "runoutput", "runindir", "compiledir", "rundir", "compile", "build", "buildrun", "reject", "errorcheckoutput", "diagnostics", "errorcheckdir"} and case.get("contract", "run") == config["contract"]
+                    valid = valid and config["contract"] in {"run", "runoutput", "runindir", "compiledir", "rundir", "errorcheckandrundir", "compile", "build", "buildrun", "reject", "errorcheckoutput", "diagnostics", "errorcheckdir"} and case.get("contract", "run") == config["contract"]
 
                     if case["fixture"].get("host_tools"):
                         native_env = case["native"].get("environment") or {}

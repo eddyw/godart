@@ -309,6 +309,63 @@ class ParityTest(unittest.TestCase):
                 mutate(changed)
                 assess(changed, "failed")
 
+    def test_combined_directory_requires_rejection_recompile_and_runtime(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            module = "module test\n\ngo 1.27.1\n"
+            diagnostic = "b.go:3: undefined: Missing"
+            digest = lambda text: parity.hashlib.sha256(text.encode()).hexdigest()
+            execution = dict(ran=True, exit=0, timed_out=False, output_sha256=digest(""))
+            compiled = [dict(execution, command=["go", "tool", "compile", "-e", "-d=panic", "sdk/p.dir/" + f + ".go"])
+                        for f in ("a", "b", "main")]
+            compiled[1].update(exit=2, output_sha256=digest(diagnostic))
+            case = dict(fixture=dict(name="p", recipe="errorcheckandrundir -1", adapter="directory-packages",
+                                     files=[dict(path="p.dir/" + f + ".go") for f in ("a", "b", "main")]),
+                        contract="errorcheckandrundir", status="passed", build_error=diagnostic,
+                        native=dict(execution), gart=dict(execution), expected_sha256=digest(""),
+                        gart_reject=dict(compiled[1]), native_match=dict(execution), gart_match=dict(execution),
+                        native_diagnostics=diagnostic, gart_diagnostics=diagnostic, wrapper_sha256=digest("original matcher"),
+                        module_source=module, module_sha256=digest(module), importcfg_sha256="config",
+                        directory_packages=[dict(name=f, path="test/" + f, files=[f + ".go"]) for f in ("a", "b", "main")],
+                        adapted_sources={f + "/" + f + ".go": "package " + f + "\n" for f in ("a", "b", "main")},
+                        native_compile=compiled, native_recompile=copy.deepcopy(compiled),
+                        native_link=dict(execution, command=["go", "tool", "link", "main.o"]))
+            path = root / "language.json"
+
+            def assess(value, status):
+                parity.save(path, dict(kind="language", go_version="go1.27.1", contract="errorcheckandrundir",
+                                       complete=True, outcomes=[value], shard=0, shards=1))
+                self.assertEqual(parity.language_behavior([root])[0]["counts"], {status: 1})
+
+            assess(case, "passed")
+            for mutate in [
+                lambda c: c["fixture"].update(recipe="errorcheckandrundir -1 -m"),
+                lambda c: c["fixture"].update(recipe="errorcheckandrundir"),
+                lambda c: c["native_compile"][0].update(exit=2),
+                lambda c: c["native_compile"][1].update(exit=0),
+                lambda c: c["native_compile"][2].update(exit=2),
+                lambda c: c["native_compile"][0]["command"].remove("-d=panic"),
+                lambda c: c.update(native_recompile=[]),
+                lambda c: c["native_recompile"][0].update(command=["go", "build"]),
+                lambda c: c["native_recompile"][1].update(exit=0),
+                lambda c: c["native_recompile"][2].update(timed_out=True),
+                lambda c: c.update(gart_reject=None),
+                lambda c: c["gart_reject"].update(exit=0),
+                lambda c: c["gart_match"].update(exit=1),
+                lambda c: c.update(native_match=None),
+                lambda c: c.update(wrapper_sha256=""),
+                lambda c: c.update(build_error=""),
+                lambda c: c.update(gart_diagnostics="changed"),
+                lambda c: c["native"].update(ran=False),
+                lambda c: c["gart"].update(exit=1),
+                lambda c: c["gart"].update(output_sha256="changed"),
+                lambda c: c["native_link"].update(exit=1),
+                lambda c: c.update(adapted_sources={}),
+            ]:
+                changed = copy.deepcopy(case)
+                mutate(changed)
+                assess(changed, "failed")
+
     def test_package_directories_require_compile_and_source_evidence(self):
         import hashlib
         with tempfile.TemporaryDirectory() as temporary:

@@ -92,10 +92,12 @@ func TestDirectoryPackagesOfGoTest(t *testing.T) {
 	}
 	selected := testShard(t, names)
 	standard := run(t, "", "go", "list", "-export", "-f", "{{if .Export}}packagefile {{.ImportPath}}={{.Export}}{{end}}", "std")
-	for _, action := range []string{"compiledir", "rundir", "errorcheckdir"} {
+	for _, action := range []string{"compiledir", "rundir", "errorcheckdir", "errorcheckandrundir"} {
 		t.Run(action, func(t *testing.T) {
+			diagnostics := action == "errorcheckdir" || action == "errorcheckandrundir"
+			runPackages := action == "rundir" || action == "errorcheckandrundir"
 			var matcher, matcherSource string
-			if action == "errorcheckdir" {
+			if diagnostics {
 				matcher, matcherSource = directoryDiagnosticMatcher(t)
 			}
 			var outcomes []*languageOutcome
@@ -161,6 +163,10 @@ func TestDirectoryPackagesOfGoTest(t *testing.T) {
 					cfg := filepath.Join(nativeDir, "importcfg")
 					writeFile(t, cfg, config)
 					result.ImportConfigSHA256 = languageDigest([]byte(config))
+					rejectIndex := len(result.DirectoryPackages) - 1
+					if action == "errorcheckandrundir" {
+						rejectIndex--
+					}
 					for index, pkg := range result.DirectoryPackages {
 						args := []string{"tool", "compile", "-e", "-D", "test", "-importcfg=" + cfg}
 						if pkg.Name == "main" {
@@ -169,7 +175,7 @@ func TestDirectoryPackagesOfGoTest(t *testing.T) {
 							args = append(args, "-o", pkg.Path+".a", "-p", pkg.Path)
 						}
 						args = append(args, strings.Fields(inv.GCFlags)...)
-						if action == "errorcheckdir" {
+						if diagnostics {
 							args = append(args, "-d=panic")
 						}
 						if c.Recipe == "compiledir -c=2" || c.Recipe == "compiledir -c=4" || c.Recipe == "rundir -l=4" {
@@ -180,17 +186,27 @@ func TestDirectoryPackagesOfGoTest(t *testing.T) {
 						}
 						result.NativeCompile = append(result.NativeCompile, languageExecution{})
 						execution := &result.NativeCompile[len(result.NativeCompile)-1]
-						if action == "errorcheckdir" {
+						if diagnostics {
 							result.NativeDiagnostics += recordLanguage(t, execution, nativeDir, runLimit, "go", args...)
-							last := index == len(result.DirectoryPackages)-1
+							last := index == rejectIndex
 							if execution.TimedOut || last && execution.Exit <= 0 || !last && execution.Exit != 0 {
-								t.Fatalf("package %s: native exit %d, final rejection=%t, timeout=%t", pkg.Path, execution.Exit, last, execution.TimedOut)
+								t.Fatalf("package %s: native exit %d, expected rejection=%t, timeout=%t", pkg.Path, execution.Exit, last, execution.TimedOut)
 							}
 						} else {
 							runLanguage(t, execution, nativeDir, runLimit, "go", args...)
 						}
 					}
-					if action == "rundir" {
+					if action == "errorcheckandrundir" {
+						for index, first := range result.NativeCompile {
+							result.NativeRecompile = append(result.NativeRecompile, languageExecution{})
+							execution := &result.NativeRecompile[len(result.NativeRecompile)-1]
+							recordLanguage(t, execution, nativeDir, runLimit, first.Command[0], first.Command[1:]...)
+							if execution.TimedOut || index == rejectIndex && execution.Exit <= 0 || index != rejectIndex && execution.Exit != 0 {
+								t.Fatalf("native repeat package %d: exit %d, timeout=%t", index, execution.Exit, execution.TimedOut)
+							}
+						}
+					}
+					if runPackages {
 						last := result.DirectoryPackages[len(result.DirectoryPackages)-1]
 						args := []string{"tool", "link", "-s", "-w", "-buildid=test", "-o", "native", "-importcfg=" + cfg}
 						if c.Recipe == "rundir -ldflags -strictdups=2 -w=0" {
@@ -275,7 +291,7 @@ func TestDirectoryPackagesOfGoTest(t *testing.T) {
 					}
 					start := time.Now()
 					err = driver.Build(driver.Options{Dir: dir, Patterns: patterns, Out: out, Runtime: runtimeDir(t), Format: false})
-					if action == "errorcheckdir" {
+					if diagnostics {
 						result.Gart = languageExecution{Ran: true, Seconds: time.Since(start).Seconds()}
 						if err != nil {
 							result.Gart.Exit = 1
@@ -293,12 +309,19 @@ func TestDirectoryPackagesOfGoTest(t *testing.T) {
 							}
 							result.GartDiagnostics = regexp.MustCompile(`(?m)^(.*?\.go:[0-9]+):[0-9]+:`).ReplaceAllString(text, "$1:")
 						} else {
-							t.Error("Gart accepted the invalid final package")
+							t.Error("Gart accepted the invalid package")
 						}
 						result.Gart.OutputSHA256 = languageDigest([]byte(result.GartDiagnostics))
 						result.WrapperSHA256 = languageDigest([]byte(matcherSource))
 						matchDirectoryDiagnostics(t, result, matcher, sourceDir, dir)
-						return
+						if action == "errorcheckdir" {
+							return
+						}
+						rejected := result.Gart
+						result.GartReject = &rejected
+						result.Gart = languageExecution{}
+						patterns = append(patterns[:rejectIndex], patterns[rejectIndex+1:]...)
+						err = driver.Build(driver.Options{Dir: dir, Patterns: patterns, Out: out, Runtime: runtimeDir(t), Format: false})
 					}
 					if err != nil {
 						result.BuildError = err.Error()
