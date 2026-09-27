@@ -10,7 +10,7 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
-func TestNativeStatTypes(t *testing.T) {
+func TestNativeSyscallDeclarations(t *testing.T) {
 	dir, err := filepath.Abs("../../testdata/programs/statsys")
 	if err != nil {
 		t.Fatal(err)
@@ -34,6 +34,16 @@ func TestNativeStatTypes(t *testing.T) {
 			}
 			got := result.Packages[0].Imports["syscall"].Types.Scope()
 			want := native[0].Types.Scope()
+			for _, name := range want.Names() {
+				if !strings.HasPrefix(name, "SYS_") {
+					continue
+				}
+				a, ok := got.Lookup(name).(*types.Const)
+				b := want.Lookup(name).(*types.Const)
+				if !ok || a.Type().String() != b.Type().String() || a.Val().ExactString() != b.Val().ExactString() {
+					t.Errorf("syscall number %s differs: Gart %v, Go %v", name, a, b)
+				}
+			}
 			for _, name := range []string{"Stat_t", "Timespec", "Stat", "Lstat", "Fstat"} {
 				a, b := got.Lookup(name), want.Lookup(name)
 				if a == nil || b == nil {
