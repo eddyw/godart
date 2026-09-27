@@ -3,10 +3,11 @@
 // license that can be found in the LICENSE file.
 
 import 'box.dart';
-import 'goint.dart';
 import 'godebug.dart';
+import 'goint.dart';
 import 'iface.dart';
 import 'platform_native.dart' if (dart.library.js_interop) 'platform_web.dart';
+import 'process_exit.dart';
 import 'sched.dart' show $activeCallerFrames, $current;
 import 'source.dart';
 import 'string.dart';
@@ -408,6 +409,7 @@ ChainState $chainOpen(Object? e) {
 /// chain. A chain that already stands open thus keeps the state of the chain
 /// that holds it.
 void $chainReset(Object? e) {
+  if (e is ProcessExit) throw e;
   $recovered = false;
   $chainPanic = e is GoPanic ? e : null;
 }

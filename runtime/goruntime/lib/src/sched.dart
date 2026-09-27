@@ -4,6 +4,7 @@ import 'dart:collection';
 import 'goint.dart';
 import 'panic.dart';
 import 'platform_native.dart' if (dart.library.js_interop) 'platform_web.dart';
+import 'process_exit.dart';
 import 'string.dart';
 
 /// The saved state of 1 call that gave up control.
@@ -262,7 +263,9 @@ int _pending = 0;
 int _live = 0;
 
 /// Puts a goroutine on the run queue.
-void $ready(Goroutine g) => _runq.add(g);
+void $ready(Goroutine g) {
+  if (!$platformExiting) _runq.add(g);
+}
 
 /// True when the run queue holds no goroutine.
 bool get $runqEmpty => _runq.isEmpty;
@@ -365,6 +368,18 @@ bool $hosted = false;
 /// The function returns when no goroutine can run. The Dart event loop then
 /// takes control, and a timer or a future starts the scheduler again.
 void $schedule() {
+  if ($platformExiting) return;
+  try {
+    _schedule();
+  } on ProcessExit {
+    _running = false;
+    $current = null;
+    $blocked = null;
+    _runq.clear();
+  }
+}
+
+void _schedule() {
   if (_running) return;
   _running = true;
   while (!_mainDone) {

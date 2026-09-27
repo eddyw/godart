@@ -5,6 +5,8 @@ import 'dart:convert';
 import 'dart:js_interop';
 import 'dart:typed_data';
 
+import 'process_exit.dart';
+
 @JS('globalThis.process')
 external _Process? get _process;
 
@@ -15,7 +17,7 @@ extension type _Process._(JSObject _) implements JSObject {
 }
 
 extension type _Output._(JSObject _) implements JSObject {
-  external bool write(JSAny value);
+  external bool write(JSAny value, [JSFunction? callback]);
 }
 
 String $platformGODEBUG() => '';
@@ -64,13 +66,30 @@ String _flush(String text) {
   return text;
 }
 
+bool _exiting = false;
+bool get $platformExiting => _exiting;
+
 /// Ends a Node process with the requested status. A browser has no process
 /// control, thus it reports an exception after the output buffers flush.
 Never $platformExit(int code) {
+  final process = _process;
+  if (process != null) {
+    if (!_exiting) {
+      _exiting = true;
+      var pending = 2;
+      void complete(JSAny? error) {
+        if (--pending == 0) process.exit(code);
+      }
+
+      // Empty writes complete after each stream drains its prior output.
+      process.stdout.write(''.toJS, complete.toJS);
+      process.stderr.write(''.toJS, complete.toJS);
+    }
+    throw const ProcessExit();
+  }
   if (_outBuffer.isNotEmpty) print(_outBuffer);
   if (_errBuffer.isNotEmpty) print(_errBuffer);
   _outBuffer = '';
   _errBuffer = '';
-  _process?.exit(code);
   throw StateError('exit $code');
 }

@@ -17,3 +17,5 @@ void $platformStderrText(String text) => stderr.write(text);
 
 /// Ends the program with a status code.
 Never $platformExit(int code) => exit(code);
+
+bool get $platformExiting => false;
