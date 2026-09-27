@@ -322,7 +322,7 @@ func (e *emitter) assign(lhs, rhs ir.Expr) {
 		return
 	}
 	if idx, ok := lhs.(*ir.Index); ok && isMapType(idx.X.GoType()) {
-		e.line("%s.set(%s, %s);", e.container(idx.X), e.expr(idx.Index), value)
+		e.line("%s.set(%s, %s);", e.container(idx.X), e.copyOf(e.expr(idx.Index), idx.Index.GoType()), value)
 		return
 	}
 	// The Dart form of a pointer to a type parameter holds no field, thus the

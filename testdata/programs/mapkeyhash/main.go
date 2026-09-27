@@ -11,7 +11,14 @@ func panicText(call func()) (out string) {
 type record struct{ Value any }
 type target struct{ Values []int }
 
+type keyRecord struct{ Values [2]int }
+
 func main() {
+	copyKeys([2]int{1, 2}, [2]int{3, 4})
+	copyKeys(keyRecord{[2]int{1, 2}}, keyRecord{[2]int{3, 4}})
+	copyKeys([1][1]int{{1}}, [1][1]int{{2}})
+	copyKeys(any([2]int{1, 2}), any([2]int{3, 4}))
+	copyKeys(&keyRecord{[2]int{1, 2}}, &keyRecord{[2]int{3, 4}})
 	generic([1]any{[]int{1}})
 	generic(&target{[]int{1}})
 
@@ -54,4 +61,28 @@ func generic[K comparable](key K) {
 	for _, m := range []map[K]int{nilMap, make(map[K]int)} {
 		fmt.Println("generic", panicText(func() { _ = m[key] }), panicText(func() { _, _ = m[key] }), panicText(func() { delete(m, key) }), panicText(func() { m[key] = 1 }))
 	}
+}
+
+func copyKeys[K comparable](first, second K) {
+	original := first
+	m := make(map[K]int)
+	m[first] = 1
+	first = second
+	fmt.Println("inserted key", len(m), m[original], m[first])
+	first = original
+	first, m[first] = second, 2
+	fmt.Println("parallel key", len(m), m[original], m[first])
+	first = original
+	m[first] += 3
+	first = second
+	fmt.Println("updated key", len(m), m[original], m[first])
+	first = original
+	m[original] = func() int { first = second; return 7 }()
+	fmt.Println("key after call", len(m), m[original], m[second])
+	first = original
+	ch := make(chan int)
+	go func() { ch <- 8 }()
+	m[first] = <-ch
+	first = second
+	fmt.Println("key after receive", len(m), m[original], m[first])
 }

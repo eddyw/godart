@@ -110,7 +110,11 @@ func (b *builder) lvalueStaged(e ast.Expr) (pre []ir.Stmt, set func(ir.Expr) ir.
 				hoistBase = b.forceHoist
 			}
 			pre1, base := hoistBase(x.X, e.X.Pos(), "b")
-			pre2, key := b.forceHoist(x.Index, e.Index.Pos(), "k")
+			index := x.Index
+			if _, ok := typeset.Core(x.X.GoType()).(*types.Map); ok {
+				index = b.copyPoint(index)
+			}
+			pre2, key := b.forceHoist(index, e.Index.Pos(), "k")
 			read := &ir.Index{Pos: x.Pos, X: base, Index: key, Type: x.Type}
 			return append(pre1, pre2...), func(v ir.Expr) ir.Stmt {
 				return &ir.Assign{Lhs: read, Rhs: v}
