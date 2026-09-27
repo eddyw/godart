@@ -20,7 +20,7 @@ The source retains the original Go BSD header.
  
  // RoundTrip should be an internal detail,
  // but widely used packages access it using linkname.
-@@ -30,5 +40,122 @@
+@@ -30,5 +40,145 @@
  	if t == nil {
  		panic("transport is nil")
  	}
@@ -60,9 +60,16 @@ The source retains the original Go BSD header.
 +			fields = append(fields, name, value)
 +		}
 +	}
-+	handle, code, head, moved, cause := dart.FetchStart(
-+		req.Method, req.URL.String(), fields, body, fetchDeadline(req))
++	handle := dart.FetchOpen()
++	stop := context.AfterFunc(req.Context(), func() { dart.FetchCancel(handle) })
++	_, code, head, moved, cause := dart.FetchStart(
++		handle, req.Method, req.URL.String(), fields, body, fetchDeadline(req))
 +	if cause != "" {
++		stop()
++		dart.FetchClose(handle)
++		if err := context.Cause(req.Context()); err != nil {
++			return nil, err
++		}
 +		return nil, errors.New("net/http: fetch() failed: " + cause)
 +	}
 +	header := Header{}
@@ -74,6 +81,7 @@ The source retains the original Go BSD header.
 +	if text := header.Get("Content-Length"); text != "" {
 +		n, err := strconv.ParseInt(text, 10, 64)
 +		if err != nil || n < 0 {
++			stop()
 +			dart.FetchClose(handle)
 +			return nil, errors.New(
 +				"net/http: invalid Content-Length header: " + strconv.Quote(text))
@@ -99,7 +107,7 @@ The source retains the original Go BSD header.
 +		Header:        header,
 +		ContentLength: length,
 +		Uncompressed:  uncompressed,
-+		Body:          &fetchBody{handle: handle},
++		Body:          &fetchBody{handle: handle, ctx: req.Context(), stop: stop},
 +		Request:       req,
 +	}, nil
 +}
@@ -115,19 +123,33 @@ The source retains the original Go BSD header.
 +
 +// fetchBody reads the body of an answer of the fetch API.
 +type fetchBody struct {
++	ctx context.Context
++	stop func() bool
 +	handle int
 +	closed bool
++	eof bool
 +}
 +
 +func (b *fetchBody) Read(p []byte) (int, error) {
 +	if b.closed {
 +		return 0, errFetchClosed
 +	}
++	if b.eof {
++		return 0, io.EOF
++	}
++	if err := context.Cause(b.ctx); err != nil {
++		return 0, err
++	}
 +	n, cause := dart.FetchRead(b.handle, p)
++	if err := context.Cause(b.ctx); err != nil {
++		return n, err
++	}
 +	if cause != "" {
 +		return n, errors.New(cause)
 +	}
 +	if n == 0 && len(p) > 0 {
++		b.eof = true
++		b.stop()
 +		return 0, io.EOF
 +	}
 +	return n, nil
@@ -138,6 +160,7 @@ The source retains the original Go BSD header.
 +		return nil
 +	}
 +	b.closed = true
++	b.stop()
 +	if cause := dart.FetchClose(b.handle); cause != "" {
 +		return errors.New(cause)
 +	}

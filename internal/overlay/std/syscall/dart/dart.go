@@ -1480,11 +1480,23 @@ func Interfaces() ([]string, []string, string) {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// FetchOpen allocates a request handle before the request can block.
+func FetchOpen() int {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// FetchCancel aborts a request or its response body. FetchClose frees the handle.
+func FetchCancel(handle int) {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // FetchStart sends a request through the fetch API of the host, and it waits
 // for the head of the answer. Each pair of items of header holds the name of a
 // field and its value, and the third result holds the same shape.
 //
-// The results are the handle of the body, the status, the header, the address
+// Call FetchOpen first. Call FetchClose when the request ends.
+//
+// The results are the request handle, the status, the header, the address
 // of the answer, and the cause of a failure. The address is empty unless a
 // redirect moved the answer.
 //
@@ -1494,7 +1506,7 @@ func Interfaces() ([]string, []string, string) {
 // A target that holds no fetch API gives the cause "operation not supported".
 //
 // The call blocks the goroutine, thus the caller becomes an async function.
-func FetchStart(method, url string, header []string, body []byte, deadline int64) (int, int, []string, string, string) {
+func FetchStart(handle int, method, url string, header []string, body []byte, deadline int64) (int, int, []string, string, string) {
 	panic("syscall/dart needs the gart compiler")
 }
 
@@ -1506,7 +1518,7 @@ func FetchRead(handle int, p []byte) (int, string) {
 	panic("syscall/dart needs the gart compiler")
 }
 
-// FetchClose ends the read of the body of an answer and frees its handle.
+// FetchClose frees a request handle and cancels its response reader.
 func FetchClose(handle int) string {
 	panic("syscall/dart needs the gart compiler")
 }

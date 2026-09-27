@@ -91,17 +91,23 @@ final class _Body {
   _Body(this.reader, this.rest, this.deadline, this.stop);
 }
 
-final List<_Body?> _bodies = <_Body?>[];
+final class _Request {
+  final _Abort? stop = _controller();
+  _Body? body;
+}
 
-int _slot(_Body b) {
-  for (int i = 0; i < _bodies.length; i++) {
-    if (_bodies[i] == null) {
-      _bodies[i] = b;
-      return i;
-    }
-  }
-  _bodies.add(b);
-  return _bodies.length - 1;
+final Map<int, _Request> _requests = <int, _Request>{};
+// Cancellation can arrive after close. A new request must not reuse that handle.
+int _nextRequest = 0;
+
+int $fetchOpen() {
+  final int handle = _nextRequest++;
+  _requests[handle] = _Request();
+  return handle;
+}
+
+void $fetchCancel(int handle) {
+  _requests[handle]?.stop?.abort();
 }
 
 final GoString _empty = GoString.empty;
@@ -166,9 +172,10 @@ int _take(_Body b, Slice<GoInt> p) {
 /// form. A plain int reaches the caller of $fetchStart, and that result is
 /// dead. Read the note on $await.
 Future<(GoInt, GoInt, Slice<GoString>, GoString, GoString)> _head(
+  int handle,
+  _Request request,
   _Response r,
   int deadline,
-  _Abort? stop,
 ) async {
   final List<GoString> fields = <GoString>[];
   r.headers.forEach(
@@ -183,11 +190,12 @@ Future<(GoInt, GoInt, Slice<GoString>, GoString, GoString)> _head(
           null,
           (await r.arrayBuffer().toDart).toDart.asUint8List(),
           deadline,
-          stop,
+          request.stop,
         )
-      : _Body(stream.getReader(), Uint8List(0), deadline, stop);
+      : _Body(stream.getReader(), Uint8List(0), deadline, request.stop);
+  request.body = b;
   return (
-    $gi(_slot(b)),
+    $gi(handle),
     $gi(r.status),
     Slice<GoString>.of(fields),
     r.redirected ? GoString.fromString(r.url) : _empty,
@@ -200,6 +208,7 @@ Future<(GoInt, GoInt, Slice<GoString>, GoString, GoString)> _head(
 /// The call gives up control, thus the result of the call itself is dead. The
 /// frame of the wait gives the value to the caller.
 (int, int, Slice<GoString>, GoString, GoString) $fetchStart(
+  int handle,
   GoString method,
   GoString url,
   Slice<GoString> header,
@@ -213,7 +222,8 @@ Future<(GoInt, GoInt, Slice<GoString>, GoString, GoString)> _head(
   for (int i = 0; i + 1 < header.len; i += 2) {
     fields.append(header[i].toDartString(), header[i + 1].toDartString());
   }
-  final _Abort? stop = _controller();
+  final _Request request = _requests[handle]!;
+  final _Abort? stop = request.stop;
   final _Init init = _Init(
     method: method.toDartString(),
     credentials: 'same-origin',
@@ -229,7 +239,7 @@ Future<(GoInt, GoInt, Slice<GoString>, GoString, GoString)> _head(
         stop?.abort();
         return ($gi(-1), $gi(0), Slice<GoString>.nil(), _empty, _timeout());
       }
-      return await _head(r, deadline, stop);
+      return await _head(handle, request, r, deadline);
     }),
     (Object cause) =>
         ($gi(-1), $gi(0), Slice<GoString>.nil(), _empty, _cause(cause)),
@@ -240,8 +250,7 @@ Future<(GoInt, GoInt, Slice<GoString>, GoString, GoString)> _head(
 /// Reads bytes of the body of an answer into the slice and gives the count. A
 /// count of 0 with no cause means the end of the body.
 (int, GoString) $fetchRead(int handle, Slice<GoInt> p) {
-  if (handle < 0 || handle >= _bodies.length) return (0, _closed());
-  final _Body? b = _bodies[handle];
+  final _Body? b = _requests[handle]?.body;
   if (b == null) return (0, _closed());
   if (p.len == 0) return (0, _empty);
   if (b.rest.isNotEmpty) return (_take(b, p), _empty);
@@ -266,12 +275,11 @@ Future<(GoInt, GoInt, Slice<GoString>, GoString, GoString)> _head(
   return (0, _empty);
 }
 
-/// Ends the read of the body of an answer and frees its handle.
+/// Frees a request handle and cancels its response reader.
 GoString $fetchClose(int handle) {
-  if (handle < 0 || handle >= _bodies.length) return _closed();
-  final _Body? b = _bodies[handle];
-  if (b == null) return _closed();
-  _bodies[handle] = null;
-  b.reader?.cancel();
+  final _Request? request = _requests.remove(handle);
+  if (request == null) return _closed();
+  // Cancel can reject after an abort. Read already reports the request cause.
+  request.body?.reader?.cancel().toDart.ignore();
   return _empty;
 }
