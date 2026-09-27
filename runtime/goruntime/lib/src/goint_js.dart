@@ -1,3 +1,6 @@
+import 'goint_division.dart'
+    if (dart.library.js) 'goint_division_js.dart'
+    as division;
 import 'int.dart';
 import 'panic.dart';
 
@@ -14,10 +17,10 @@ const int _b32 = 4294967296;
 const int _b16 = 65536;
 
 /// The signed 32-bit value of the low 32 bits of x.
-int _s32(int x) => ((x + 2147483648) % _b32) - 2147483648;
+int _s32(int x) => x.toSigned(32);
 
 /// The unsigned 32-bit value of the low 32 bits of x.
-int _u32(int x) => x % _b32;
+int _u32(int x) => x.toUnsigned(32);
 
 final class GoInt {
   /// The high half, as a signed 32-bit value.
@@ -123,12 +126,7 @@ BigInt _sbig(GoInt a) =>
 
 BigInt _ubig(GoInt a) => _sbig(a).toUnsigned(64);
 
-GoInt _ofBig(BigInt v) {
-  final BigInt t = v.toUnsigned(64);
-  final int high = (t >> 32).toInt();
-  final int low = (t & BigInt.from(0xFFFFFFFF)).toInt();
-  return GoInt._(_s32(high), low);
-}
+GoInt _ofParts((int, int) value) => GoInt._(_s32(value.$1), value.$2);
 
 /// The Go integer of a Dart int. The value must hold 53 bits or less,
 /// because a JS number holds no more of an integer.
@@ -165,24 +163,24 @@ GoInt $u32(GoInt v) => GoInt._(0, v.$l);
 /// Truncated division, as in Go.
 GoInt $div(GoInt a, GoInt b) {
   if (b.$h == 0 && b.$l == 0) $panicDivide();
-  return _ofBig(_sbig(a) ~/ _sbig(b));
+  return _ofParts(division.divide(a.$h, a.$l, b.$h, b.$l));
 }
 
 /// The remainder keeps the sign of the dividend, as in Go.
 GoInt $mod(GoInt a, GoInt b) {
   if (b.$h == 0 && b.$l == 0) $panicDivide();
-  return _ofBig(_sbig(a).remainder(_sbig(b)));
+  return _ofParts(division.remainder(a.$h, a.$l, b.$h, b.$l));
 }
 
 /// Unsigned division of 2 64-bit patterns.
 GoInt $udiv(GoInt a, GoInt b) {
   if (b.$h == 0 && b.$l == 0) $panicDivide();
-  return _ofBig(_ubig(a) ~/ _ubig(b));
+  return _ofParts(division.divide(_u32(a.$h), a.$l, _u32(b.$h), b.$l));
 }
 
 GoInt $umod(GoInt a, GoInt b) {
   if (b.$h == 0 && b.$l == 0) $panicDivide();
-  return _ofBig(_ubig(a).remainder(_ubig(b)));
+  return _ofParts(division.remainder(_u32(a.$h), a.$l, _u32(b.$h), b.$l));
 }
 
 /// Unsigned comparison of 2 64-bit patterns.
@@ -207,15 +205,12 @@ GoInt $shl(GoInt v, GoInt count) {
   if (s >= 64) return GoInt.zero;
   if (s == 0) return v;
   if (s < 32) {
-    final int keep = _b32 ~/ (1 << s);
-    final int crossing = v.$l ~/ keep;
-    final int low = (v.$l % keep) * (1 << s);
-    final int high = _s32((_u32(v.$h) % keep) * (1 << s) + crossing);
+    final int low = _u32(v.$l << s);
+    final int high = _s32((v.$h << s) | (v.$l >> (32 - s)));
     return GoInt._(high, low);
   }
   if (s == 32) return GoInt._(_s32(v.$l), 0);
-  final int keep = _b32 ~/ (1 << (s - 32));
-  return GoInt._(_s32((v.$l % keep) * (1 << (s - 32))), 0);
+  return GoInt._(_s32(v.$l << (s - 32)), 0);
 }
 
 /// An arithmetic right shift. Go keeps the sign bit.
@@ -225,8 +220,7 @@ GoInt $shr(GoInt v, GoInt count) {
   if (s >= 64) return v.$h < 0 ? const GoInt._(-1, 0xFFFFFFFF) : GoInt.zero;
   if (s == 0) return v;
   if (s < 32) {
-    final int step = 1 << s;
-    final int low = _u32(v.$l ~/ step + (_u32(v.$h) % step) * (_b32 ~/ step));
+    final int low = _u32((v.$l >> s) | (v.$h << (32 - s)));
     final int high = _s32(v.$h >> s);
     return GoInt._(high, low);
   }
@@ -242,12 +236,11 @@ GoInt $ushr(GoInt v, GoInt count) {
   if (s == 0) return v;
   final int uh = _u32(v.$h);
   if (s < 32) {
-    final int step = 1 << s;
-    final int low = v.$l ~/ step + (uh % step) * (_b32 ~/ step);
-    return GoInt._(_s32(uh ~/ step), low);
+    final int low = _u32((v.$l >> s) | (v.$h << (32 - s)));
+    return GoInt._(_s32(uh >> s), low);
   }
   if (s == 32) return GoInt._(0, uh);
-  return GoInt._(0, uh ~/ (1 << (s - 32)));
+  return GoInt._(0, uh >> (s - 32));
 }
 
 /// The decimal text of a 64-bit pattern that holds an unsigned value.

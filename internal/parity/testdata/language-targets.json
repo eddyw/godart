@@ -73,5 +73,15 @@
   "chan/select",
   "chan/select8",
   "chan/sieve1",
-  "chan/sieve2"
+  "chan/sieve2",
+  "char_lit",
+  "convert",
+  "convert4",
+  "divide",
+  "divmod",
+  "intcvt",
+  "shift3",
+  "string_lit",
+  "utf",
+  "zerodivide"
 ]
