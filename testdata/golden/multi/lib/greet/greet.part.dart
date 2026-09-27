@@ -62,29 +62,94 @@ final class Greeter$$View extends Greeter$ implements $StructView {
 }
 
 Greeter$? New(GoString name) {
-  return Greeter$(name, GoInt.zero);
+  final $source = $sourceEnter(
+    'example.com/multi/greet.New',
+    'example.com/multi/greet/greet.go',
+    17,
+  );
+  try {
+    $source?.at('example.com/multi/greet/greet.go', 18);
+    return Greeter$(name, GoInt.zero);
+  } finally {
+    $sourceLeave($source);
+  }
 }
 
 void Greeter$SetStyle(Greeter$? g, GoInt s) {
-  (g == null ? $panicNil() : g!).$field$style = s;
+  final $source = $sourceEnter(
+    'example.com/multi/greet.(*Greeter).SetStyle',
+    'example.com/multi/greet/greet.go',
+    21,
+  );
+  try {
+    $source?.at('example.com/multi/greet/greet.go', 22);
+    (g == null ? $panicNil() : g!).$field$style = s;
+  } finally {
+    $sourceLeave($source);
+  }
 }
 
 GoString Greeter$Text(Greeter$? g) {
-  if (((g == null ? $panicNil() : g!).$field$style == $gi(1))) {
+  final $source = $sourceEnter(
+    'example.com/multi/greet.(*Greeter).Text',
+    'example.com/multi/greet/greet.go',
+    25,
+  );
+  try {
+    $source?.at('example.com/multi/greet/greet.go', 26);
+    if (((g == null ? $panicNil() : g!).$field$style == $gi(1))) {
+      $source?.at('example.com/multi/greet/greet.go', 27);
+      return $concat(
+        $gs1_0_47316da018fa584e,
+        (g == null ? $panicNil() : g!).Name,
+      );
+    }
+    $source?.at('example.com/multi/greet/greet.go', 29);
     return $concat(
-      $gs1_0_47316da018fa584e,
+      $gs1_1_40a11d59c648b358,
       (g == null ? $panicNil() : g!).Name,
     );
+  } finally {
+    $sourceLeave($source);
   }
-  return $concat($gs1_1_40a11d59c648b358, (g == null ? $panicNil() : g!).Name);
 }
 
 GoString Twice(GoString name) {
-  Greeter$? g = New(name);
-  return $concat(
-    $concat(Greeter$Text(g), $gs1_2_36a9e7f1c95b82ff),
-    Greeter$Text(g),
+  final $source = $sourceEnter(
+    'example.com/multi/greet.Twice',
+    'example.com/multi/greet/greet.go',
+    32,
   );
+  try {
+    $source?.at('example.com/multi/greet/greet.go', 33);
+    Greeter$? g =
+        $sourceCall<Greeter$?>(
+          $source,
+          'example.com/multi/greet/greet.go',
+          33,
+          () => New(name),
+        );
+    $source?.at('example.com/multi/greet/greet.go', 34);
+    return $concat(
+      $concat(
+        $sourceCall<GoString>(
+          $source,
+          'example.com/multi/greet/greet.go',
+          34,
+          () => Greeter$Text(g),
+        ),
+        $gs1_2_36a9e7f1c95b82ff,
+      ),
+      $sourceCall<GoString>(
+        $source,
+        'example.com/multi/greet/greet.go',
+        34,
+        () => Greeter$Text(g),
+      ),
+    );
+  } finally {
+    $sourceLeave($source);
+  }
 }
 
 final GoString $gs1_0_47316da018fa584e = GoString.fromString('HELLO, ');

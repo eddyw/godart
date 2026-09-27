@@ -14,13 +14,65 @@
 part of '../main.dart';
 
 void _main() {
-  $pkg$greet.Greeter$? g = $pkg$greet.New($gs1_0_486ea46224d1bb4f);
-  $println(<String>[$pkg$greet.Greeter$Text(g).toDartString()]);
-  $pkg$greet.Greeter$SetStyle(g, $gi(1));
-  $println(<String>[$pkg$greet.Greeter$Text(g).toDartString()]);
-  $println(<String>[$pkg$greet.Twice($gs1_1_4cd0e21a9a0795a1).toDartString()]);
-  $println(<String>[$pkg$count.Runes($gs1_2_3c48591d8d098a45).toString()]);
-  $println(<String>[$gi(0).toString(), $gi(1).toString()]);
+  final $source = $sourceEnter('main.main', 'example.com/multi/main.go', 8);
+  try {
+    $source?.at('example.com/multi/main.go', 9);
+    $pkg$greet.Greeter$? g =
+        $sourceCall<$pkg$greet.Greeter$?>(
+          $source,
+          'example.com/multi/main.go',
+          9,
+          () => $pkg$greet.New($gs1_0_486ea46224d1bb4f),
+        );
+    $source?.at('example.com/multi/main.go', 10);
+    $println(<String>[
+      $sourceCall<GoString>(
+        $source,
+        'example.com/multi/main.go',
+        10,
+        () => $pkg$greet.Greeter$Text(g),
+      ).toDartString(),
+    ]);
+    $source?.at('example.com/multi/main.go', 11);
+
+    $sourceCall<void>(
+      $source,
+      'example.com/multi/main.go',
+      11,
+      () => $pkg$greet.Greeter$SetStyle(g, $gi(1)),
+    );
+    $source?.at('example.com/multi/main.go', 12);
+    $println(<String>[
+      $sourceCall<GoString>(
+        $source,
+        'example.com/multi/main.go',
+        12,
+        () => $pkg$greet.Greeter$Text(g),
+      ).toDartString(),
+    ]);
+    $source?.at('example.com/multi/main.go', 13);
+    $println(<String>[
+      $sourceCall<GoString>(
+        $source,
+        'example.com/multi/main.go',
+        13,
+        () => $pkg$greet.Twice($gs1_1_4cd0e21a9a0795a1),
+      ).toDartString(),
+    ]);
+    $source?.at('example.com/multi/main.go', 14);
+    $println(<String>[
+      $sourceCall<GoInt>(
+        $source,
+        'example.com/multi/main.go',
+        14,
+        () => $pkg$count.Runes($gs1_2_3c48591d8d098a45),
+      ).toString(),
+    ]);
+    $source?.at('example.com/multi/main.go', 15);
+    $println(<String>[$gi(0).toString(), $gi(1).toString()]);
+  } finally {
+    $sourceLeave($source);
+  }
 }
 
 final GoString $gs1_0_486ea46224d1bb4f = GoString.fromString('world');

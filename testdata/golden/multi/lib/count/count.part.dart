@@ -14,14 +14,31 @@
 part of '../count.dart';
 
 GoInt Runes(GoString text) {
-  GoInt n = $gi(0);
-  GoString $range6_12 = text;
-  GoInt $i6_2 = $gi(0);
-  GoInt $size6_2 = $gi(0);
-  GoInt $rune6_2 = $gi(0);
-  for (; ($i6_2 < $gi($range6_12.length)); $i6_2 = ($i6_2 + $size6_2)) {
-    ($rune6_2, $size6_2) = $decodeRune($range6_12, $i6_2);
-    n = (n + $gi(1));
+  final $source = $sourceEnter(
+    'example.com/multi/count.Runes',
+    'example.com/multi/count/count.go',
+    4,
+  );
+  try {
+    $source?.at('example.com/multi/count/count.go', 5);
+    GoInt n = $gi(0);
+    $source?.at('example.com/multi/count/count.go', 6);
+    GoString $range6_12 = text;
+    $source?.at('example.com/multi/count/count.go', 6);
+    GoInt $i6_2 = $gi(0);
+    $source?.at('example.com/multi/count/count.go', 6);
+    GoInt $size6_2 = $gi(0);
+    $source?.at('example.com/multi/count/count.go', 6);
+    GoInt $rune6_2 = $gi(0);
+    $source?.at('example.com/multi/count/count.go', 6);
+    for (; ($i6_2 < $gi($range6_12.length)); $i6_2 = ($i6_2 + $size6_2)) {
+      ($rune6_2, $size6_2) = $decodeRune($range6_12, $i6_2);
+      $source?.at('example.com/multi/count/count.go', 7);
+      n = (n + $gi(1));
+    }
+    $source?.at('example.com/multi/count/count.go', 9);
+    return n;
+  } finally {
+    $sourceLeave($source);
   }
-  return n;
 }
