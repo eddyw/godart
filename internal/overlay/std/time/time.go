@@ -660,21 +660,24 @@ type Timer struct {
 	handle int
 }
 
-// Stop cancels a timer. It reports false when the timer ran already.
+// Stop cancels a timer. It reports whether the timer was active or held
+// an unread value.
 func (t *Timer) Stop() bool {
 	if t.send == nil && t.body == nil {
 		panic("time: Stop called on uninitialized Timer")
 	}
-	return dart.StopTimer(t.handle)
+	active := dart.StopTimer(t.handle)
+	return drainTimer(t.send) || active
 }
 
 // Reset stops the timer and starts it again with the new duration. It reports
-// whether the timer was active.
+// whether the timer was active or held an unread value.
 func (t *Timer) Reset(d Duration) bool {
 	if t.send == nil && t.body == nil {
 		panic("time: Reset called on uninitialized Timer")
 	}
 	active := dart.ResetTimer(t.handle)
+	active = drainTimer(t.send) || active
 	if t.send == nil {
 		t.handle = dart.StartTimer(int64(d), t.body)
 		return active
@@ -689,9 +692,10 @@ func AfterFunc(d Duration, f func()) *Timer {
 }
 
 // NewTimer gives a timer that writes the time into its channel after the
-// duration. The channel holds 1 value, thus the write never blocks.
+// duration. The channel reports a capacity of 0.
 func NewTimer(d Duration) *Timer {
 	ch := make(chan Time, 1)
+	dart.MarkTimerChannel(ch)
 	t := &Timer{C: ch, send: ch}
 	t.handle = dart.StartTimer(int64(d), func() { sendTime(ch) })
 	return t
@@ -705,10 +709,12 @@ func After(d Duration) <-chan Time {
 // sendTime writes the time into the channel. It drops the value when the
 // channel is full, exactly as Go does for a timer.
 func sendTime(ch chan Time) {
-	select {
-	case ch <- Now():
-	default:
-	}
+	dart.ValueTrySend(ch, Now())
+}
+
+func drainTimer(ch chan Time) bool {
+	_, _, received := dart.ValueTryRecv(ch)
+	return received
 }
 
 // A Ticker writes the time into its channel at each pass of a period.
@@ -727,6 +733,7 @@ func NewTicker(d Duration) *Ticker {
 		panic("non-positive interval for NewTicker")
 	}
 	ch := make(chan Time, 1)
+	dart.MarkTimerChannel(ch)
 	t := &Ticker{C: ch, send: ch, period: d}
 	t.arm()
 	return t
@@ -745,6 +752,7 @@ func Tick(d Duration) <-chan Time {
 func (t *Ticker) Stop() {
 	t.stopped = true
 	dart.StopTimer(t.handle)
+	drainTimer(t.send)
 }
 
 // Reset stops the ticker and starts it again with the new period.
@@ -753,6 +761,7 @@ func (t *Ticker) Reset(d Duration) {
 		panic("non-positive interval for Reset")
 	}
 	dart.ResetTimer(t.handle)
+	drainTimer(t.send)
 	t.period = d
 	t.stopped = false
 	t.arm()

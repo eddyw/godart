@@ -1533,6 +1533,12 @@ func StartTimer(nanoseconds int64, f func()) int {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// MarkTimerChannel gives a timer channel zero visible length and capacity.
+// The channel must have a buffer capacity of 1.
+func MarkTimerChannel(channel any) {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // StopTimer cancels a timer. It reports false when the timer ran already.
 //
 // A timer of a synctest bubble that a goroutine outside each bubble reaches

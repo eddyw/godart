@@ -16,7 +16,8 @@ import 'string.dart';
 /// operation, at a select statement, at a sleep, and at an isolate worker.
 /// Thus the queues need no lock.
 final class Chan<T> {
-  final int capacity;
+  final int _capacity;
+  bool _timer = false;
   final T Function() _zero;
 
   // Each queue takes its value on the first read. The zero value of a channel
@@ -35,16 +36,18 @@ final class Chan<T> {
   /// goroutine is durable, and no event outside that bubble ends it.
   final Bubble? bubble;
 
-  Chan(this.capacity, this._zero) : isNil = false, bubble = $current?.bubble {
+  Chan(this._capacity, this._zero) : isNil = false, bubble = $current?.bubble {
     // Go reports a capacity below 0 with a plain text and no prefix.
-    if (capacity < 0) {
+    if (_capacity < 0) {
       $panic($runtimeError('makechan: size out of range', plain: true));
     }
   }
 
-  Chan.nil(this._zero) : capacity = 0, isNil = true, bubble = null;
+  Chan.nil(this._zero) : _capacity = 0, isNil = true, bubble = null;
 
-  int get length => _buffer.length;
+  int get capacity => _timer ? 0 : _capacity;
+
+  int get length => _timer ? 0 : _buffer.length;
 
   bool get isClosed => _closed;
 
@@ -70,7 +73,7 @@ final class Chan<T> {
 
   /// True when a send gives up no control at this moment.
   bool get readyToSend =>
-      !isNil && (_closed || _hasReceiver || _buffer.length < capacity);
+      !isNil && (_closed || _hasReceiver || _buffer.length < _capacity);
 
   bool get _hasSender => _senders.any((_SendWait<T> w) => w.sel?.done != true);
 
@@ -218,6 +221,10 @@ final class Chan<T> {
       $ready(waiting.g);
     }
   }
+}
+
+void $markTimerChannel(Iface? channel) {
+  (channel!.value as Chan)._timer = true;
 }
 
 /// The state of 1 select statement that waits.
