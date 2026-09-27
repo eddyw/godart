@@ -111,6 +111,9 @@ on headers, credentials, network access, and cross-origin requests still apply.
 Native filesystem operations, raw sockets, and HTTP servers do not become
 available in a browser merely because a program compiles.
 
+Node fetch can discard the original bytes of non-ASCII HTTP status text.
+Gart cannot recover bytes that the host discards.
+
 Native HTTP and TLS use the active Go SDK sources over Dart socket adapters.
 Browser HTTP retains fetch. The project has no security audit.
 Read [SECURITY.md](../SECURITY.md) before a security-sensitive deployment.

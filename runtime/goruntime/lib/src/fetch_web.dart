@@ -42,6 +42,7 @@ extension type _Headers._(JSObject _) implements JSObject {
 
 extension type _Response._(JSObject _) implements JSObject {
   external int get status;
+  external String get statusText;
   external bool get redirected;
   external String get url;
   external _Headers get headers;
@@ -171,8 +172,7 @@ int _take(_Body b, Slice<GoInt> p) {
 /// The result rides the frame of the wait, thus each integer carries the Go
 /// form. A plain int reaches the caller of $fetchStart, and that result is
 /// dead. Read the note on $await.
-Future<(GoInt, GoInt, Slice<GoString>, GoString, GoString)> _head(
-  int handle,
+Future<(GoInt, GoString, Slice<GoString>, GoString, GoString)> _head(
   _Request request,
   _Response r,
   int deadline,
@@ -196,8 +196,8 @@ Future<(GoInt, GoInt, Slice<GoString>, GoString, GoString)> _head(
       : _Body(stream.getReader(), Uint8List(0), deadline, request.stop);
   request.body = b;
   return (
-    $gi(handle),
     $gi(r.status),
+    GoString.fromBytes(r.statusText.codeUnits),
     Slice<GoString>.of(fields),
     r.redirected ? GoString.fromString(r.url) : _empty,
     _empty,
@@ -208,7 +208,7 @@ Future<(GoInt, GoInt, Slice<GoString>, GoString, GoString)> _head(
 ///
 /// The call gives up control, thus the result of the call itself is dead. The
 /// frame of the wait gives the value to the caller.
-(int, int, Slice<GoString>, GoString, GoString) $fetchStart(
+(int, GoString, Slice<GoString>, GoString, GoString) $fetchStart(
   int handle,
   GoString method,
   GoString url,
@@ -217,7 +217,7 @@ Future<(GoInt, GoInt, Slice<GoString>, GoString, GoString)> _head(
   int deadline,
 ) {
   if (!_has) {
-    return (-1, 0, Slice<GoString>.nil(), _empty, _noFetch);
+    return (0, _empty, Slice<GoString>.nil(), _empty, _noFetch);
   }
   final _Headers fields = _Headers();
   for (int i = 0; i + 1 < header.len; i += 2) {
@@ -241,14 +241,14 @@ Future<(GoInt, GoInt, Slice<GoString>, GoString, GoString)> _head(
     ) async {
       if (r == null) {
         stop?.abort();
-        return ($gi(-1), $gi(0), Slice<GoString>.nil(), _empty, _timeout());
+        return ($gi(0), _empty, Slice<GoString>.nil(), _empty, _timeout());
       }
-      return await _head(handle, request, r, deadline);
+      return await _head(request, r, deadline);
     }),
     (Object cause) =>
-        ($gi(-1), $gi(0), Slice<GoString>.nil(), _empty, _cause(cause)),
+        ($gi(0), _empty, Slice<GoString>.nil(), _empty, _cause(cause)),
   );
-  return (-1, 0, Slice<GoString>.nil(), _empty, _empty);
+  return (0, _empty, Slice<GoString>.nil(), _empty, _empty);
 }
 
 /// Reads bytes of the body of an answer into the slice and gives the count. A

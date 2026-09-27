@@ -51,6 +51,20 @@ func TestHTTPFetchRequests(t *testing.T) {
 		return s.URL
 	}
 	headerServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/status" || r.URL.Path == "/unknown" {
+			conn, _, err := w.(http.Hijacker).Hijack()
+			if err != nil {
+				t.Errorf("hijack: %v", err)
+				return
+			}
+			status := "200 Custom"
+			if r.URL.Path == "/unknown" {
+				status = "299 Custom"
+			}
+			fmt.Fprintf(conn, "HTTP/1.1 %s\r\nContent-Length: 0\r\nConnection: close\r\n\r\n", status)
+			conn.Close()
+			return
+		}
 		if r.URL.Path == "/method" {
 			io.WriteString(w, r.Method)
 			return
@@ -166,6 +180,12 @@ func runRequests(base, kind string) {
 	fmt.Println(kind, "failure", err != nil && !errors.Is(err, cause) && !strings.Contains(err.Error(), "request completed"))
 }
 func runHeaderRequests(base string) {
+ for _, c := range []struct{path,status string;code int}{{"status","200 Custom",200},{"unknown","299 Custom",299}} {
+  res,err:=http.Get(base+"/"+c.path)
+  if err!=nil {panic(err)}
+  res.Body.Close()
+  fmt.Println("status",c.path,res.Status==c.status,res.StatusCode==c.code)
+ }
  for i, value := range []string{"ascii", "café", "中", "\x80\xff"} {
   req,_ := http.NewRequest("GET",base+"/echo",nil)
   req.Header.Set("X-Bytes",value)
@@ -288,6 +308,8 @@ transport read true
 transport normal ok
 transport eof true
 transport failure true
+status status true true
+status unknown true true
 headers request 0 true true true
 headers request 1 true true true
 headers request 2 true true true

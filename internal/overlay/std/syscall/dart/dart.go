@@ -1496,9 +1496,8 @@ func FetchCancel(handle int) {
 //
 // Call FetchOpen first. Call FetchClose when the request ends.
 //
-// The results are the request handle, the status, the header, the address
-// of the answer, and the cause of a failure. The address is empty unless a
-// redirect moved the answer.
+// The results are the status code, status text, header, response address,
+// and failure cause. The address is empty unless a redirect moved the answer.
 //
 // deadline ends the wait, in nanoseconds after the start of the Unix epoch. A
 // value of 0 holds no limit, and the same limit covers each read of the body.
@@ -1506,7 +1505,7 @@ func FetchCancel(handle int) {
 // A target that holds no fetch API gives the cause "operation not supported".
 //
 // The call blocks the goroutine, thus the caller becomes an async function.
-func FetchStart(handle int, method, url string, header []string, body []byte, deadline int64) (int, int, []string, string, string) {
+func FetchStart(handle int, method, url string, header []string, body []byte, deadline int64) (int, string, []string, string, string) {
 	panic("syscall/dart needs the gart compiler")
 }
 

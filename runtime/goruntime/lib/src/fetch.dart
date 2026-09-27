@@ -15,14 +15,14 @@ int $fetchOpen() => -1;
 
 void $fetchCancel(int handle) {}
 
-(int, int, Slice<GoString>, GoString, GoString) $fetchStart(
+(int, GoString, Slice<GoString>, GoString, GoString) $fetchStart(
   int handle,
   GoString method,
   GoString url,
   Slice<GoString> header,
   Slice<int> body,
   int deadline,
-) => (-1, 0, Slice<GoString>.nil(), GoString.empty, _noFetch);
+) => (0, GoString.empty, Slice<GoString>.nil(), GoString.empty, _noFetch);
 
 (int, GoString) $fetchRead(int handle, Slice<int> p) => (0, _noFetch);
 
