@@ -20,9 +20,11 @@ func TestTimeLayout(t *testing.T) {
 	dir := filepath.Join(runtime.GOROOT(), "src/time")
 	names := map[string][]string{
 		"mono_test.go":     nil,
-		"time_test.go":     {"TestTimeAddSecOverflow", "TestUnmarshalInvalidTimes"},
-		"export_test.go":   {"SetMono", "GetMono", "UnixToInternal"},
-		"internal_test.go": {"NotMonoNegativeTime"},
+		"zoneinfo_test.go": {"TestTzset", "TestTzsetName", "TestTzsetOffset", "TestMalformedTZData", "TestLocationNames"},
+		"format_test.go":   {"nextStdChunkTests", "TestNextStdChunk", "TestAppendInt", "ParseTimeZoneTest", "parseTimeZoneTests", "TestParseTimeZone", "TestQuote"},
+		"time_test.go":     {"TestTimeAddSecOverflow", "TestUnmarshalInvalidTimes", "minDuration", "maxDuration", "subTests", "TestSub", "daysInTests", "TestDaysIn"},
+		"export_test.go":   {"SetMono", "GetMono", "UnixToInternal", "NextStdChunk", "StdChunkNames", "AppendInt", "ParseTimeZone", "Quote", "Tzset", "TzsetName", "TzsetOffset"},
+		"internal_test.go": {"NotMonoNegativeTime", "MinMonoTime", "MaxMonoTime", "DaysIn"},
 	}
 	files, err := filepath.Glob(filepath.Join(dir, "*_test.go"))
 	if err != nil {
@@ -53,7 +55,7 @@ func TestTimeLayout(t *testing.T) {
 		t.Fatalf("got %d binaries", len(stats.Binaries))
 	}
 	prepareDart(t, out)
-	const filter = "^(TestHasMonotonicClock|TestMonotonicAdd|TestMonotonicSub|TestMonotonicOverflow|TestMonotonicString|TestTimeAddSecOverflow|TestUnmarshalInvalidTimes)$"
+	const filter = "^(TestHasMonotonicClock|TestMonotonicAdd|TestMonotonicSub|TestMonotonicOverflow|TestMonotonicString|TestTimeAddSecOverflow|TestUnmarshalInvalidTimes|TestNextStdChunk|TestAppendInt|TestParseTimeZone|TestQuote|TestSub|TestDaysIn|TestTzset|TestTzsetName|TestTzsetOffset|TestMalformedTZData|TestLocationNames)$"
 	args := []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=" + filter}
 	for _, target := range []string{"vm", "aot", "js", "wasm"} {
 		t.Run(target, func(t *testing.T) {
