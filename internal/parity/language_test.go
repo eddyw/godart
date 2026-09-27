@@ -87,6 +87,8 @@ func TestLanguageInventory(t *testing.T) {
 		write("test/groupsworkers"+workers+".go", "// compiledir -c="+workers+"\npackage ignored\n")
 		write("test/groupsworkers"+workers+".dir/a.go", "package a\n")
 	}
+	write("test/groupslink.go", "// rundir -ldflags -strictdups=2 -w=0\npackage ignored\n")
+	write("test/groupslink.dir/main.go", "package main\nfunc main() {}\n")
 	write("test/groupsrun.go", "// rundir\npackage ignored\n")
 	write("test/groupsrun.dir/a.go", "package a\n")
 	compileRecipes := map[string]string{
@@ -152,8 +154,8 @@ func TestLanguageInventory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(inv.Cases) != 88 {
-		t.Fatalf("got %d cases, want 88", len(inv.Cases))
+	if len(inv.Cases) != 89 {
+		t.Fatalf("got %d cases, want 89", len(inv.Cases))
 	}
 	cases := map[string]LanguageCase{}
 	for _, c := range inv.Cases {
@@ -228,6 +230,9 @@ func TestLanguageInventory(t *testing.T) {
 	}
 	if cases["build"].Adapter != "build-file" || cases["buildflags"].Adapter != "missing" {
 		t.Fatal("the build adapter must preserve recipe flags")
+	}
+	if c := cases["groupslink"]; c.Adapter != "directory-packages" || len(c.Files) != 2 {
+		t.Fatalf("directory linker recipe changed: %+v", c)
 	}
 	if c := cases["buildexperiment"]; c.Adapter != "build-file" || len(c.NativeFlags) != 0 {
 		t.Fatalf("build experiment recipe changed: %+v", c)

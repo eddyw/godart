@@ -433,6 +433,28 @@ class ParityTest(unittest.TestCase):
             case["contract"] = "compiledir" if contract == "rundir" else "rundir"
             self.assertFalse(parity.directory_language_valid(case, "go1.27.1"))
 
+    def test_directory_linker_options_reach_native_link(self):
+        module = "module test\n\ngo 1.27.1\n"
+        execution = dict(ran=True, exit=0, timed_out=False, output_sha256="expected")
+        command = ["go", "tool", "link", "-s", "-w", "-buildid=test", "-o", "native", "-importcfg=config", "-strictdups=2", "-w=0", "a.o"]
+        case = dict(
+            fixture=dict(name="p", recipe="rundir -ldflags -strictdups=2 -w=0", adapter="directory-packages", files=[dict(path="p.dir/a.go")]),
+            contract="rundir", directory_packages=[dict(name="main", path="test/a", files=["a.go"])],
+            native_compile=[dict(execution, command=["go", "tool", "compile", "-e", "a.go"])],
+            adapted_sources={"a/a.go": "package main\n"},
+            module_source=module, module_sha256=parity.hashlib.sha256(module.encode()).hexdigest(),
+            importcfg_sha256="config", native_link=dict(execution, command=command),
+            native=dict(execution), gart=dict(execution), expected_sha256="expected")
+        self.assertTrue(parity.directory_language_valid(case, "go1.27.1"))
+        for changed in [command[:9] + command[-1:], command[:-2] + ["-w=1", "a.o"],
+                        command[:-1] + ["-strictdups=0", "a.o"], command[:-1] + ["other.o"],
+                        ["go", "build", "."]]:
+            case["native_link"]["command"] = changed
+            self.assertFalse(parity.directory_language_valid(case, "go1.27.1"))
+        case["native_link"]["command"] = command
+        case["fixture"]["recipe"] += " -s=0"
+        self.assertFalse(parity.directory_language_valid(case, "go1.27.1"))
+
     def test_separate_directory_packages_preserve_file_identity(self):
         module = "module test\n\ngo 1.27.1\n"
         wrapper = 'import "package:test/a.dart";\nimport "package:test/b.dart";\nvoid main() {}\n'

@@ -346,11 +346,12 @@ def directory_language_valid(case, go_version):
         ("compiledir", "compiledir -c=4"): ["-c=4"],
         ("rundir", "rundir -l=4"): ["-l=4"],
     }.get((contract, fixture.get("recipe")), [])
+    linker_flags = ["-strictdups=2", "-w=0"] if (contract, fixture.get("recipe")) == ("rundir", "rundir -ldflags -strictdups=2 -w=0") else []
     packages = case.get("directory_packages") or []
     adapted = case.get("adapted_sources") or {}
     compiled = case.get("native_compile") or []
     module = case.get("module_source", "")
-    if ((fixture.get("recipe") != contract and not separate and not compiler_flags) or fixture.get("adapter") != "directory-packages"
+    if ((fixture.get("recipe") != contract and not separate and not compiler_flags and not linker_flags) or fixture.get("adapter") != "directory-packages"
             or not packages or len(compiled) != len(packages) or (not reject and case.get("build_error"))
             or not case.get("importcfg_sha256") or not go_version
             or module != "module test\n\ngo " + go_version.removeprefix("go") + "\n"
@@ -404,6 +405,13 @@ def directory_language_valid(case, go_version):
         return (case.get("wrapper_source") == wrapper
                 and case.get("wrapper_sha256") == hashlib.sha256(wrapper.encode()).hexdigest())
     link = case.get("native_link") or {}
+    if linker_flags:
+        command = link.get("command", [])
+        if (len(command) != 10 + len(linker_flags)
+                or command[:8] != ["go", "tool", "link", "-s", "-w", "-buildid=test", "-o", "native"]
+                or not command[8].startswith("-importcfg=")
+                or command[9:-1] != linker_flags or command[-1] != packages[-1]["files"][0][:-3] + ".o"):
+            return False
     expected = case.get("expected_sha256")
     return (link.get("ran") and link.get("exit") == 0 and not link.get("timed_out")
             and link.get("command", [])[:3] == ["go", "tool", "link"]

@@ -192,7 +192,12 @@ func TestDirectoryPackagesOfGoTest(t *testing.T) {
 					}
 					if action == "rundir" {
 						last := result.DirectoryPackages[len(result.DirectoryPackages)-1]
-						runLanguage(t, &result.NativeLink, nativeDir, runLimit, "go", "tool", "link", "-s", "-w", "-buildid=test", "-o", "native", "-importcfg="+cfg, strings.TrimSuffix(last.Files[0], ".go")+".o")
+						args := []string{"tool", "link", "-s", "-w", "-buildid=test", "-o", "native", "-importcfg=" + cfg}
+						if c.Recipe == "rundir -ldflags -strictdups=2 -w=0" {
+							args = append(args, "-strictdups=2", "-w=0")
+						}
+						args = append(args, strings.TrimSuffix(last.Files[0], ".go")+".o")
+						runLanguage(t, &result.NativeLink, nativeDir, runLimit, "go", args...)
 						want, err := os.ReadFile(filepath.Join(root, c.Name+".out"))
 						if err != nil && !os.IsNotExist(err) {
 							t.Fatal(err)
