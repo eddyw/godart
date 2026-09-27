@@ -1,0 +1,67 @@
+package driver_test
+
+import (
+	"os"
+	"path/filepath"
+	"runtime"
+	"strconv"
+	"testing"
+
+	"github.com/eddyw/godart/internal/driver"
+)
+
+func TestHTTPFetchValidation(t *testing.T) {
+	dir, out := t.TempDir(), t.TempDir()
+	origin := filepath.Join(runtime.GOROOT(), "src/net/http")
+	source := selectedUpstreamSource(t, filepath.Join(origin, "transport_test.go"), []string{"doneContext", "doneContext.Done", "doneContext.Err", "TestTransportCheckContextDoneEarly", "bodyCloser", "TestTransportClosesBodyOnInvalidRequests", "testTransportClosesBodyOnInvalidRequests"})
+	writeFile(t, filepath.Join(dir, "go.mod"), "module example.com/httpvalidation\n\ngo 1.27\n")
+	writeFile(t, filepath.Join(dir, "invalid_test.go"), source)
+	license, err := os.ReadFile(filepath.Join(runtime.GOROOT(), "LICENSE"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, filepath.Join(dir, "LICENSE"), string(license))
+	// The adapter rejects I/O before a server can receive an invalid request.
+	// These mode names preserve upstream cases, not HTTP/2 server coverage.
+	writeFile(t, filepath.Join(dir, "adapter_test.go"), `package http_test
+import("context";"errors";"net";. "net/http";"testing")
+type testMode string
+type fixtureServer struct {URL string; handler Handler}
+type clientServerTest struct {ts *fixtureServer}
+func (s *fixtureServer) Client() *Client {
+ return &Client{Transport:&Transport{DialContext:func(context.Context,string,string)(net.Conn,error){
+  s.handler.ServeHTTP(nil,nil)
+  return nil,errors.New("unexpected dial")
+ }}}
+}
+func newClientServerTest(_ *testing.T,mode testMode,h Handler)*clientServerTest {
+ scheme:="http";if mode=="h2" {scheme="https"}
+ return &clientServerTest{ts:&fixtureServer{URL:scheme+"://127.0.0.1:1",handler:h}}
+}
+func run(t *testing.T,f func(*testing.T,testMode)) {
+ for _,mode:=range []testMode{"h1","h2"} {t.Run(string(mode),func(t *testing.T){f(t,mode)})}
+}
+`)
+	stats, err := driver.BuildWithStats(driver.Options{Dir: dir, Patterns: []string{"."}, Out: out, Runtime: runtimeDir(t), Tests: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(stats.Binaries) != 1 {
+		t.Fatal(stats.Binaries)
+	}
+	prepareDart(t, out)
+	prelude := filepath.Join(out, "fetch-denied.mjs")
+	writeFile(t, prelude, "globalThis.fetch = () => { console.error('unexpected fetch'); process.exit(97); };\n")
+	args := []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=^(TestTransportCheckContextDoneEarly|TestTransportClosesBodyOnInvalidRequests)$/^(h1|h2)$"}
+	for _, target := range []string{"vm", "aot", "js", "wasm"} {
+		t.Run(target, func(t *testing.T) {
+			var result programResult
+			if target == "vm" {
+				result = programOutcome(t, dir, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, args...)...)
+			} else {
+				result = runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, args, "--import", prelude)
+			}
+			compareUpstream(t, "http-fetch-validation", "net/http", "^(TestTransportCheckContextDoneEarly|TestTransportClosesBodyOnInvalidRequests)$/^(h1|h2)$", target, origin, result.Text, result.Exit)
+		})
+	}
+}

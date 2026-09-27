@@ -20,7 +20,7 @@ The source retains the original Go BSD header.
  
  // RoundTrip should be an internal detail,
  // but widely used packages access it using linkname.
-@@ -30,5 +40,155 @@
+@@ -30,5 +40,187 @@
  	if t == nil {
  		panic("transport is nil")
  	}
@@ -39,6 +39,38 @@ The source retains the original Go BSD header.
 +// Client never runs there, and the host also decodes the gzip form. Go gives
 +// the same 2 answers under GOOS=js.
 +func (t *Transport) fetchRoundTrip(req *Request) (*Response, error) {
++	if req.URL == nil {
++		req.closeBody()
++		return nil, errors.New("http: nil Request.URL")
++	}
++	if req.Header == nil {
++		req.closeBody()
++		return nil, errors.New("http: nil Request.Header")
++	}
++	scheme := req.URL.Scheme
++	isHTTP := scheme == "http" || scheme == "https"
++	if isHTTP {
++		if err := validateHeaders(req.Header); err != "" {
++			req.closeBody()
++			return nil, errors.New("net/http: invalid header " + err)
++		}
++		if err := validateHeaders(req.Trailer); err != "" {
++			req.closeBody()
++			return nil, errors.New("net/http: invalid trailer " + err)
++		}
++	}
++	if !isHTTP {
++		req.closeBody()
++		return nil, badStringError("unsupported protocol scheme", scheme)
++	}
++	if req.Method != "" && !validMethod(req.Method) {
++		req.closeBody()
++		return nil, badStringError("net/http: invalid method", req.Method)
++	}
++	if req.URL.Host == "" {
++		req.closeBody()
++		return nil, errors.New("http: no Host in request URL")
++	}
 +	select {
 +	case <-req.Context().Done():
 +		req.closeBody()
