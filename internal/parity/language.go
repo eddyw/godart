@@ -262,6 +262,37 @@ func DiscoverLanguage(ctx build.Context) (*LanguageInventory, error) {
 				"errorcheck -0 -m -l -smallframes",
 				"errorcheck -0 -l -m=2":
 				c.Exclusion = &Omission{Classification: "target-limit", Reason: "The assertions match native Go compiler optimization decisions. Gart delegates native optimization to Dart. Source compilation and runtime behavior require separate coverage."}
+			case "errorcheck -+ -0 -l -d=wb",
+				"errorcheck -0 -+ -p=internal/runtime/sys -m",
+				"errorcheck -0 -N -d=nil",
+				"errorcheck -0 -d=append,slice",
+				"errorcheck -0 -d=checkptr -m",
+				"errorcheck -0 -d=escapedebug=1",
+				"errorcheck -0 -d=nil",
+				"errorcheck -0 -d=ssa/check_bce/debug=1",
+				"errorcheck -0 -d=ssa/intrinsics/debug",
+				"errorcheck -0 -d=ssa/known_bits/debug=1",
+				"errorcheck -0 -d=ssa/late_fuse/debug=1",
+				"errorcheck -0 -d=ssa/opt/debug=1",
+				"errorcheck -0 -d=ssa/phiopt/debug=3",
+				"errorcheck -0 -d=ssa/prove/debug=1",
+				"errorcheck -0 -d=ssa/prove/debug=2",
+				"errorcheck -0 -d=ssa/tighten/debug=1",
+				"errorcheck -0 -d=tailcall=1",
+				"errorcheck -0 -d=typeassert",
+				"errorcheck -0 -d=wb",
+				"errorcheck -0 -l -d=defer",
+				"errorcheck -0 -l -d=wb",
+				"errorcheck -0 -l -m -live",
+				"errorcheck -0 -live",
+				"errorcheck -0 -live -l",
+				"errorcheck -0 -live -wb=0",
+				"errorcheck -0 -m -d=escapemutationscalls,zerocopy -l",
+				"errorcheck -0 -m -live -std",
+				"errorcheckdir -0 -m",
+				"errorcheckwithauto -0 -l -live -wb=0 -d=ssa/insert_resched_checks/off",
+				"errorcheckwithauto -0 -m -d=inlfuncswithclosures=1":
+				c.Exclusion = &Omission{Classification: "target-limit", Reason: "The assertions inspect native Go optimization decisions or runtime metadata. Gart delegates native optimization and runtime metadata to Dart. Source compilation and runtime behavior require separate coverage."}
 			}
 			if skip, ok := policy.Skips[c.Name]; ok {
 				c.Exclusion = &skip

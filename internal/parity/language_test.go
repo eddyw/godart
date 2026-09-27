@@ -1,10 +1,12 @@
 package parity
 
 import (
+	"fmt"
 	"go/build"
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 )
 
@@ -485,6 +487,108 @@ func TestRunRecipeInputs(t *testing.T) {
 		files, args, valid := languageRunRecipe(test.recipe)
 		if !slices.Equal(files, test.files) || !slices.Equal(args, test.args) || valid != test.valid {
 			t.Errorf("%q: files=%v args=%v valid=%t", test.recipe, files, args, valid)
+		}
+	}
+}
+
+func TestNativeDiagnosticRecipes(t *testing.T) {
+	root := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(root, "src/cmd/internal/testdir"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(filepath.Join(root, "test"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	for path, data := range map[string]string{
+		"VERSION": "go1.27.1\n",
+		"src/cmd/internal/testdir/testdir_test.go": `package testdir_test; var dirs=[]string{"."}; var types2Failures=setOf(); var types2Failures32Bit=setOf()`,
+	} {
+		if err := os.WriteFile(filepath.Join(root, path), []byte(data), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	recipes := []string{
+		"errorcheck -+ -0 -l -d=wb",
+		"errorcheck -0 -+ -p=internal/runtime/sys -m",
+		"errorcheck -0 -N -d=nil",
+		"errorcheck -0 -d=append,slice",
+		"errorcheck -0 -d=checkptr -m",
+		"errorcheck -0 -d=escapedebug=1",
+		"errorcheck -0 -d=nil",
+		"errorcheck -0 -d=ssa/check_bce/debug=1",
+		"errorcheck -0 -d=ssa/intrinsics/debug",
+		"errorcheck -0 -d=ssa/known_bits/debug=1",
+		"errorcheck -0 -d=ssa/late_fuse/debug=1",
+		"errorcheck -0 -d=ssa/opt/debug=1",
+		"errorcheck -0 -d=ssa/phiopt/debug=3",
+		"errorcheck -0 -d=ssa/prove/debug=1",
+		"errorcheck -0 -d=ssa/prove/debug=2",
+		"errorcheck -0 -d=ssa/tighten/debug=1",
+		"errorcheck -0 -d=tailcall=1",
+		"errorcheck -0 -d=typeassert",
+		"errorcheck -0 -d=wb",
+		"errorcheck -0 -l -d=defer",
+		"errorcheck -0 -l -d=wb",
+		"errorcheck -0 -l -m -live",
+		"errorcheck -0 -live",
+		"errorcheck -0 -live -l",
+		"errorcheck -0 -live -wb=0",
+		"errorcheck -0 -m -d=escapemutationscalls,zerocopy -l",
+		"errorcheck -0 -m -live -std",
+		"errorcheckdir -0 -m",
+		"errorcheckwithauto -0 -l -live -wb=0 -d=ssa/insert_resched_checks/off",
+		"errorcheckwithauto -0 -m -d=inlfuncswithclosures=1",
+	}
+	for i, recipe := range recipes {
+		name := fmt.Sprintf("native%d.go", i)
+		if err := os.WriteFile(filepath.Join(root, "test", name), []byte("// "+recipe+"\npackage p\n"), 0644); err != nil {
+			t.Fatal(err)
+		}
+		if strings.HasPrefix(recipe, "errorcheckdir ") {
+			dir := filepath.Join(root, "test", strings.TrimSuffix(name, ".go")+".dir")
+			if err := os.Mkdir(dir, 0755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(dir, "p.go"), []byte("package p\n"), 0644); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	for name, recipe := range map[string]string{
+		"rejection": "errorcheck -d=ssa/prove/debug=1",
+		"runtime":   "errorcheckandrundir -0 -m",
+		"unknown":   "errorcheck -0 -d=future/debug=1",
+	} {
+		if err := os.WriteFile(filepath.Join(root, "test", name+".go"), []byte("// "+recipe+"\npackage p\n"), 0644); err != nil {
+			t.Fatal(err)
+		}
+		if name == "runtime" {
+			dir := filepath.Join(root, "test", name+".dir")
+			if err := os.Mkdir(dir, 0755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\nfunc main() {}\n"), 0644); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	ctx := build.Default
+	ctx.GOROOT = root
+	inv, err := DiscoverLanguage(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(inv.Cases) != len(recipes)+3 {
+		t.Fatalf("got %d cases, want %d", len(inv.Cases), len(recipes)+3)
+	}
+	for _, c := range inv.Cases {
+		if strings.HasPrefix(c.Name, "native") {
+			if c.Exclusion == nil || c.Exclusion.Classification != "target-limit" || !strings.Contains(c.Exclusion.Reason, "separate coverage") {
+				t.Errorf("native diagnostics lack an explicit target limit: %+v", c)
+			}
+		} else if c.Exclusion != nil {
+			t.Errorf("unrelated recipe has an exclusion: %+v", c)
 		}
 	}
 }
