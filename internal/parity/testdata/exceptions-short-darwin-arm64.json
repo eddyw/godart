@@ -13902,5 +13902,19 @@
       "reason": "The original upstream test skips this case in short mode.",
       "test": "TestMultiWakeupTimer"
     }
+  ],
+  "crypto/tls": [
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips this case in short mode.",
+      "test": "TestDeadlineOnWrite"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips this case in short mode.",
+      "test": "TestDialTimeout"
+    }
   ]
 }
