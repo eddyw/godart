@@ -24,6 +24,8 @@ const Version = "0.1.0-dev"
 
 // TestOptions holds the flags of the test command.
 type TestOptions struct {
+	// Timeout limits tests and examples. Zero disables the timeout.
+	Timeout time.Duration
 	// Args pass additional arguments to each test binary.
 	Args []string
 	// Verbose writes 1 line for each test.
@@ -217,6 +219,7 @@ func binaryArgs(testOpt TestOptions) []string {
 				strconv.FormatInt(testOpt.BenchTime.Nanoseconds(), 10))
 		}
 	}
+	args = append(args, "-test.timeout="+testOpt.Timeout.String())
 	return append(args, testOpt.Args...)
 }
 

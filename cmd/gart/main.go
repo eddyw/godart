@@ -57,6 +57,7 @@ The test command takes these flags:
 	-v               write 1 line for each test
 	-run expr        run only a test whose name matches the expression
 	-short           ask each test for its short form
+	-timeout d       panic after this test duration (default 10m, 0 disables)
 	-failfast        do not start new tests after the first test failure
 	-count n         run the whole list of the tests n times, and 0 runs none
 	-cover           report the part of the statements that the tests reached
@@ -202,6 +203,7 @@ func runTest(args []string) error {
 	verbose := flags.set.Bool("v", false, "write 1 line for each test")
 	pattern := flags.set.String("run", "", "run only a test whose name matches this expression")
 	short := flags.set.Bool("short", false, "ask each test for its short form")
+	timeout := flags.set.Duration("timeout", 10*time.Minute, "panic after this test duration (0 disables the timeout)")
 	failFast := flags.set.Bool("failfast", false, "do not start new tests after the first test failure")
 	count := flags.set.Int("count", 1, "run the whole list of the tests this many times")
 	cover := flags.set.Bool("cover", false,
@@ -221,6 +223,7 @@ func runTest(args []string) error {
 	}
 	testOptions := driver.TestOptions{
 		Args:       programArgs,
+		Timeout:    *timeout,
 		Verbose:    *verbose,
 		Run:        *pattern,
 		Short:      *short,

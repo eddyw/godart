@@ -432,7 +432,7 @@ func runFuzzTargets(targets []InternalFuzzTarget, flags options) (ran, ok bool) 
 				continue
 			}
 			ran = true
-			t := &T{name: target.Name}
+			t := &T{name: target.Name, deadline: flags.deadline}
 			f := &F{t: t, files: FuzzCorpus[target.Name]}
 			fn := target.Fn
 			// F holds no Parallel, thus the target never parks and the group

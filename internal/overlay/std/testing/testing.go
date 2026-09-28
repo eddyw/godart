@@ -89,6 +89,7 @@ func Init() {
 		return
 	}
 	flagsReady = true
+	flag.DurationVar(&timeout, "test.timeout", 0, "panic test binary after duration `d` (0 disables the timeout)")
 	flag.BoolVar(&verbose, "test.v", verbose, "verbose: print additional output")
 	flag.BoolVar(&short, "test.short", short, "run smaller test suite to save time")
 	flag.BoolVar(&failFast, "test.failfast", false, "do not start new tests after the first test failure")
@@ -105,6 +106,7 @@ func Init() {
 // flagsReady marks a call of Init. Go also holds such a flag, because a second
 // call of flag.BoolVar with 1 name panics.
 var flagsReady bool
+var timeout time.Duration
 
 // MainStart builds the state of a test binary. A generated main of Go calls
 // it, and the entry point of gart calls NewM.
@@ -127,7 +129,11 @@ func RunTests(matchString func(pat, str string) (bool, error), tests []InternalT
 	if MatchString == nil {
 		MatchString = matchString
 	}
-	ran, ok := runList(tests, readFlags())
+	flags := readFlags()
+	if timeout > 0 {
+		flags.deadline = time.Now().Add(timeout)
+	}
+	ran, ok := runList(tests, flags)
 	if !ran {
 		emit(NoTestsToRun)
 	}
@@ -291,6 +297,7 @@ func AllocsPerRun(runs int, f func()) float64 {
 
 // T holds the state of 1 test.
 type T struct {
+	deadline   time.Time
 	names      *subtestNames
 	name       string
 	level      int
@@ -538,16 +545,13 @@ func (t *T) Chdir(dir string) {
 }
 
 // Deadline gives the time at which the binary passes the timeout of the run.
-//
-// gart holds no flag for a timeout, thus the flag of the result is always
-// false. Go reports the same for a run with the timeout 0.
 func (t *T) Deadline() (deadline time.Time, ok bool) {
 	if t.synctest {
 		// A test of a bubble reads a fake clock, thus a deadline of the real
 		// clock holds no meaning for it.
 		panic("testing: t.Deadline called inside synctest bubble")
 	}
-	return time.Time{}, false
+	return t.deadline, !t.deadline.IsZero()
 }
 
 // Attr writes 1 attribute of the test. A verbose run holds the line, and a
@@ -682,7 +686,7 @@ func (t *T) runSub(name string, f func(*T)) bool {
 	if t.names == nil {
 		t.names = &subtestNames{subNames: make(map[string]int32)}
 	}
-	sub := &T{name: t.names.unique(t.name, name), names: t.names, level: t.level + 1, parent: t}
+	sub := &T{name: t.names.unique(t.name, name), names: t.names, level: t.level + 1, parent: t, deadline: t.deadline}
 	if !matches(sub.name, runFilter) || skips(sub.name) {
 		return true
 	}
@@ -790,6 +794,12 @@ func (m *M) Run() int {
 		flag.Parse()
 	}
 	flags := readFlags()
+	var alarm *time.Timer
+	if timeout > 0 {
+		flags.deadline = time.Now().Add(timeout)
+		alarm = time.AfterFunc(timeout, func() { panic(fmt.Sprintf("test timed out after %v", timeout)) })
+		defer alarm.Stop()
+	}
 	ran, ok := runList(m.tests, flags)
 	failed := !ok
 	// Go runs each fuzz target after the tests and in front of the examples.
@@ -806,6 +816,9 @@ func (m *M) Run() int {
 		if !runExample(ex) {
 			failed = true
 		}
+	}
+	if alarm != nil {
+		alarm.Stop()
 	}
 	if flags.benchmarks {
 		for _, bc := range m.benchmarks {
@@ -852,7 +865,7 @@ func runList(tests []InternalTest, flags options) (ran, ok bool) {
 				continue
 			}
 			ran = true
-			t := &T{name: tc.Name}
+			t := &T{name: tc.Name, deadline: flags.deadline}
 			f := tc.F
 			g.run(t, f)
 			if t.parallel {
@@ -934,7 +947,8 @@ var skipFilter string
 
 // options holds the flags of a run.
 type options struct {
-	run string
+	deadline time.Time
+	run      string
 	// benchmarks reports whether the arguments held -test.bench.
 	benchmarks bool
 	bench      string

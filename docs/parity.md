@@ -136,6 +136,11 @@ Cleanup callbacks can register further cleanup callbacks. They execute in revers
 benchmarks. It does not provide a fuzz-input generator or native allocation
 measurements. Native `go test` remains a separate comparison baseline.
 
+`gart test -timeout` defaults to 10 minutes. A value of 0 disables the timeout.
+The deadline covers tests, fuzz seeds, and examples, but excludes benchmarks.
+`T.Deadline` reports that deadline, including in subtests.
+The timeout report does not yet list active tests.
+
 Use these sources for current coverage:
 
 - `make surface` for exported names and absent APIs.
