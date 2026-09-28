@@ -32,7 +32,26 @@ func TestHTTPUpstream(t *testing.T) {
 		"TestServerIssue5953": true, "testServerIssue5953": true,
 		"TestSniffWriteSize": true, "testSniffWriteSize": true,
 		"TestIdentityResponse": true, "testIdentityResponse": true,
-		"TestH12_ExplicitContentLength": true, "TestH12_FlushBeforeBody": true, "TestH12_FlushMidBody": true}
+		"TestH12_ExplicitContentLength": true, "TestH12_FlushBeforeBody": true, "TestH12_FlushMidBody": true,
+		"TestClientHead":                     true,
+		"testClientHead":                     true,
+		"robotsTxtHandler":                   true,
+		"TestClientHeadContentLength":        true,
+		"testClientHeadContentLength":        true,
+		"TestEmptyPasswordAuth":              true,
+		"testEmptyPasswordAuth":              true,
+		"TestClientRedirectUseResponse":      true,
+		"testClientRedirectUseResponse":      true,
+		"TestClientRedirect308NoGetBody":     true,
+		"testClientRedirect308NoGetBody":     true,
+		"TestClientTimeoutDoesNotExpire":     true,
+		"testClientTimeoutDoesNotExpire":     true,
+		"TestClientPopulatesNilResponseBody": true,
+		"nilBodyRoundTripper":                true,
+		"TestClientCallsCloseOnlyOnce":       true,
+		"testClientCallsCloseOnlyOnce":       true,
+		"issue40382Body":                     true,
+	}
 	var tests []string
 	for name := range names {
 		if strings.HasPrefix(name, "Test") {
@@ -41,7 +60,7 @@ func TestHTTPUpstream(t *testing.T) {
 	}
 	slices.Sort(tests)
 	var extracted strings.Builder
-	extracted.WriteString("// Copyright 2015 The Go Authors. All rights reserved.\n// Use of this source code is governed by a BSD-style\n// license that can be found in the LICENSE file.\n\npackage http_test\n\nimport (\"net\";\"bytes\";\"compress/gzip\";\"compress/zlib\";\"log\";\"slices\";\"context\";\"errors\";\"time\";\"net/url\";\"crypto/rand\";\"fmt\";\"io\";\"reflect\";\"strconv\";\"strings\";\"testing\";. \"net/http\")\n\n")
+	extracted.WriteString("// Copyright 2015 The Go Authors. All rights reserved.\n// Copyright 2011 The Go Authors. All rights reserved.\n// Copyright 2009 The Go Authors. All rights reserved.\n// Copyright 2010 The Go Authors. All rights reserved.\n// Use of this source code is governed by a BSD-style\n// license that can be found in the LICENSE file.\n\npackage http_test\n\nimport (\"encoding/base64\";\"net/http/httptest\";\"sync/atomic\";\"net\";\"bytes\";\"compress/gzip\";\"compress/zlib\";\"log\";\"slices\";\"context\";\"errors\";\"time\";\"net/url\";\"crypto/rand\";\"fmt\";\"io\";\"reflect\";\"strconv\";\"strings\";\"testing\";. \"net/http\")\n\n")
 	for _, file := range []string{"clientserver_test.go", "transport_test.go", "client_test.go", "serve_test.go", "sniff_test.go"} {
 		source, err := os.ReadFile(filepath.Join(runtime.GOROOT(), "src/net/http", file))
 		if err != nil {
@@ -108,14 +127,16 @@ func TestHTTPUpstream(t *testing.T) {
 		t.Fatalf("got %d HTTP test binaries", len(stats.Binaries))
 	}
 	prepareDart(t, outDir)
-	args := append([]string{filepath.Join(outDir, stats.Binaries[0].Entry)}, upstreamTestArgs("-test.run="+filter)...)
-	out, runErr, finished := output(dir, nil, runLimit, "dart", args...)
-	code := 0
-	if runErr != nil {
-		code = 1
+	args := upstreamTestArgs("-test.run=" + filter)
+	for _, target := range []string{"vm", "aot"} {
+		t.Run(target, func(t *testing.T) {
+			var result programResult
+			if target == "vm" {
+				result = programOutcome(t, dir, "dart", append([]string{filepath.Join(outDir, stats.Binaries[0].Entry)}, args...)...)
+			} else {
+				result = runUpstreamTarget(t, target, outDir, stats.Binaries[0].Entry, dir, args)
+			}
+			compareUpstream(t, "net/http-selected", "net/http", filter, target, filepath.Join(runtime.GOROOT(), "src/net/http"), result.Text, result.Exit)
+		})
 	}
-	if !finished {
-		t.Fatalf("HTTP upstream timeout:\n%s", out)
-	}
-	compareUpstream(t, "net/http-selected", "net/http", filter, "vm", filepath.Join(runtime.GOROOT(), "src/net/http"), string(out), code)
 }

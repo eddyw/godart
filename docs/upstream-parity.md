@@ -65,6 +65,10 @@ Reports retain these target exclusions. They do not count them as passes.
 Separate omissions cover native FIPS subprocesses, linker symbols, forced GC,
 the BoringSSL runner, and external services.
 
+The HTTP client comparisons use real HTTP/1 and TLS HTTP/2 servers on VM and AOT.
+Their adapter excludes HTTP/3 and upstream fake-network internals.
+Original assertions and matched skips remain unchanged.
+
 The Linux fallback-root adapter replaces namespace mounts with private directories and certificate environment paths.
 Both compilers receive the same fixture patch. The original assertions and separate child processes remain unchanged.
 Reports retain the original source hash, patch, adapted source, and adapted source hash.
