@@ -33,34 +33,46 @@ func TestHTTPUpstream(t *testing.T) {
 		"TestSniffWriteSize": true, "testSniffWriteSize": true,
 		"TestIdentityResponse": true, "testIdentityResponse": true,
 		"TestH12_ExplicitContentLength": true, "TestH12_FlushBeforeBody": true, "TestH12_FlushMidBody": true,
-		"TestClientHead":                     true,
-		"testClientHead":                     true,
-		"robotsTxtHandler":                   true,
-		"TestClientHeadContentLength":        true,
-		"testClientHeadContentLength":        true,
-		"TestEmptyPasswordAuth":              true,
-		"testEmptyPasswordAuth":              true,
-		"TestClientRedirectUseResponse":      true,
-		"testClientRedirectUseResponse":      true,
-		"TestClientRedirect308NoGetBody":     true,
-		"testClientRedirect308NoGetBody":     true,
-		"TestClientTimeoutDoesNotExpire":     true,
-		"testClientTimeoutDoesNotExpire":     true,
-		"TestClientPopulatesNilResponseBody": true,
-		"nilBodyRoundTripper":                true,
-		"TestClientCallsCloseOnlyOnce":       true,
-		"testClientCallsCloseOnlyOnce":       true,
-		"issue40382Body":                     true,
+		"TestClientHead":                           true,
+		"testClientHead":                           true,
+		"robotsTxtHandler":                         true,
+		"TestClientHeadContentLength":              true,
+		"testClientHeadContentLength":              true,
+		"TestEmptyPasswordAuth":                    true,
+		"testEmptyPasswordAuth":                    true,
+		"TestClientRedirectUseResponse":            true,
+		"testClientRedirectUseResponse":            true,
+		"TestClientRedirect308NoGetBody":           true,
+		"testClientRedirect308NoGetBody":           true,
+		"TestClientTimeoutDoesNotExpire":           true,
+		"testClientTimeoutDoesNotExpire":           true,
+		"TestClientPopulatesNilResponseBody":       true,
+		"nilBodyRoundTripper":                      true,
+		"TestClientCallsCloseOnlyOnce":             true,
+		"testClientCallsCloseOnlyOnce":             true,
+		"issue40382Body":                           true,
+		"TestHostMismatchCookies":                  true,
+		"testHostMismatchCookies":                  true,
+		"TestRedirectCookiesJar":                   true,
+		"testRedirectCookiesJar":                   true,
+		"TestJar":                                  true,
+		"matchReturnedCookies":                     true,
+		"expectedCookies":                          true,
+		"echoCookiesRedirectHandler":               true,
+		"TestJarCalls":                             true,
+		"testJarCalls":                             true,
+		"RecordingJar":                             true,
+		"TestClientRedirectResponseWithoutRequest": true,
+		"issue15577Tripper":                        true,
+		"TestClientCloseIdleConnections":           true,
+		"roundTripperWithoutCloseIdle":             true,
+		"roundTripperWithCloseIdle":                true,
+		"TestClientPropagatesTimeoutToContext":     true,
+		"testRoundTripper":                         true,
 	}
 	var tests []string
-	for name := range names {
-		if strings.HasPrefix(name, "Test") {
-			tests = append(tests, name)
-		}
-	}
-	slices.Sort(tests)
 	var extracted strings.Builder
-	extracted.WriteString("// Copyright 2015 The Go Authors. All rights reserved.\n// Copyright 2011 The Go Authors. All rights reserved.\n// Copyright 2009 The Go Authors. All rights reserved.\n// Copyright 2010 The Go Authors. All rights reserved.\n// Use of this source code is governed by a BSD-style\n// license that can be found in the LICENSE file.\n\npackage http_test\n\nimport (\"encoding/base64\";\"net/http/httptest\";\"sync/atomic\";\"net\";\"bytes\";\"compress/gzip\";\"compress/zlib\";\"log\";\"slices\";\"context\";\"errors\";\"time\";\"net/url\";\"crypto/rand\";\"fmt\";\"io\";\"reflect\";\"strconv\";\"strings\";\"testing\";. \"net/http\")\n\n")
+	extracted.WriteString("// Copyright 2015 The Go Authors. All rights reserved.\n// Copyright 2011 The Go Authors. All rights reserved.\n// Copyright 2009 The Go Authors. All rights reserved.\n// Copyright 2010 The Go Authors. All rights reserved.\n// Use of this source code is governed by a BSD-style\n// license that can be found in the LICENSE file.\n\npackage http_test\n\nimport (\"encoding/base64\";\"net/http/httptest\";\"sync/atomic\";\"sync\";\"net\";\"bytes\";\"compress/gzip\";\"compress/zlib\";\"log\";\"slices\";\"context\";\"errors\";\"time\";\"net/url\";\"crypto/rand\";\"fmt\";\"io\";\"reflect\";\"strconv\";\"strings\";\"testing\";. \"net/http\")\n\n")
 	for _, file := range []string{"clientserver_test.go", "transport_test.go", "client_test.go", "serve_test.go", "sniff_test.go"} {
 		source, err := os.ReadFile(filepath.Join(runtime.GOROOT(), "src/net/http", file))
 		if err != nil {
@@ -76,6 +88,9 @@ func TestHTTPUpstream(t *testing.T) {
 			switch d := decl.(type) {
 			case *ast.FuncDecl:
 				keep = names[d.Name.Name]
+				if keep && d.Recv == nil && strings.HasPrefix(d.Name.Name, "Test") {
+					tests = append(tests, d.Name.Name)
+				}
 				if d.Recv != nil {
 					switch typ := d.Recv.List[0].Type.(type) {
 					case *ast.Ident:
@@ -113,6 +128,7 @@ func TestHTTPUpstream(t *testing.T) {
 		t.Fatal(err)
 	}
 	writeFile(t, filepath.Join(dir, "adapter_test.go"), string(adapter))
+	slices.Sort(tests)
 	patterns := make([]string, len(tests))
 	for i, name := range tests {
 		patterns[i] = regexp.QuoteMeta(name)
