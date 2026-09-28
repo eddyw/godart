@@ -541,19 +541,19 @@ func newLocalListener(t testing.TB, network string) net.Listener {
 			if pkg == "net/http" {
 				name = pkg + "-content-type"
 			}
-			compareUpstreamInputs(t, name, pkg, filter, "vm", dir, result.Text, result.Exit, certificates, resolver)
+			compareUpstreamInputs(t, name, pkg, filter, "vm", dir, result.Text, result.Exit, certificates, resolver, true)
 			if pkg == "os/signal" || pkg == "crypto/md5" || pkg == "crypto/subtle" || pkg == "reflect" || pkg == "crypto/x509" || pkg == "crypto/tls" || pkg == "runtime" || pkg == "runtime/metrics" || pkg == "fmt" || pkg == "encoding/asn1" || pkg == "encoding/json" || pkg == "encoding/gob" || pkg == "go/parser" || pkg == "html/template" || pkg == "context" || pkg == "testing" || pkg == "time" {
 				for _, target := range []string{"aot", "js", "wasm"} {
 					t.Run(target, func(t *testing.T) {
 						result := runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, args)
-						compareUpstreamInputs(t, name, pkg, filter, target, dir, result.Text, result.Exit, certificates, resolver)
+						compareUpstreamInputs(t, name, pkg, filter, target, dir, result.Text, result.Exit, certificates, resolver, true)
 					})
 				}
 			}
 			if pkg == "os" || pkg == "net" || pkg == "syscall" {
 				t.Run("aot", func(t *testing.T) {
 					result := runUpstreamTarget(t, "aot", out, stats.Binaries[0].Entry, dir, args)
-					compareUpstreamInputs(t, name, pkg, filter, "aot", dir, result.Text, result.Exit, certificates, resolver)
+					compareUpstreamInputs(t, name, pkg, filter, "aot", dir, result.Text, result.Exit, certificates, resolver, true)
 				})
 			}
 			if pkg == "net" {
@@ -562,14 +562,14 @@ func newLocalListener(t testing.TB, network string) net.Listener {
 				for _, target := range []string{"js", "wasm"} {
 					t.Run(target, func(t *testing.T) {
 						result := runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, pipeArgs)
-						compareUpstream(t, "net-pipe", pkg, pipeFilter, target, dir, result.Text, result.Exit)
+						compareUpstream(t, "net-pipe", pkg, pipeFilter, target, dir, result.Text, result.Exit, true)
 					})
 				}
 			}
 			if pkg == "sync" || pkg == "internal/godebug" {
 				run(t, out, "dart", "compile", "exe", stats.Binaries[0].Entry, "-o", launcher)
 				result := programOutcome(t, dir, launcher, args...)
-				compareUpstreamInputs(t, name, pkg, filter, "aot", dir, result.Text, result.Exit, certificates, resolver)
+				compareUpstreamInputs(t, name, pkg, filter, "aot", dir, result.Text, result.Exit, certificates, resolver, true)
 			}
 		})
 	}

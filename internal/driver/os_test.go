@@ -76,7 +76,7 @@ func TestOSEnvironment(t *testing.T) {
 			} else {
 				got = runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, args)
 			}
-			compareUpstream(t, "os-environment", "os", filter, target, filepath.Join(runtime.GOROOT(), "src/os"), got.Text, got.Exit)
+			compareUpstream(t, "os-environment", "os", filter, target, filepath.Join(runtime.GOROOT(), "src/os"), got.Text, got.Exit, false)
 		})
 	}
 }

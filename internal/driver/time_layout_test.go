@@ -87,7 +87,7 @@ func TestTimeLayout(t *testing.T) {
 			} else {
 				result = runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, args)
 			}
-			compareUpstream(t, "time-layout", "time", filter, target, dir, result.Text, result.Exit)
+			compareUpstream(t, "time-layout", "time", filter, target, dir, result.Text, result.Exit, true)
 		})
 	}
 }

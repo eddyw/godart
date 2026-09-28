@@ -60,7 +60,7 @@ func TestReflectConversions(t *testing.T) {
 			} else {
 				result = runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, args)
 			}
-			compareUpstream(t, "reflect-conversion", "reflect", filter, target, dir, result.Text, result.Exit)
+			compareUpstream(t, "reflect-conversion", "reflect", filter, target, dir, result.Text, result.Exit, true)
 		})
 	}
 }

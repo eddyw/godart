@@ -87,7 +87,7 @@ func TestSystemTrustInvalidCertificates(t *testing.T) {
 			if err != nil {
 				code = 1
 			}
-			compareUpstream(t, "crypto/x509-system-invalid", "crypto/x509", "^TestIssue51759$", target, filepath.Join(runtime.GOROOT(), "src/crypto/x509"), string(data), code)
+			compareUpstream(t, "crypto/x509-system-invalid", "crypto/x509", "^TestIssue51759$", target, filepath.Join(runtime.GOROOT(), "src/crypto/x509"), string(data), code, false)
 		})
 	}
 }

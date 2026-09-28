@@ -54,7 +54,7 @@ func TestRFC6724(t *testing.T) {
 			} else {
 				result = runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, netDir, args)
 			}
-			compareUpstream(t, "net-rfc6724", "net", filter, target, netDir, result.Text, result.Exit)
+			compareUpstream(t, "net-rfc6724", "net", filter, target, netDir, result.Text, result.Exit, true)
 		})
 	}
 }

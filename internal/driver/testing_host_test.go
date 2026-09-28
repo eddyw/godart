@@ -46,7 +46,7 @@ func TestTestingHostContracts(t *testing.T) {
 			} else {
 				result = runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, args)
 			}
-			compareUpstream(t, "testing-host", "testing", filter, target, filepath.Join(runtime.GOROOT(), "src/testing"), result.Text, result.Exit)
+			compareUpstream(t, "testing-host", "testing", filter, target, filepath.Join(runtime.GOROOT(), "src/testing"), result.Text, result.Exit, false)
 		})
 	}
 }

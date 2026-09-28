@@ -447,9 +447,9 @@ func TestTCPDialFamilies(t *testing.T) {
 	const filter = "^(TestDialLocal|TestDialAddrError|TestDialerLocalAddr|TestCancelAfterDial|TestDialWithNonZeroDeadline)$"
 	args := upstreamTestArgs("-test.run=" + filter)
 	result := programOutcome(t, netDir, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, args...)...)
-	compareUpstream(t, "net-tcp-dial-family", "net", filter, "vm", netDir, result.Text, result.Exit)
+	compareUpstream(t, "net-tcp-dial-family", "net", filter, "vm", netDir, result.Text, result.Exit, true)
 	t.Run("aot", func(t *testing.T) {
 		result := runUpstreamTarget(t, "aot", out, stats.Binaries[0].Entry, netDir, args)
-		compareUpstream(t, "net-tcp-dial-family", "net", filter, "aot", netDir, result.Text, result.Exit)
+		compareUpstream(t, "net-tcp-dial-family", "net", filter, "aot", netDir, result.Text, result.Exit, true)
 	})
 }

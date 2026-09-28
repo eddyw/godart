@@ -71,7 +71,7 @@ func TestCompilerTypeAssertions(t *testing.T) {
 			} else {
 				result = runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, args)
 			}
-			compareUpstreamInventory(t, "compiler-type-assertions", pkg, "", target, dir, result.Text, result.Exit, inventory, nil, nil, nil)
+			compareUpstreamInventory(t, "compiler-type-assertions", pkg, "", target, dir, result.Text, result.Exit, inventory, nil, nil, nil, true)
 		})
 	}
 }

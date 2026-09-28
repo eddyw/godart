@@ -69,7 +69,7 @@ func TestResolverLifecycle(t *testing.T) {
 			} else {
 				result = runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, args)
 			}
-			compareUpstreamInventory(t, "net-resolver-lifecycle", "net", filter, target, dir, result.Text, result.Exit, inventory, nil, nil, exclusions)
+			compareUpstreamInventory(t, "net-resolver-lifecycle", "net", filter, target, dir, result.Text, result.Exit, inventory, nil, nil, exclusions, true)
 		})
 	}
 }

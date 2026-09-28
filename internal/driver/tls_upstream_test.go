@@ -55,7 +55,7 @@ func TestTLSUpstream(t *testing.T) {
 			} else {
 				result = runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, args)
 			}
-			compareUpstreamInventory(t, "tls-selected", "crypto/tls", filter, target, dir, result.Text, result.Exit, inventory, nil, nil, exclusions)
+			compareUpstreamInventory(t, "tls-selected", "crypto/tls", filter, target, dir, result.Text, result.Exit, inventory, nil, nil, exclusions, true)
 		})
 	}
 }

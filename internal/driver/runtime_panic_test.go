@@ -119,7 +119,7 @@ func runTestProg(t *testing.T, binary, name string) string {
 			} else {
 				result = runUpstreamTarget(t, target, validatorOut, stats.Binaries[0].Entry, validator, args)
 			}
-			compareUpstream(t, "runtime-panic", "runtime", "^TestPanicTraceback$", target, filepath.Join(runtime.GOROOT(), "src/runtime"), result.Text, result.Exit)
+			compareUpstream(t, "runtime-panic", "runtime", "^TestPanicTraceback$", target, filepath.Join(runtime.GOROOT(), "src/runtime"), result.Text, result.Exit, false)
 		})
 	}
 }

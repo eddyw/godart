@@ -45,7 +45,7 @@ func TestWriteFilePermissions(t *testing.T) {
 			} else {
 				result = runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, args)
 			}
-			compareUpstream(t, "os-writefile-permissions", "os", filter, target, osDir, result.Text, result.Exit)
+			compareUpstream(t, "os-writefile-permissions", "os", filter, target, osDir, result.Text, result.Exit, false)
 		})
 	}
 }

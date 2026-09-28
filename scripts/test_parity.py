@@ -1540,11 +1540,11 @@ class ParityTest(unittest.TestCase):
                 dict(kernel=dict(compiles=0, incremental=0)),
                 dict(kernel=dict(compiles=1, incremental=1)),
                 dict(kernel=dict(compiles=1, incremental=0), trimpath=False),
-                dict(selection="kernel/p"),
+                dict(selection="kernel/p", schema_version=None),
             ]
             for index, options in enumerate(cases):
                 name = f"Test{index}"
-                record = dict(package="p", expected=[name], target="vm", short=True,
+                record = dict(schema_version=1, package="p", expected=[name], target="vm", short=True,
                               trimpath=True, native_trimpath=False, timeout="5m0s",
                               native=dict(exit=0), gart=dict(exit=0),
                               comparison=dict(passed=[name], problems=[]))
@@ -1555,6 +1555,38 @@ class ParityTest(unittest.TestCase):
             self.assertTrue(all(g["top_level"] == {"passed": 1} for g in groups))
             legacy = next(g for g in groups if g["configuration"]["kernel"] == "unrecorded")
             self.assertIsNone(legacy["configuration"]["trimpath"])
+
+    def test_behavior_keeps_legacy_source_paths_unknown(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            manifests = root / "manifests"
+            reports = root / "reports"
+            parity.save(manifests / "coverage-manifest.json", [])
+            for index, (version, trimmed) in enumerate([(None, True), (1, True), (1, False)]):
+                name = f"Test{index}"
+                record = dict(package="p", expected=[name], trimpath=trimmed,
+                              native=dict(exit=0), gart=dict(exit=0),
+                              comparison=dict(passed=[name], problems=[]))
+                if version is not None:
+                    record["schema_version"] = version
+                parity.save(reports / f"{index}.json", record)
+            groups = parity.behavior([reports], manifests)
+            self.assertEqual(len(groups), 3)
+            self.assertEqual({g["configuration"]["trimpath"] for g in groups}, {None, True, False})
+
+    def test_behavior_rejects_unknown_schema_or_invalid_source_path_flag(self):
+        cases = [dict(schema_version=value, trimpath=True) for value in [0, 2, True, "1", 1.0]]
+        cases.extend(dict(schema_version=1, trimpath=value) for value in [None, 0, "true"])
+        for fields in cases:
+            with self.subTest(fields=fields), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                manifests = root / "manifests"
+                reports = root / "reports"
+                parity.save(manifests / "coverage-manifest.json", [])
+                parity.save(reports / "report.json", dict(fields, package="p", expected=["Test"],
+                    native=dict(exit=0), gart=dict(exit=0), comparison=dict(passed=["Test"], problems=[])))
+                with self.assertRaisesRegex(ValueError, "upstream report schema|source-path flag"):
+                    parity.behavior([reports], manifests)
 
     def test_behavior_rejects_invalid_kernel_counters(self):
         for counters in ({}, [], True, dict(compiles=-1, incremental=0),

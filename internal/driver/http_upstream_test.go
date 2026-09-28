@@ -136,7 +136,7 @@ func TestHTTPUpstream(t *testing.T) {
 			} else {
 				result = runUpstreamTarget(t, target, outDir, stats.Binaries[0].Entry, dir, args)
 			}
-			compareUpstream(t, "net/http-selected", "net/http", filter, target, filepath.Join(runtime.GOROOT(), "src/net/http"), result.Text, result.Exit)
+			compareUpstream(t, "net/http-selected", "net/http", filter, target, filepath.Join(runtime.GOROOT(), "src/net/http"), result.Text, result.Exit, true)
 		})
 	}
 }

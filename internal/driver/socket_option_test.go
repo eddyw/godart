@@ -228,7 +228,7 @@ func newLocalListener(t testing.TB, network string) net.Listener {
 			} else {
 				original = runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, upstreamTestArgs("-test.run=^TestNotTemporaryRead$"))
 			}
-			compareUpstream(t, "net-linger", "net", "^TestNotTemporaryRead$", target, dir, original.Text, original.Exit)
+			compareUpstream(t, "net-linger", "net", "^TestNotTemporaryRead$", target, dir, original.Text, original.Exit, false)
 		})
 	}
 }

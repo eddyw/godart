@@ -42,7 +42,7 @@ func TestDirectoryMetadata(t *testing.T) {
 			} else {
 				result = runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, osDir, args)
 			}
-			compareUpstream(t, "os-directory-metadata", "os", filter, target, osDir, result.Text, result.Exit)
+			compareUpstream(t, "os-directory-metadata", "os", filter, target, osDir, result.Text, result.Exit, false)
 		})
 	}
 }

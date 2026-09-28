@@ -298,7 +298,9 @@ Kernel comparisons retain a separate report for each execution.
 Reports record actual source-path options and the kernel compile and incremental counters.
 The compile counter includes incremental compilations.
 The aggregate separates timeouts, source-path options, and kernel counters.
-Legacy kernel reports have unknown cache state and source-path options.
+A report needs schema version 1 or kernel counters to establish its source-path option.
+Legacy kernel reports without counters retain unknown cache state.
+All adapters supply their compilation's source-path option explicitly.
 
 API declaration differences require review. Equivalent aliases can produce differences.
 Signature comparison ignores parameter names, including nested callbacks and generic parameters.

@@ -69,7 +69,7 @@ func supportsTCPFamily(network, address string) bool {
 			} else {
 				result = runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, args)
 			}
-			compareUpstream(t, "net-interfaces", "net", filter, target, dir, result.Text, result.Exit)
+			compareUpstream(t, "net-interfaces", "net", filter, target, dir, result.Text, result.Exit, true)
 		})
 	}
 }

@@ -50,7 +50,7 @@ func TestDirectoryCursor(t *testing.T) {
 			} else {
 				result = runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, args)
 			}
-			compareUpstream(t, "os-directory-cursor", "os", filter, target, osDir, result.Text, result.Exit)
+			compareUpstream(t, "os-directory-cursor", "os", filter, target, osDir, result.Text, result.Exit, false)
 		})
 	}
 }

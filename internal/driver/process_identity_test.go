@@ -115,7 +115,7 @@ func main() {
 			} else {
 				result = runUpstreamTarget(t, target, testOut, stats.Binaries[0].Entry, dir, args)
 			}
-			compareUpstream(t, "syscall-process-group", "syscall", "^TestZeroSysProcAttr$", target, dir, result.Text, result.Exit)
+			compareUpstream(t, "syscall-process-group", "syscall", "^TestZeroSysProcAttr$", target, dir, result.Text, result.Exit, false)
 		})
 	}
 }

@@ -67,7 +67,7 @@ func run(t *testing.T,f func(*testing.T,testMode)) {
 			} else {
 				result = runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, args, "--import", prelude)
 			}
-			compareUpstream(t, "http-fetch-transport", "net/http", "^(TestTransportCheckContextDoneEarly|TestTransportClosesBodyOnInvalidRequests|TestTransportAltProto|TestAltProtoCancellation|TestTransportEmptyMethod)$/^(h1|h2)$", target, origin, result.Text, result.Exit)
+			compareUpstream(t, "http-fetch-transport", "net/http", "^(TestTransportCheckContextDoneEarly|TestTransportClosesBodyOnInvalidRequests|TestTransportAltProto|TestAltProtoCancellation|TestTransportEmptyMethod)$/^(h1|h2)$", target, origin, result.Text, result.Exit, false)
 		})
 	}
 }

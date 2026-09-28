@@ -32,11 +32,11 @@ func TestRuntimeCaller(t *testing.T) {
 	const filter = "^(TestCaller|TestNilName|TestLineNumber|TestCallers|TestCallersPanic|TestCallersDoublePanic|TestCallersAfterRecovery|TestCallersAbortedPanic|TestCallersAbortedPanic2|TestCallersEndlineno)$"
 	args := upstreamTestArgs("-test.run=" + filter)
 	result := programOutcome(t, dir, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, args...)...)
-	compareUpstream(t, "runtime-caller", "runtime", filter, "vm", dir, result.Text, result.Exit)
+	compareUpstream(t, "runtime-caller", "runtime", filter, "vm", dir, result.Text, result.Exit, true)
 	for _, target := range []string{"aot", "js", "wasm"} {
 		t.Run(target, func(t *testing.T) {
 			result := runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, args)
-			compareUpstream(t, "runtime-caller", "runtime", filter, target, dir, result.Text, result.Exit)
+			compareUpstream(t, "runtime-caller", "runtime", filter, target, dir, result.Text, result.Exit, true)
 		})
 	}
 }

@@ -244,6 +244,9 @@ def behavior(paths, manifests=MANIFESTS):
                 "go_version", "dart_version", "node_version", "goos", "goarch", "target", "short",
                 "source_sha256", "build_tags", "gart_build_tags", "tool_tags", "cgo", "environment",
                 "timeout", "trimpath", "native_trimpath", "kernel")}
+            schema = report.get("schema_version")
+            if schema is not None and (type(schema) is not int or schema != 1):
+                raise ValueError("unsupported upstream report schema: " + str(path))
             kernel = report.get("kernel")
             if kernel is not None:
                 if (not isinstance(kernel, dict) or set(kernel) != {"compiles", "incremental"} or
@@ -251,6 +254,10 @@ def behavior(paths, manifests=MANIFESTS):
                     raise ValueError("invalid kernel counters: " + str(path))
             elif (report.get("selection") or "").startswith("kernel/"):
                 config["kernel"] = "unrecorded"
+            if schema == 1 or kernel is not None:
+                if type(report.get("trimpath")) is not bool:
+                    raise ValueError("invalid source-path flag: " + str(path))
+            else:
                 config["trimpath"] = None
             origin = provenance(path)
             config.update(origin)
