@@ -68,6 +68,7 @@ the BoringSSL runner, and external services.
 The HTTP client comparisons use real HTTP/1 and TLS HTTP/2 servers on VM and AOT.
 Their adapter excludes HTTP/3 and upstream fake-network internals.
 Original assertions and matched skips remain unchanged.
+The adapter retains the original HTTP cleanup assertions and goroutine inspection helper.
 
 The Linux fallback-root adapter replaces namespace mounts with private directories and certificate environment paths.
 Both compilers receive the same fixture patch. The original assertions and separate child processes remain unchanged.

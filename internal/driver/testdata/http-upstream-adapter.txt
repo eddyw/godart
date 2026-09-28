@@ -46,6 +46,6 @@ func run(t *testing.T,f func(*testing.T,testMode),opts ...any) {
  modes:=http3SkippedMode
  if len(opts)>0 {modes=opts[0].([]testMode)}
  for _,mode:=range modes {
-  t.Run(string(mode),func(t *testing.T) { f(t,mode) })
+  t.Run(string(mode),func(t *testing.T) { t.Cleanup(func() { afterTest(t) }); f(t,mode) })
  }
 }

@@ -97,11 +97,23 @@ func TestHTTPUpstream(t *testing.T) {
 		"testRedirectsByMethod":                     true,
 		"removeCommonLines":                         true,
 		"writeCountingConn":                         true,
+		"TestGetRequestFormat":                      true,
+		"TestPostRequestFormat":                     true,
+		"TestPostFormRequestFormat":                 true,
+		"TestClientSendsCookieFromJar":              true,
+		"TestClientErrorWithRequestURI":             true,
+		"TestBasicAuth":                             true,
+		"TestBasicAuthHeadersPreserved":             true,
+		"TestStripPasswordFromError":                true,
+		"recordingTransport":                        true,
+		"afterTest":                                 true,
+		"interestingGoroutines":                     true,
+		"leakReported":                              true,
 	}
 	var tests []string
 	var extracted strings.Builder
-	extracted.WriteString("// Copyright 2015 The Go Authors. All rights reserved.\n// Copyright 2011 The Go Authors. All rights reserved.\n// Copyright 2009 The Go Authors. All rights reserved.\n// Copyright 2010 The Go Authors. All rights reserved.\n// Use of this source code is governed by a BSD-style\n// license that can be found in the LICENSE file.\n\npackage http_test\n\nimport (\"encoding/base64\";\"net/http/httptest\";\"net/http/cookiejar\";\"sync/atomic\";\"sync\";\"net\";\"bytes\";\"compress/gzip\";\"compress/zlib\";\"log\";\"slices\";\"context\";\"errors\";\"time\";\"net/url\";\"crypto/rand\";\"fmt\";\"io\";\"reflect\";\"strconv\";\"strings\";\"testing\";. \"net/http\")\n\n")
-	for _, file := range []string{"clientserver_test.go", "transport_test.go", "client_test.go", "serve_test.go", "sniff_test.go"} {
+	extracted.WriteString("// Copyright 2013 The Go Authors. All rights reserved.\n// Copyright 2015 The Go Authors. All rights reserved.\n// Copyright 2011 The Go Authors. All rights reserved.\n// Copyright 2009 The Go Authors. All rights reserved.\n// Copyright 2010 The Go Authors. All rights reserved.\n// Use of this source code is governed by a BSD-style\n// license that can be found in the LICENSE file.\n\npackage http_test\n\nimport (\"runtime\";\"net/http\";\"encoding/base64\";\"net/http/httptest\";\"net/http/cookiejar\";\"sync/atomic\";\"sync\";\"net\";\"bytes\";\"compress/gzip\";\"compress/zlib\";\"log\";\"slices\";\"context\";\"errors\";\"time\";\"net/url\";\"crypto/rand\";\"fmt\";\"io\";\"reflect\";\"strconv\";\"strings\";\"testing\";. \"net/http\")\n\n")
+	for _, file := range []string{"clientserver_test.go", "transport_test.go", "client_test.go", "serve_test.go", "sniff_test.go", "main_test.go"} {
 		source, err := os.ReadFile(filepath.Join(runtime.GOROOT(), "src/net/http", file))
 		if err != nil {
 			t.Fatal(err)
@@ -161,7 +173,7 @@ func TestHTTPUpstream(t *testing.T) {
 	for i, name := range tests {
 		patterns[i] = regexp.QuoteMeta(name)
 	}
-	filter := "^(" + strings.Join(patterns, "|") + ")$/^(h1|h2)$"
+	filter := "^(" + strings.Join(patterns, "|") + ")$"
 	outDir := t.TempDir()
 	stats, err := driver.BuildWithStats(driver.Options{Dir: dir, Patterns: []string{"."}, Out: outDir, Runtime: runtimeDir(t), TrimPath: true, Tests: true})
 	if err != nil {
