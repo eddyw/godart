@@ -17,7 +17,7 @@ func TestRuntimeCaller(t *testing.T) {
 	fixture, out := t.TempDir(), t.TempDir()
 	writeFile(t, filepath.Join(fixture, "go.mod"), "module runtime_test\n\ngo 1.27\n")
 	writeFile(t, filepath.Join(fixture, "000_package.go"), "package runtime_test\n")
-	source := selectedUpstreamSource(t, filepath.Join(dir, "symtab_test.go"), []string{"TestCaller", "testCallerFoo", "testCallerBar", "TestLineNumber", "lineNumber", "firstLine", "lineVar1", "lineVar2a", "compLit", "arrayLit", "sliceLit", "mapLit", "intLit", "trythis", "recordLines", "l38"})
+	source := selectedUpstreamSource(t, filepath.Join(dir, "symtab_test.go"), []string{"TestCaller", "TestNilName", "testCallerFoo", "testCallerBar", "TestLineNumber", "lineNumber", "firstLine", "lineVar1", "lineVar2a", "compLit", "arrayLit", "sliceLit", "mapLit", "intLit", "trythis", "recordLines", "l38"})
 	writeFile(t, filepath.Join(fixture, "symtab_test.go"), source)
 	source = selectedUpstreamSource(t, filepath.Join(dir, "callers_test.go"), []string{"f1", "f2", "f3", "testCallers", "testCallersEqual", "TestCallers", "TestCallersPanic", "TestCallersDoublePanic", "TestCallersAfterRecovery", "TestCallersAbortedPanic", "TestCallersAbortedPanic2", "TestCallersEndlineno", "testNormalEndlineno", "testGenericEndlineno", "testCallerLine", "callerLine"})
 	writeFile(t, filepath.Join(fixture, "callers_test.go"), source)
@@ -29,7 +29,7 @@ func TestRuntimeCaller(t *testing.T) {
 		t.Fatalf("got %d binaries", len(stats.Binaries))
 	}
 	prepareDart(t, out)
-	const filter = "^(TestCaller|TestLineNumber|TestCallers|TestCallersPanic|TestCallersDoublePanic|TestCallersAfterRecovery|TestCallersAbortedPanic|TestCallersAbortedPanic2|TestCallersEndlineno)$"
+	const filter = "^(TestCaller|TestNilName|TestLineNumber|TestCallers|TestCallersPanic|TestCallersDoublePanic|TestCallersAfterRecovery|TestCallersAbortedPanic|TestCallersAbortedPanic2|TestCallersEndlineno)$"
 	args := upstreamTestArgs("-test.run=" + filter)
 	result := programOutcome(t, dir, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, args...)...)
 	compareUpstream(t, "runtime-caller", "runtime", filter, "vm", dir, result.Text, result.Exit)
