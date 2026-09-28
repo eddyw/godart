@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"runtime"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/eddyw/godart/internal/driver"
@@ -21,6 +22,20 @@ func TestRuntimeCaller(t *testing.T) {
 	writeFile(t, filepath.Join(fixture, "symtab_test.go"), source)
 	source = selectedUpstreamSource(t, filepath.Join(dir, "callers_test.go"), []string{"f1", "f2", "f3", "testCallers", "testCallersEqual", "TestCallers", "TestCallersPanic", "TestCallersDoublePanic", "TestCallersAfterRecovery", "TestCallersAbortedPanic", "TestCallersAbortedPanic2", "TestCallersEndlineno", "testNormalEndlineno", "testGenericEndlineno", "testCallerLine", "callerLine"})
 	writeFile(t, filepath.Join(fixture, "callers_test.go"), source)
+	for _, item := range []struct {
+		file  string
+		names []string
+	}{
+		{"stack_test.go", []string{"TestStackOutput", "TestStackAllOutput"}},
+		{"traceback_test.go", []string{"TestTracebackGeneric", "testTracebackGenericFn", "testTracebackGenericFnInlined", "testTracebackGenericTyp"}},
+		{"runtime_test.go", []string{"flagQuick"}},
+	} {
+		source := selectedUpstreamSource(t, filepath.Join(dir, item.file), item.names)
+		if item.file == "runtime_test.go" {
+			source = strings.Replace(source, `. "runtime"`+"\n", "", 1)
+		}
+		writeFile(t, filepath.Join(fixture, item.file), source)
+	}
 	stats, err := driver.BuildWithStats(driver.Options{Dir: fixture, Patterns: []string{"."}, Out: out, Runtime: runtimeDir(t), Tests: true, TrimPath: true})
 	if err != nil {
 		t.Fatal(err)
@@ -29,7 +44,7 @@ func TestRuntimeCaller(t *testing.T) {
 		t.Fatalf("got %d binaries", len(stats.Binaries))
 	}
 	prepareDart(t, out)
-	const filter = "^(TestCaller|TestNilName|TestLineNumber|TestCallers|TestCallersPanic|TestCallersDoublePanic|TestCallersAfterRecovery|TestCallersAbortedPanic|TestCallersAbortedPanic2|TestCallersEndlineno)$"
+	const filter = "^(TestCaller|TestNilName|TestLineNumber|TestCallers|TestCallersPanic|TestCallersDoublePanic|TestCallersAfterRecovery|TestCallersAbortedPanic|TestCallersAbortedPanic2|TestCallersEndlineno|TestStackOutput|TestStackAllOutput|TestTracebackGeneric)$"
 	args := upstreamTestArgs("-test.run=" + filter)
 	result := programOutcome(t, dir, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, args...)...)
 	compareUpstream(t, "runtime-caller", "runtime", filter, "vm", dir, result.Text, result.Exit, true)

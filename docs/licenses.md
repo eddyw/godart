@@ -57,7 +57,8 @@ Harness regressions retain original `testing_test.go` and `sub_test.go` assertio
 Benchmark result types and format methods adapt `src/testing/benchmark.go`
 and retain its BSD notice.
 The runtime caller adapter retains original declarations from
-`src/runtime/symtab_test.go` and `callers_test.go` with their Go BSD notices.
+`src/runtime/symtab_test.go`, `callers_test.go`, `stack_test.go`,
+`traceback_test.go`, and `runtime_test.go` with their Go BSD notices.
 The panic traceback adapter preserves `src/runtime/crash_test.go` and
 `src/runtime/testdata/testprog/deadlock.go` with their Go BSD notices.
 The process identity adapter adapts group-count validation from Go

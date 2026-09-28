@@ -464,14 +464,18 @@ func (e *emitter) goFuncName(f *ir.Func) string {
 	recv := "?"
 	if obj := receiverTypeName(f.Recv.Type); obj != nil {
 		recv = obj.Name()
-		if len(f.TypeParams) > 0 {
+		if namedOf(f.Recv.Type).TypeParams().Len() > 0 {
 			recv += "[...]"
 		}
 		if isPointerType(f.Recv.Type) {
 			recv = "(*" + recv + ")"
 		}
 	}
-	return path + "." + recv + "." + f.Name
+	name := f.Name
+	if f.Obj.Signature().TypeParams().Len() > 0 {
+		name += "[...]"
+	}
+	return path + "." + recv + "." + name
 }
 
 // flushFrames writes the class of each frame that a declaration made.
