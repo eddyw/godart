@@ -4,7 +4,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -46,7 +45,7 @@ func TestRFC6724(t *testing.T) {
 	}
 	prepareDart(t, out)
 	const filter = "^(TestSortByRFC6724|TestRFC6724PolicyTableOrder|TestRFC6724PolicyTableContent|TestRFC6724PolicyTableClassify|TestRFC6724ClassifyScope|TestRFC6724CommonPrefixLength)$"
-	args := []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=" + filter}
+	args := upstreamTestArgs("-test.run=" + filter)
 	for _, target := range []string{"vm", "aot", "js", "wasm"} {
 		t.Run(target, func(t *testing.T) {
 			var result programResult

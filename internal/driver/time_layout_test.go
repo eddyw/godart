@@ -78,7 +78,7 @@ func TestTimeLayout(t *testing.T) {
 	}
 	prepareDart(t, out)
 	const filter = "^(TestHasMonotonicClock|TestMonotonicAdd|TestMonotonicSub|TestMonotonicOverflow|TestMonotonicString|TestTimeAddSecOverflow|TestUnmarshalInvalidTimes|TestNextStdChunk|TestAppendInt|TestParseTimeZone|TestQuote|TestSub|TestDaysIn|TestTzset|TestTzsetName|TestTzsetOffset|TestMalformedTZData|TestLocationNames|TestAfterFunc|TestTickerStress|TestTickerConcurrentStress|TestOverflowSleep|TestZeroTimerResetPanics|TestZeroTimerStopPanics|TestConcurrentTimerReset|TestConcurrentTimerResetStop|TestChan|TestStopResult|TestResetResult|TestTicker|TestTickerStopWithDirectInitialization|TestTeardown|TestTick|TestNewTickerLtZeroDuration|TestTickerResetLtZeroDuration|TestManualTicker|TestAfterTimes|TestTickTimes|TestAfterTick|TestAfterStop|TestReset|TestAfterFuncStarvation|TestAfterQueuing|TestTimerStopStress|TestSleepZeroDeadlock|TestIssue5745|TestTimerModifiedEarlier|TestAdjustTimers|TestMultiWakeupTimer|TestLoadLocationZipFile|TestTimeIsDST|TestTimeWithZoneTransition|TestZoneBounds|TestVersion3|TestFirstZone|TestEarlyLocation)$"
-	args := []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=" + filter}
+	args := upstreamTestArgs("-test.run=" + filter)
 	for _, target := range []string{"vm", "aot", "js", "wasm"} {
 		t.Run(target, func(t *testing.T) {
 			var result programResult

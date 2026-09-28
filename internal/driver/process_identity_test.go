@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -109,7 +108,7 @@ func main() {
 	prepareDart(t, testOut)
 	for _, target := range []string{"vm", "aot"} {
 		t.Run("upstream/"+target, func(t *testing.T) {
-			args := []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=^TestZeroSysProcAttr$"}
+			args := upstreamTestArgs("-test.run=^TestZeroSysProcAttr$")
 			var result programResult
 			if target == "vm" {
 				result = programOutcome(t, dir, "dart", append([]string{filepath.Join(testOut, stats.Binaries[0].Entry)}, args...)...)

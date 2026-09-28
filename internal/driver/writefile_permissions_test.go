@@ -38,7 +38,7 @@ func TestWriteFilePermissions(t *testing.T) {
 	prepareDart(t, out)
 	for _, target := range []string{"vm", "aot"} {
 		t.Run(target, func(t *testing.T) {
-			args := []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=" + filter}
+			args := upstreamTestArgs("-test.run=" + filter)
 			var result programResult
 			if target == "vm" {
 				result = programOutcome(t, dir, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, args...)...)

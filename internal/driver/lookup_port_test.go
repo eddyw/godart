@@ -64,7 +64,7 @@ func TestGoResolverPortErrors(t *testing.T) {
 				t.Fatal(result.Text)
 			}
 			const filter = "^TestLookupPort_Minimal$"
-			result = runTarget(netDir, []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=" + filter})
+			result = runTarget(netDir, upstreamTestArgs("-test.run="+filter))
 			compareUpstream(t, "net-lookup-port", "net", filter, target, netDir, result.Text, result.Exit)
 		})
 	}

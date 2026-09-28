@@ -375,7 +375,7 @@ func TestTestsOfGoroot(t *testing.T) {
 			if c.Package == "go/build" || c.Package == "debug/buildinfo" || c.Package == "crypto/x509" || c.Package == "internal/testenv" || c.Package == "internal/godebug" || c.Package == "internal/godebugs" || importer != nil || c.Package == "go/importer" || c.Package == "go/internal/gccgoimporter" || c.Package == "internal/types/errors" {
 				env = append(os.Environ(), "GOROOT="+build.Default.GOROOT)
 			}
-			args := []string{filepath.Join(outDir, stats.Binaries[0].Entry), "-test.v", fmt.Sprintf("-test.short=%t", testing.Short()), "-test.run=" + c.Run, "-test.skip=" + upstreamSkip(t, c.Package)}
+			args := append([]string{filepath.Join(outDir, stats.Binaries[0].Entry)}, upstreamTestArgs("-test.run="+c.Run, "-test.skip="+upstreamSkip(t, c.Package))...)
 			args = append(args, upstreamExtraArgs(c.Package)...)
 			text, execErr, finished := output(dir, env, upstreamLimit(), "dart", args...)
 			if !finished {

@@ -5,7 +5,6 @@ import (
 	"go/token"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"testing"
 
 	"github.com/eddyw/godart/internal/driver"
@@ -50,7 +49,7 @@ func TestSignalDeliveryUpstream(t *testing.T) {
 				{"signal-stop", "^TestStop$"},
 			} {
 				t.Run(suite.name, func(t *testing.T) {
-					args := []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=" + suite.filter}
+					args := upstreamTestArgs("-test.run=" + suite.filter)
 					var got programResult
 					if target == "vm" {
 						got = programOutcome(t, dir, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, args...)...)

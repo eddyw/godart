@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -63,7 +62,7 @@ func TestCompilerTypeAssertions(t *testing.T) {
 		t.Fatalf("got %d binaries", len(stats.Binaries))
 	}
 	prepareDart(t, out)
-	args := []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short())}
+	args := upstreamTestArgs()
 	for _, target := range []string{"vm", "aot", "js", "wasm"} {
 		t.Run(target, func(t *testing.T) {
 			var result programResult

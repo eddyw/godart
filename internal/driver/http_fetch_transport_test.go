@@ -4,7 +4,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"testing"
 
 	"github.com/eddyw/godart/internal/driver"
@@ -59,7 +58,7 @@ func run(t *testing.T,f func(*testing.T,testMode)) {
 	prepareDart(t, out)
 	prelude := filepath.Join(out, "fetch-denied.mjs")
 	writeFile(t, prelude, "globalThis.fetch = () => { console.error('unexpected fetch'); process.exit(97); };\n")
-	args := []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=^(TestTransportCheckContextDoneEarly|TestTransportClosesBodyOnInvalidRequests|TestTransportAltProto|TestAltProtoCancellation|TestTransportEmptyMethod)$/^(h1|h2)$"}
+	args := upstreamTestArgs("-test.run=^(TestTransportCheckContextDoneEarly|TestTransportClosesBodyOnInvalidRequests|TestTransportAltProto|TestAltProtoCancellation|TestTransportEmptyMethod)$/^(h1|h2)$")
 	for _, target := range []string{"vm", "aot", "js", "wasm"} {
 		t.Run(target, func(t *testing.T) {
 			var result programResult

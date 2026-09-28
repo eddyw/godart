@@ -8,7 +8,6 @@ import (
 	"regexp"
 	"runtime"
 	"slices"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -96,7 +95,7 @@ func TestUpstreamTargets(t *testing.T) {
 							t.Logf("target exclusion %s: %s", name, reason)
 						}
 					}
-					args := []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=" + filter, "-test.skip=" + upstreamSkip(t, pkg)}
+					args := upstreamTestArgs("-test.run="+filter, "-test.skip="+upstreamSkip(t, pkg))
 					var nodeArgs []string
 					if !testing.Short() {
 						nodeArgs = c.FullNodeArgs

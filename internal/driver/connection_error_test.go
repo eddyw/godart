@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -109,7 +108,7 @@ func newLocalPacketListener(t testing.TB, network string) PacketConn {
 	}
 	prepareDart(t, out)
 	const filter = "^(TestReadTimeout|TestReadFromTimeout|TestReadTimeoutMustNotReturn|TestWriteTimeout|TestWriteTimeoutMustNotReturn|TestWriteToTimeout|TestReadTimeoutFluctuation|TestReadFromTimeoutFluctuation|TestWriteTimeoutFluctuation|TestReadWriteProlongedTimeout|TestReadWriteDeadlineRace|TestConcurrentSetDeadline)$"
-	args := []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=" + filter}
+	args := upstreamTestArgs("-test.run=" + filter)
 	result := programOutcome(t, netDir, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, args...)...)
 	compareUpstream(t, "net-connection-errors", "net", filter, "vm", netDir, result.Text, result.Exit)
 	t.Run("aot", func(t *testing.T) {

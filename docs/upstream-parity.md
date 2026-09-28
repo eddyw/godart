@@ -135,6 +135,10 @@ The compiler does not edit those branches, inputs, or assertions.
 Short-mode skips remain explicit exclusions, and reports record the selected mode.
 A short-mode pass establishes parity only for that configuration.
 
+The upstream comparison drivers use the same test timeout for Go and Gart.
+Use `upstreamTestArgs` for direct test binaries.
+External process limits remain separate.
+
 The manual workflow accepts `upstream_mode=full` for the original long suites.
 Locally, set `GART_UPSTREAM_MODE=full` before the standard library or upstream target command.
 Direct `go test` runs use full mode unless the command includes `-short`.

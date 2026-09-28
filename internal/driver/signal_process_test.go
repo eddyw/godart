@@ -72,7 +72,7 @@ func TestSignalProcessesUpstream(t *testing.T) {
 			for _, name := range []string{"TestNotifyContextNotifications", "TestNohup"} {
 				t.Run(name, func(t *testing.T) {
 					filter := "^" + name + "$"
-					args := []string{"-test.v", "-test.timeout=" + upstreamLimit().String(), "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=" + filter}
+					args := upstreamTestArgs("-test.run=" + filter)
 					got := programOutcome(t, dir, launcher, args...)
 					compareUpstream(t, "signal-process-"+name, "os/signal", filter, target, dir, got.Text, got.Exit)
 				})

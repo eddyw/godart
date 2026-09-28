@@ -5,7 +5,6 @@ import (
 	"go/token"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"testing"
 
 	"github.com/eddyw/godart/internal/driver"
@@ -61,7 +60,7 @@ func supportsTCPFamily(network, address string) bool {
 		filter += "|TestParseProcNet"
 	}
 	filter += ")$"
-	args := []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=" + filter}
+	args := upstreamTestArgs("-test.run=" + filter)
 	for _, target := range []string{"vm", "aot"} {
 		t.Run(target, func(t *testing.T) {
 			var result programResult

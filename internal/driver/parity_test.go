@@ -132,6 +132,10 @@ func upstreamSkip(t *testing.T, pkg string) string {
 	return strings.Join(patterns, "|")
 }
 
+func upstreamTestArgs(extra ...string) []string {
+	return append([]string{"-test.v", fmt.Sprintf("-test.short=%t", testing.Short()), "-test.timeout=" + upstreamLimit().String()}, extra...)
+}
+
 func upstreamLimit() time.Duration {
 	if testing.Short() {
 		return runLimit

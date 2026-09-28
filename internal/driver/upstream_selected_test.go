@@ -535,7 +535,7 @@ func newLocalListener(t testing.TB, network string) net.Listener {
 			if pkg == "sync" || pkg == "internal/godebug" || pkg == "os" {
 				launcher = prepareUpstreamSelfExec(t, out, stats.Binaries[0].Entry)
 			}
-			args := []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=" + filter, "-test.skip=" + upstreamSkip(t, pkg)}
+			args := upstreamTestArgs("-test.run="+filter, "-test.skip="+upstreamSkip(t, pkg))
 			result := programOutcome(t, dir, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, args...)...)
 			name := pkg + "-selected"
 			if pkg == "net/http" {
@@ -558,8 +558,7 @@ func newLocalListener(t testing.TB, network string) net.Listener {
 			}
 			if pkg == "net" {
 				const pipeFilter = "^(TestPipe|TestPipeCloseError)$"
-				pipeArgs := slices.Clone(args)
-				pipeArgs[2] = "-test.run=" + pipeFilter
+				pipeArgs := upstreamTestArgs("-test.run="+pipeFilter, "-test.skip="+upstreamSkip(t, pkg))
 				for _, target := range []string{"js", "wasm"} {
 					t.Run(target, func(t *testing.T) {
 						result := runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, pipeArgs)

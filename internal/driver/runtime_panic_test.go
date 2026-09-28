@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
-	"strconv"
 	"testing"
 
 	"github.com/eddyw/godart/internal/driver"
@@ -114,7 +113,7 @@ func runTestProg(t *testing.T, binary, name string) string {
 			}
 			writeFile(t, outputPath, text)
 			var result programResult
-			args = []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=^TestPanicTraceback$"}
+			args = upstreamTestArgs("-test.run=^TestPanicTraceback$")
 			if target == "vm" {
 				result = programOutcome(t, validator, "dart", append([]string{filepath.Join(validatorOut, stats.Binaries[0].Entry)}, args...)...)
 			} else {

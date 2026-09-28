@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -63,7 +62,7 @@ func TestResolverLifecycle(t *testing.T) {
 			selected := tests
 			var exclusions map[string]string
 			filter := "^(" + strings.Join(selected, "|") + ")$"
-			args := []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=" + filter}
+			args := upstreamTestArgs("-test.run=" + filter)
 			var result programResult
 			if target == "vm" {
 				result = programOutcome(t, dir, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, args...)...)

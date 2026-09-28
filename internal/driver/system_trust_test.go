@@ -4,7 +4,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -76,7 +75,7 @@ func TestSystemTrustInvalidCertificates(t *testing.T) {
 	run(t, out, "dart", "compile", "exe", entry, "-o", binary)
 	for _, target := range []string{"vm", "aot"} {
 		t.Run(target, func(t *testing.T) {
-			command, args := binary, []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=^TestIssue51759$"}
+			command, args := binary, upstreamTestArgs("-test.run=^TestIssue51759$")
 			if target == "vm" {
 				command, args = "dart", append([]string{entry}, args...)
 			}

@@ -7,7 +7,6 @@ import (
 	"go/token"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"strings"
 	"testing"
 )
@@ -52,7 +51,7 @@ func TestReflectConversions(t *testing.T) {
 	}
 	prepareDart(t, out)
 	const filter = "^(TestConvert|TestConvertPanic|TestIssue80332|TestConvertibleTo|TestIssue80332Others|TestFieldPkgPath|TestUnaddressableField|TestConvertNaNs|TestSignalingNaNArgument|TestSignalingNaNReturn)$"
-	args := []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=" + filter}
+	args := upstreamTestArgs("-test.run=" + filter)
 	for _, target := range []string{"vm", "aot", "js", "wasm"} {
 		t.Run(target, func(t *testing.T) {
 			var result programResult

@@ -4,7 +4,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"testing"
 	"time"
 
@@ -68,7 +67,7 @@ func TestOSEnvironment(t *testing.T) {
 	}
 	prepareDart(t, out)
 	const filter = "^(TestExpand|TestConsistentEnviron|TestUnsetenv|TestClearenv|TestLookupEnv|TestEnvironConsistency)$"
-	args := []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=" + filter}
+	args := upstreamTestArgs("-test.run=" + filter)
 	for _, target := range []string{"vm", "aot", "js", "wasm"} {
 		t.Run(target, func(t *testing.T) {
 			var got programResult

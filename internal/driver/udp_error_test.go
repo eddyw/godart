@@ -223,7 +223,7 @@ func TestUDPDestinationErrors(t *testing.T) {
 	for _, target := range []string{"vm", "aot"} {
 		t.Run(target, func(t *testing.T) {
 			const filter = "^(TestUDPZeroBytePayload|TestUDPZeroByteBuffer|TestUDPReadSizeError|TestUDPReadTimeout)$"
-			args := []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=" + filter}
+			args := upstreamTestArgs("-test.run=" + filter)
 			var r programResult
 			if target == "vm" {
 				r = programOutcome(t, dir, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, args...)...)

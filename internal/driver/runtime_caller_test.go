@@ -6,7 +6,6 @@ import (
 	"regexp"
 	"runtime"
 	"slices"
-	"strconv"
 	"testing"
 
 	"github.com/eddyw/godart/internal/driver"
@@ -31,7 +30,7 @@ func TestRuntimeCaller(t *testing.T) {
 	}
 	prepareDart(t, out)
 	const filter = "^(TestCaller|TestLineNumber|TestCallers|TestCallersPanic|TestCallersDoublePanic|TestCallersAfterRecovery|TestCallersAbortedPanic|TestCallersAbortedPanic2|TestCallersEndlineno)$"
-	args := []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=" + filter}
+	args := upstreamTestArgs("-test.run=" + filter)
 	result := programOutcome(t, dir, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, args...)...)
 	compareUpstream(t, "runtime-caller", "runtime", filter, "vm", dir, result.Text, result.Exit)
 	for _, target := range []string{"aot", "js", "wasm"} {

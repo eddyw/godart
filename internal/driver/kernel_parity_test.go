@@ -36,7 +36,7 @@ func TestKernelUpstreamParity(t *testing.T) {
 					opt.TrimPath = false
 				}
 				var output bytes.Buffer
-				code, err := driver.Test(opt, driver.TestOptions{Verbose: true, Short: testing.Short(), Run: suite.run}, &output)
+				code, err := driver.Test(opt, driver.TestOptions{Timeout: upstreamLimit(), Verbose: true, Short: testing.Short(), Run: suite.run}, &output)
 				if err != nil {
 					t.Fatal(err)
 				}
