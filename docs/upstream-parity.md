@@ -294,6 +294,11 @@ Add `--applications build/app-results` to include application records in a repor
 Repeat `--reports` for separate evidence directories. The report never blends incompatible configurations or compiler snapshots.
 Reports without compiler provenance remain explicitly unattributed. Existing reports do not establish parity for the current checkout.
 Duplicate report bytes count once. Conflicting outcomes remain visible and cannot count as passes.
+Kernel comparisons retain a separate report for each execution.
+Reports record actual source-path options and the kernel compile and incremental counters.
+The compile counter includes incremental compilations.
+The aggregate separates timeouts, source-path options, and kernel counters.
+Legacy kernel reports have unknown cache state and source-path options.
 
 API declaration differences require review. Equivalent aliases can produce differences.
 Signature comparison ignores parameter names, including nested callbacks and generic parameters.

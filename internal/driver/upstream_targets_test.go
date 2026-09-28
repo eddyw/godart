@@ -101,7 +101,7 @@ func TestUpstreamTargets(t *testing.T) {
 						nodeArgs = c.FullNodeArgs
 					}
 					result := runUpstreamTargetEnv(t, target, out, stats.Binaries[0].Entry, dir, args, env, nodeArgs...)
-					compareUpstreamSDKInventory(t, pkg, pkg, filter, target, dir, result.Text, result.Exit, inventory, nil, nil, c.Exclude[target], importer)
+					compareUpstreamSDKInventory(t, pkg, pkg, filter, target, dir, result.Text, result.Exit, inventory, nil, nil, c.Exclude[target], importer, true, nil)
 
 				})
 			}

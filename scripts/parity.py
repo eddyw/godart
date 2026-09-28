@@ -242,7 +242,16 @@ def behavior(paths, manifests=MANIFESTS):
             stamp = digest(path)
             config = {key: report.get(key) for key in (
                 "go_version", "dart_version", "node_version", "goos", "goarch", "target", "short",
-                "source_sha256", "build_tags", "gart_build_tags", "tool_tags", "cgo", "environment")}
+                "source_sha256", "build_tags", "gart_build_tags", "tool_tags", "cgo", "environment",
+                "timeout", "trimpath", "native_trimpath", "kernel")}
+            kernel = report.get("kernel")
+            if kernel is not None:
+                if (not isinstance(kernel, dict) or set(kernel) != {"compiles", "incremental"} or
+                        any(type(value) is not int or value < 0 for value in kernel.values())):
+                    raise ValueError("invalid kernel counters: " + str(path))
+            elif (report.get("selection") or "").startswith("kernel/"):
+                config["kernel"] = "unrecorded"
+                config["trimpath"] = None
             origin = provenance(path)
             config.update(origin)
             if config.get("compiler_snapshot"):
@@ -1035,6 +1044,8 @@ def report(args):
         c = group["configuration"]
         lines.extend([f"## {c['go_version']} {c['goos']}/{c['goarch']} {c['target']} short={c['short']}", "",
                       f"Compiler snapshot: {c.get('compiler_snapshot') or 'unattributed'}",
+                      "Execution configuration: " + json.dumps({key: c.get(key) for key in
+                          ("timeout", "trimpath", "native_trimpath", "kernel")}, sort_keys=True),
                       "Top-level outcomes: " + json.dumps(group["top_level"], sort_keys=True),
                       "Subtest outcomes: " + json.dumps(group["subtests"], sort_keys=True),
                       "Unobserved inventory: " + json.dumps(group.get("unobserved_counts", {}), sort_keys=True),

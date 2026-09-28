@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"go/build"
 	"path/filepath"
+	"strconv"
 	"testing"
 	"time"
 
@@ -35,6 +36,7 @@ func TestKernelUpstreamParity(t *testing.T) {
 				if iteration == 2 {
 					opt.TrimPath = false
 				}
+				beforeCompiles, beforeIncremental := compiles, incremental
 				var output bytes.Buffer
 				code, err := driver.Test(opt, driver.TestOptions{Timeout: upstreamLimit(), Verbose: true, Short: testing.Short(), Run: suite.run}, &output)
 				if err != nil {
@@ -43,7 +45,9 @@ func TestKernelUpstreamParity(t *testing.T) {
 				if code != 0 {
 					t.Log(output.String())
 				}
-				compareUpstream(t, "kernel/"+pkg, pkg, suite.run, "vm", dir, output.String(), code)
+				kernel := &upstreamKernel{Compiles: compiles - beforeCompiles, Incremental: incremental - beforeIncremental}
+				name := "kernel/" + pkg + "/" + strconv.Itoa(iteration)
+				compareUpstreamSDKInputs(t, name, pkg, suite.run, "vm", dir, output.String(), code, nil, nil, nil, opt.TrimPath, kernel)
 			}
 			if compiles != 2 || incremental != 1 {
 				t.Fatalf("compiled %d kernels, %d incremental, want 2 and 1", compiles, incremental)

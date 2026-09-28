@@ -357,7 +357,7 @@ func TestTestsOfGoroot(t *testing.T) {
 			stats, err := driver.BuildWithStats(options)
 			if err != nil {
 				t.Logf("upstream test build failed: %v", err)
-				compareUpstreamSDKInputs(t, c.name, c.Package, c.Run, "vm", dir, "the test build failed: "+err.Error(), 1, inputs, nil, importer)
+				compareUpstreamSDKInputs(t, c.name, c.Package, c.Run, "vm", dir, "the test build failed: "+err.Error(), 1, inputs, nil, importer, true, nil)
 				return
 			}
 			if len(stats.Binaries) != 1 {
@@ -379,7 +379,7 @@ func TestTestsOfGoroot(t *testing.T) {
 			args = append(args, upstreamExtraArgs(c.Package)...)
 			text, execErr, finished := output(dir, env, upstreamLimit(), "dart", args...)
 			if !finished {
-				compareUpstreamSDKInputs(t, c.name, c.Package, c.Run, "vm", dir, string(text), 124, inputs, nil, importer, images...)
+				compareUpstreamSDKInputs(t, c.name, c.Package, c.Run, "vm", dir, string(text), 124, inputs, nil, importer, true, nil, images...)
 				return
 			}
 			code := 0
@@ -392,7 +392,7 @@ func TestTestsOfGoroot(t *testing.T) {
 			}
 			got := string(text)
 			t.Logf("upstream results:\n%s", got)
-			compareUpstreamSDKInputs(t, c.name, c.Package, c.Run, "vm", dir, got, code, inputs, nil, importer, images...)
+			compareUpstreamSDKInputs(t, c.name, c.Package, c.Run, "vm", dir, got, code, inputs, nil, importer, true, nil, images...)
 
 		})
 	}

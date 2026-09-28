@@ -71,7 +71,13 @@ func externalFixtures(t *testing.T, output string) []moduleFixture {
 	return used
 }
 
+type upstreamKernel struct {
+	Compiles    int `json:"compiles"`
+	Incremental int `json:"incremental"`
+}
+
 type upstreamEvidence struct {
+	Kernel            *upstreamKernel     `json:"kernel,omitempty"`
 	ImporterInputs    *importerInputs     `json:"importer_inputs,omitempty"`
 	TargetExclusions  map[string]string   `json:"target_exclusions,omitempty"`
 	Selection         string              `json:"selection"`
@@ -158,10 +164,10 @@ func compareUpstream(t *testing.T, name, pkg, filter, target, dir, dartText stri
 
 func compareUpstreamInputs(t *testing.T, name, pkg, filter, target, dir, dartText string, dartExit int, inputs *certificateInputs, resolver *resolverInputs, images ...nativeImage) {
 	t.Helper()
-	compareUpstreamSDKInputs(t, name, pkg, filter, target, dir, dartText, dartExit, inputs, resolver, nil, images...)
+	compareUpstreamSDKInputs(t, name, pkg, filter, target, dir, dartText, dartExit, inputs, resolver, nil, true, nil, images...)
 }
 
-func compareUpstreamSDKInputs(t *testing.T, name, pkg, filter, target, dir, dartText string, dartExit int, inputs *certificateInputs, resolver *resolverInputs, importer *importerInputs, images ...nativeImage) {
+func compareUpstreamSDKInputs(t *testing.T, name, pkg, filter, target, dir, dartText string, dartExit int, inputs *certificateInputs, resolver *resolverInputs, importer *importerInputs, trimPath bool, kernel *upstreamKernel, images ...nativeImage) {
 	t.Helper()
 	var inventory parity.Inventory
 	nameOfInventory, err := parity.InventoryName(build.Default)
@@ -175,15 +181,15 @@ func compareUpstreamSDKInputs(t *testing.T, name, pkg, filter, target, dir, dart
 	if err := json.Unmarshal(manifest, &inventory); err != nil {
 		t.Fatal(err)
 	}
-	compareUpstreamSDKInventory(t, name, pkg, filter, target, dir, dartText, dartExit, inventory, inputs, resolver, nil, importer, images...)
+	compareUpstreamSDKInventory(t, name, pkg, filter, target, dir, dartText, dartExit, inventory, inputs, resolver, nil, importer, trimPath, kernel, images...)
 }
 
 func compareUpstreamInventory(t *testing.T, name, pkg, filter, target, dir, dartText string, dartExit int, inventory parity.Inventory, inputs *certificateInputs, resolver *resolverInputs, targetExclusions map[string]string, images ...nativeImage) {
 	t.Helper()
-	compareUpstreamSDKInventory(t, name, pkg, filter, target, dir, dartText, dartExit, inventory, inputs, resolver, targetExclusions, nil, images...)
+	compareUpstreamSDKInventory(t, name, pkg, filter, target, dir, dartText, dartExit, inventory, inputs, resolver, targetExclusions, nil, true, nil, images...)
 }
 
-func compareUpstreamSDKInventory(t *testing.T, name, pkg, filter, target, dir, dartText string, dartExit int, inventory parity.Inventory, inputs *certificateInputs, resolver *resolverInputs, targetExclusions map[string]string, importer *importerInputs, images ...nativeImage) {
+func compareUpstreamSDKInventory(t *testing.T, name, pkg, filter, target, dir, dartText string, dartExit int, inventory parity.Inventory, inputs *certificateInputs, resolver *resolverInputs, targetExclusions map[string]string, importer *importerInputs, trimPath bool, kernel *upstreamKernel, images ...nativeImage) {
 	t.Helper()
 	nativeTags := slices.Clone(build.Default.BuildTags)
 	args := []string{"test", "-json", "-count=1", "-timeout=" + upstreamLimit().String()}
@@ -341,7 +347,7 @@ func compareUpstreamSDKInventory(t *testing.T, name, pkg, filter, target, dir, d
 		if pkg == "crypto/tls" || pkg == "go/build" || pkg == "debug/buildinfo" || pkg == "internal/testenv" || importer != nil || pkg == "go/importer" || pkg == "go/internal/gccgoimporter" || pkg == "internal/types/errors" {
 			env["GOROOT"] = build.Default.GOROOT
 		}
-		data, err := json.MarshalIndent(upstreamEvidence{ImporterInputs: importer, TargetExclusions: targetExclusions, Selection: name, ResolverInputs: resolver, CertificateInputs: inputs, NativeImages: images, ExternalFixtures: external, NativeArgs: args, NativeTrimPath: false, Short: testing.Short(), Timeout: upstreamLimit().String(), NodeVersion: nodeVersion, GartBuildTags: []string{"dart"}, TrimPath: true, Environment: env, GoVersion: runtime.Version(), DartVersion: dartVersion, GOOS: runtime.GOOS, GOARCH: runtime.GOARCH, BuildTags: nativeTags, ToolTags: build.Default.ToolTags, Cgo: build.Default.CgoEnabled, SourceSHA256: inventory.SourceSHA256, Fixtures: inventory.Fixtures, Expected: expected, Skip: upstreamSkip(t, pkg), Target: target, Package: pkg, Filter: filter, Native: native, Gart: gart, Comparison: comparison}, "", "  ")
+		data, err := json.MarshalIndent(upstreamEvidence{ImporterInputs: importer, TargetExclusions: targetExclusions, Selection: name, ResolverInputs: resolver, CertificateInputs: inputs, NativeImages: images, ExternalFixtures: external, NativeArgs: args, NativeTrimPath: false, Short: testing.Short(), Timeout: upstreamLimit().String(), NodeVersion: nodeVersion, GartBuildTags: []string{"dart"}, TrimPath: trimPath, Kernel: kernel, Environment: env, GoVersion: runtime.Version(), DartVersion: dartVersion, GOOS: runtime.GOOS, GOARCH: runtime.GOARCH, BuildTags: nativeTags, ToolTags: build.Default.ToolTags, Cgo: build.Default.CgoEnabled, SourceSHA256: inventory.SourceSHA256, Fixtures: inventory.Fixtures, Expected: expected, Skip: upstreamSkip(t, pkg), Target: target, Package: pkg, Filter: filter, Native: native, Gart: gart, Comparison: comparison}, "", "  ")
 		if err != nil {
 			t.Fatal(err)
 		}

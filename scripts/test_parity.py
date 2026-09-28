@@ -1525,6 +1525,51 @@ class ParityTest(unittest.TestCase):
             parity.save(reports / "full.json", record)
             self.assertEqual(len(parity.behavior([reports], manifests)), 2)
 
+    def test_behavior_separates_execution_configuration(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            manifests = root / "manifests"
+            reports = root / "reports"
+            parity.save(manifests / "coverage-manifest.json", [])
+            cases = [
+                {},
+                dict(trimpath=False),
+                dict(native_trimpath=True),
+                dict(timeout="1h15m0s"),
+                dict(kernel=dict(compiles=1, incremental=0)),
+                dict(kernel=dict(compiles=0, incremental=0)),
+                dict(kernel=dict(compiles=1, incremental=1)),
+                dict(kernel=dict(compiles=1, incremental=0), trimpath=False),
+                dict(selection="kernel/p"),
+            ]
+            for index, options in enumerate(cases):
+                name = f"Test{index}"
+                record = dict(package="p", expected=[name], target="vm", short=True,
+                              trimpath=True, native_trimpath=False, timeout="5m0s",
+                              native=dict(exit=0), gart=dict(exit=0),
+                              comparison=dict(passed=[name], problems=[]))
+                record.update(options)
+                parity.save(reports / f"{index}.json", record)
+            groups = parity.behavior([reports], manifests)
+            self.assertEqual(len(groups), len(cases))
+            self.assertTrue(all(g["top_level"] == {"passed": 1} for g in groups))
+            legacy = next(g for g in groups if g["configuration"]["kernel"] == "unrecorded")
+            self.assertIsNone(legacy["configuration"]["trimpath"])
+
+    def test_behavior_rejects_invalid_kernel_counters(self):
+        for counters in ({}, [], True, dict(compiles=-1, incremental=0),
+                         dict(compiles=True, incremental=0), dict(compiles=1, incremental="0")):
+            with self.subTest(counters=counters), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                manifests = root / "manifests"
+                reports = root / "reports"
+                parity.save(manifests / "coverage-manifest.json", [])
+                parity.save(reports / "report.json", dict(package="p", expected=["Test"],
+                    kernel=counters, native=dict(exit=0), gart=dict(exit=0),
+                    comparison=dict(passed=["Test"], problems=[])))
+                with self.assertRaisesRegex(ValueError, "invalid kernel counters"):
+                    parity.behavior([reports], manifests)
+
     def test_behavior_preserves_target_exclusions_without_assumed_passes(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
