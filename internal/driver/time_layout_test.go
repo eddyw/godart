@@ -1,10 +1,12 @@
 package driver_test
 
 import (
+	"archive/zip"
 	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"io"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -21,12 +23,12 @@ func TestTimeLayout(t *testing.T) {
 	names := map[string][]string{
 		"mono_test.go":     nil,
 		"tick_test.go":     {"TestTicker", "TestTickerStopWithDirectInitialization", "TestTeardown", "TestTick", "TestNewTickerLtZeroDuration", "TestTickerResetLtZeroDuration", "TestManualTicker", "TestAfterTimes", "TestTickTimes", "TestChan", "timer", "tickerTimer", "testTimerChan"},
-		"sleep_test.go":    {"TestAfterTick", "TestAfterStop", "TestReset", "newTimerFunc", "testAfterStop", "testReset", "TestStopResult", "TestResetResult", "testStopResetResult", "TestAfterFunc", "TestTickerStress", "TestTickerConcurrentStress", "TestOverflowSleep", "TestZeroTimerResetPanics", "TestZeroTimerStopPanics", "checkZeroPanicString"},
+		"sleep_test.go":    {"TestAfterFuncStarvation", "TestAfterQueuing", "TestTimerStopStress", "TestSleepZeroDeadlock", "TestIssue5745", "TestTimerModifiedEarlier", "TestAdjustTimers", "TestMultiWakeupTimer", "testAfterQueuing", "testAfterQueuing1", "slots", "afterResult", "await", "TestAfterTick", "TestAfterStop", "TestReset", "newTimerFunc", "testAfterStop", "testReset", "TestStopResult", "TestResetResult", "testStopResetResult", "TestAfterFunc", "TestTickerStress", "TestTickerConcurrentStress", "TestOverflowSleep", "TestZeroTimerResetPanics", "TestZeroTimerStopPanics", "checkZeroPanicString"},
 		"zoneinfo_test.go": {"TestTzset", "TestTzsetName", "TestTzsetOffset", "TestMalformedTZData", "TestLocationNames"},
-		"format_test.go":   {"nextStdChunkTests", "TestNextStdChunk", "TestAppendInt", "ParseTimeZoneTest", "parseTimeZoneTests", "TestParseTimeZone", "TestQuote"},
-		"time_test.go":     {"TestTimeAddSecOverflow", "TestUnmarshalInvalidTimes", "minDuration", "maxDuration", "subTests", "TestSub", "daysInTests", "TestDaysIn", "TestConcurrentTimerReset", "TestConcurrentTimerResetStop"},
-		"export_test.go":   {"SetMono", "GetMono", "UnixToInternal", "NextStdChunk", "StdChunkNames", "AppendInt", "ParseTimeZone", "Quote", "Tzset", "TzsetName", "TzsetOffset"},
-		"internal_test.go": {"NotMonoNegativeTime", "MinMonoTime", "MaxMonoTime", "DaysIn"},
+		"format_test.go":   {"TestLoadLocationZipFile", "nextStdChunkTests", "TestNextStdChunk", "TestAppendInt", "ParseTimeZoneTest", "parseTimeZoneTests", "TestParseTimeZone", "TestQuote"},
+		"time_test.go":     {"TestTimeIsDST", "TestTimeWithZoneTransition", "TestZoneBounds", "parsedTime", "TimeTest", "utctests", "TestTimeAddSecOverflow", "TestUnmarshalInvalidTimes", "minDuration", "maxDuration", "subTests", "TestSub", "daysInTests", "TestDaysIn", "TestConcurrentTimerReset", "TestConcurrentTimerResetStop"},
+		"export_test.go":   {"DisablePlatformSources", "SetMono", "GetMono", "UnixToInternal", "NextStdChunk", "StdChunkNames", "AppendInt", "ParseTimeZone", "Quote", "Tzset", "TzsetName", "TzsetOffset"},
+		"internal_test.go": {"origPlatformZoneSources", "disablePlatformSources", "NotMonoNegativeTime", "MinMonoTime", "MaxMonoTime", "DaysIn"},
 	}
 	files, err := filepath.Glob(filepath.Join(dir, "*_test.go"))
 	if err != nil {
@@ -48,6 +50,24 @@ func TestTimeLayout(t *testing.T) {
 			sources[path] = []byte("package " + f.Name.Name + "\n")
 		}
 	}
+	zones, err := zip.OpenReader(filepath.Join(runtime.GOROOT(), "lib/time/zoneinfo.zip"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer zones.Close()
+	zone, err := zones.Open("America/Los_Angeles")
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := io.ReadAll(zone)
+	zone.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	zonePath := filepath.Join(dir, "zoneinfo_test.go")
+	zoneSource := strings.Replace(string(sources[zonePath]), "package time_test", "package time_test\nimport _ \"time/tzdata\"", 1)
+	zoneSource += "\nfunc init() { loc, err := time.LoadLocationFromTZData(\"Local\", []byte(" + strconv.Quote(string(data)) + ")); if err != nil { panic(err) }; *time.Local = *loc }\n"
+	sources[zonePath] = []byte(zoneSource)
 	out := t.TempDir()
 	stats, err := driver.BuildWithStats(driver.Options{Dir: dir, Patterns: []string{"."}, Out: out, Runtime: runtimeDir(t), Tests: true, TestSources: sources, TrimPath: true})
 	if err != nil {
@@ -57,7 +77,7 @@ func TestTimeLayout(t *testing.T) {
 		t.Fatalf("got %d binaries", len(stats.Binaries))
 	}
 	prepareDart(t, out)
-	const filter = "^(TestHasMonotonicClock|TestMonotonicAdd|TestMonotonicSub|TestMonotonicOverflow|TestMonotonicString|TestTimeAddSecOverflow|TestUnmarshalInvalidTimes|TestNextStdChunk|TestAppendInt|TestParseTimeZone|TestQuote|TestSub|TestDaysIn|TestTzset|TestTzsetName|TestTzsetOffset|TestMalformedTZData|TestLocationNames|TestAfterFunc|TestTickerStress|TestTickerConcurrentStress|TestOverflowSleep|TestZeroTimerResetPanics|TestZeroTimerStopPanics|TestConcurrentTimerReset|TestConcurrentTimerResetStop|TestChan|TestStopResult|TestResetResult|TestTicker|TestTickerStopWithDirectInitialization|TestTeardown|TestTick|TestNewTickerLtZeroDuration|TestTickerResetLtZeroDuration|TestManualTicker|TestAfterTimes|TestTickTimes|TestAfterTick|TestAfterStop|TestReset)$"
+	const filter = "^(TestHasMonotonicClock|TestMonotonicAdd|TestMonotonicSub|TestMonotonicOverflow|TestMonotonicString|TestTimeAddSecOverflow|TestUnmarshalInvalidTimes|TestNextStdChunk|TestAppendInt|TestParseTimeZone|TestQuote|TestSub|TestDaysIn|TestTzset|TestTzsetName|TestTzsetOffset|TestMalformedTZData|TestLocationNames|TestAfterFunc|TestTickerStress|TestTickerConcurrentStress|TestOverflowSleep|TestZeroTimerResetPanics|TestZeroTimerStopPanics|TestConcurrentTimerReset|TestConcurrentTimerResetStop|TestChan|TestStopResult|TestResetResult|TestTicker|TestTickerStopWithDirectInitialization|TestTeardown|TestTick|TestNewTickerLtZeroDuration|TestTickerResetLtZeroDuration|TestManualTicker|TestAfterTimes|TestTickTimes|TestAfterTick|TestAfterStop|TestReset|TestAfterFuncStarvation|TestAfterQueuing|TestTimerStopStress|TestSleepZeroDeadlock|TestIssue5745|TestTimerModifiedEarlier|TestAdjustTimers|TestMultiWakeupTimer|TestLoadLocationZipFile|TestTimeIsDST|TestTimeWithZoneTransition|TestZoneBounds)$"
 	args := []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=" + filter}
 	for _, target := range []string{"vm", "aot", "js", "wasm"} {
 		t.Run(target, func(t *testing.T) {
@@ -89,6 +109,13 @@ func timeExportSource(t *testing.T, path string, names []string) string {
 	found := 0
 	for _, name := range names {
 		for _, declaration := range file.Decls {
+			if function, ok := declaration.(*ast.FuncDecl); ok && function.Name.Name == name {
+				fmt.Fprintf(&out, "//line %s:%d\n", filepath.Base(path), fs.Position(function.Pos()).Line)
+				out.Write(source[fs.Position(function.Pos()).Offset:fs.Position(function.End()).Offset])
+				out.WriteByte('\n')
+				found++
+				continue
+			}
 			group, ok := declaration.(*ast.GenDecl)
 			if !ok {
 				continue

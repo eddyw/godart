@@ -13894,5 +13894,13 @@
       "gart": "skip",
       "reason": "The original Go suite excludes this test in short mode."
     }
+  ],
+  "time": [
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips this case in short mode.",
+      "test": "TestMultiWakeupTimer"
+    }
   ]
 }
