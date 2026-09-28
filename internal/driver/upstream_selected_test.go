@@ -228,7 +228,7 @@ func TestSelectedUpstream(t *testing.T) {
 			{Name: "path_test.go", Declarations: []string{"TestMkdirAll", "TestMkdirAllAbsPath", "TestMkdirAllWithSymlink"}},
 			{Name: "root_test.go", Declarations: []string{"testMaybeRooted", "makefs", "hasLink", "rootTest", "rootTest.run", "rootTestCases", "errEndsTest", "TestRootMkdirAll", "TestRootMkdir", "TestRootOpen_File", "TestRootOpen_Directory", "TestRootCreate", "TestRootOpenRoot", "TestRootStat", "TestRootLstat", "TestRootReadlink", "TestRootRemoveFile", "TestRootRemoveDirectory", "TestRootNonPermissionMode", "TestRootUseAfterClose", "TestRootSymlinkToRoot", "TestOpenInRoot", "TestRootRemoveDot", "TestRootWriteReadFile", "TestRootName", "TestRootConcurrentClose"}},
 		},
-		"net":      {{Name: "interface_test.go", Declarations: []string{"TestInterfaces"}}, {Name: "ip_test.go"}, {Name: "mac_test.go"}, {Name: "pipe_test.go"}, {Name: "tcpsock_test.go", Declarations: []string{"TestTCPConcurrentAccept", "resolveTCPAddrTest", "resolveTCPAddrTests", "TestResolveTCPAddr"}}, {Name: "udpsock_test.go", Declarations: []string{"resolveUDPAddrTest", "resolveUDPAddrTests", "TestResolveUDPAddr"}}, {Name: "iprawsock_test.go", Declarations: []string{"resolveIPAddrTest", "resolveIPAddrTests", "TestResolveIPAddr"}}, {Name: "net.go", Declarations: []string{"errNoSuitableAddress"}}},
+		"net":      {{Name: "net_test.go", Declarations: []string{"withTCPConnPair", "TestReadTimeoutUnblocksRead", "TestCloseUnblocksRead", "TestCloseUnblocksReadUDP"}}, {Name: "interface_test.go", Declarations: []string{"TestInterfaces"}}, {Name: "ip_test.go"}, {Name: "mac_test.go"}, {Name: "pipe_test.go"}, {Name: "tcpsock_test.go", Declarations: []string{"TestTCPConcurrentAccept", "resolveTCPAddrTest", "resolveTCPAddrTests", "TestResolveTCPAddr"}}, {Name: "udpsock_test.go", Declarations: []string{"resolveUDPAddrTest", "resolveUDPAddrTests", "TestResolveUDPAddr"}}, {Name: "iprawsock_test.go", Declarations: []string{"resolveIPAddrTest", "resolveIPAddrTests", "TestResolveIPAddr"}}, {Name: "net.go", Declarations: []string{"errNoSuitableAddress"}}},
 		"net/http": {{Name: "header_test.go", Declarations: []string{"headerWriteTests", "TestHeaderWrite", "parseTimeTests", "TestParseTime", "TestNilHeaderClone"}}, {Name: "sniff_test.go", Declarations: []string{"sniffTests", "TestDetectContentType"}}},
 	}
 	names := make([]string, 0, len(selections))
@@ -413,6 +413,16 @@ import . "os/signal"
 				source = strings.Replace(source, "package net\n", "package net_test\nimport . \"net\"\n", 1)
 				source = strings.TrimPrefix(source, "//go:build dart\n")
 				writeFile(t, filepath.Join(fixture, "helper_test.go"), source)
+				writeFile(t, filepath.Join(fixture, "listener_test.go"), `package net_test
+import ("net"; "testing")
+// The TCP pair uses a real IPv4 loopback listener.
+func newLocalListener(t testing.TB, network string) net.Listener {
+ t.Helper()
+ listener, err := net.Listen(network, "127.0.0.1:0")
+ if err != nil { t.Fatal(err) }
+ return listener
+}
+`)
 				resolver = prepareResolverInputs(t, filepath.Join(dir, "main_test.go"))
 				writeFile(t, filepath.Join(fixture, "resolver_inputs_test.go"), resolver.FixtureSource)
 			}
