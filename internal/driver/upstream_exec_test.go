@@ -35,9 +35,10 @@ func prepareUpstreamNativeImage(t *testing.T, dir, out, entry string) nativeImag
 	if strings.Count(string(source), start) != 1 {
 		t.Fatal("expected 1 generated test entry point")
 	}
+	imports := upstreamOSImport(t, out)
 	quoted := strings.ReplaceAll(strconv.Quote(name), "$", `\$`)
-	writeFile(t, entry, strings.Replace(string(source), start,
-		"$os.Args[0] = GoString.fromString("+quoted+");\n"+start, 1))
+	writeFile(t, entry, imports+strings.Replace(string(source), start,
+		"$upstreamOS.Args[0] = GoString.fromString("+quoted+");\n"+start, 1))
 	return result
 }
 
@@ -66,7 +67,8 @@ func prepareUpstreamSelfExec(t *testing.T, out, entry string) string {
 	}
 	name := strings.ReplaceAll(strconv.Quote(launcher), "$", `\$`)
 	// Adapt executable identity in the generated harness, outside upstream assertions.
-	code := strings.Replace(string(source), start, "$os.Args[0] = GoString.fromString("+name+");\n"+start, 1)
+	imports := upstreamOSImport(t, out)
+	code := imports + strings.Replace(string(source), start, "$upstreamOS.Args[0] = GoString.fromString("+name+");\n"+start, 1)
 	writeFile(t, entry, code)
 	executableSource := filepath.Join(out, "lib", "std", "os", "extra.part.dart")
 	source, err = os.ReadFile(executableSource)
@@ -87,4 +89,16 @@ func prepareUpstreamSelfExec(t *testing.T, out, entry string) string {
 		t.Fatal(err)
 	}
 	return launcher
+}
+
+func upstreamOSImport(t *testing.T, out string) string {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join(out, "pubspec.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	line, _, _ := strings.Cut(string(data), "\n")
+	name := strings.TrimPrefix(line, "name: ")
+	// A package URI keeps the import in the same Dart library instance.
+	return "import " + strconv.Quote("package:"+name+"/std/os.dart") + " as $upstreamOS;\n"
 }
