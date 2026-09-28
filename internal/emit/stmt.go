@@ -384,7 +384,13 @@ func (e *emitter) deferredId(fun ir.Expr) int {
 }
 
 func (e *emitter) goStmt(s *ir.Go) {
-	e.line("$go(() { %s; });", e.expr(s.Call))
+	// The launch wrapper is not a Go caller in the new goroutine.
+	previous := e.sourceFrame
+	e.sourceFrame = false
+	call := e.expr(s.Call)
+	e.sourceFrame = previous
+	e.markDrop()
+	e.line("$go(() { %s; });", call)
 }
 
 func (e *emitter) ifStmt(s *ir.If) {
