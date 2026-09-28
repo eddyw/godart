@@ -310,7 +310,7 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 	case "GC":
 		return "$gc()", true
 	case "AddCleanup":
-		return fmt.Sprintf("$addCleanup(%s!.value as Object, %s)", args[0], args[1]), true
+		return fmt.Sprintf("$addCleanup(%s!, %s, %s, %s)", args[0], args[1], args[2], args[3]), true
 	case "StopCleanup":
 		return fmt.Sprintf("$stopCleanup(%s)", args[0]), true
 	case "Kind":

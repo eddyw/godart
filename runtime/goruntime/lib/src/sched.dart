@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:collection';
 
+import 'box.dart';
 import 'goint.dart';
+import 'iface.dart';
 import 'panic.dart';
 import 'platform_native.dart' if (dart.library.js_interop) 'platform_web.dart';
 import 'process_exit.dart';
@@ -509,9 +511,28 @@ final Finalizer<void Function()> _cleanups = Finalizer<void Function()>((
 ///
 /// Dart gives no way to force a collection, thus the time of the run follows the
 /// collector of Dart. Read docs/parity.md.
-int $addCleanup(Object target, void Function()? run) {
+int $addCleanup(
+  Iface target,
+  Iface? arg,
+  bool pointerArg,
+  void Function()? run,
+) {
+  final Object value = target.value as Object;
+  final Object? argument = arg?.value;
+  if (pointerArg &&
+      (identical($pointerOwner(value), $pointerOwner(argument)) ||
+          value is $Ref && argument is $Ref && value == argument)) {
+    $panic(
+      Iface(
+        $typeString,
+        GoString.fromString(
+          'runtime.AddCleanup: ptr is equal to arg, cleanup will never run',
+        ),
+      ),
+    );
+  }
   final Object token = Object();
-  _cleanups.attach(target, run!, detach: token);
+  _cleanups.attach(value, run!, detach: token);
   _cleanupTokens.add(token);
   return _cleanupTokens.length;
 }

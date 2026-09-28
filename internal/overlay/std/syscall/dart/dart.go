@@ -160,7 +160,7 @@ func GC() {
 
 // AddCleanup attaches a function that runs after the collector of Dart frees
 // the value, and it gives the handle of the cleanup.
-func AddCleanup(target any, run func()) int {
+func AddCleanup(target, arg any, pointerArg bool, run func()) int {
 	panic("syscall/dart needs the gart compiler")
 }
 

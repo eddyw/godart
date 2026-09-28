@@ -290,9 +290,11 @@ func (c Cleanup) Stop() { dart.StopCleanup(c.handle) }
 // collector of Dart. GC forces no run. Read docs/parity.md.
 func AddCleanup[T, S any](ptr *T, cleanup func(S), arg S) Cleanup {
 	if ptr == nil {
-		panic("runtime: AddCleanup: ptr is nil")
+		panic("runtime.AddCleanup: ptr is nil")
 	}
-	return Cleanup{handle: dart.AddCleanup(ptr, cleanupCallback(cleanup, arg))}
+	// The pointer check uses the static type of the cleanup argument.
+	_, kind, _ := dart.DescInfo(dart.DescElem(dart.DescOf((*S)(nil))))
+	return Cleanup{handle: dart.AddCleanup(ptr, arg, kind == "ptr", cleanupCallback(cleanup, arg))}
 }
 
 // The cleanup closure must not retain the target through a shared context.
