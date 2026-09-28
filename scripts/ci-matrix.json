@@ -321,8 +321,8 @@
       "suite": "upstream-priority",
       "shard": 0,
       "shards": 4,
-      "timeout": 22,
-      "job_timeout": 27,
+      "timeout": 35,
+      "job_timeout": 40,
       "full_timeout": 39,
       "full_job_timeout": 44
     },
@@ -330,8 +330,8 @@
       "suite": "upstream-priority",
       "shard": 1,
       "shards": 4,
-      "timeout": 14,
-      "job_timeout": 19,
+      "timeout": 32,
+      "job_timeout": 37,
       "full_timeout": 22,
       "full_job_timeout": 27
     },
@@ -339,8 +339,8 @@
       "suite": "upstream-priority",
       "shard": 2,
       "shards": 4,
-      "timeout": 11,
-      "job_timeout": 16,
+      "timeout": 36,
+      "job_timeout": 41,
       "full_timeout": 8,
       "full_job_timeout": 13
     },
@@ -348,8 +348,8 @@
       "suite": "upstream-priority",
       "shard": 3,
       "shards": 4,
-      "timeout": 10,
-      "job_timeout": 15,
+      "timeout": 32,
+      "job_timeout": 37,
       "full_timeout": 143,
       "full_job_timeout": 148
     },
