@@ -17,7 +17,6 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"strings"
 	"sync"
 )
 
@@ -65,22 +64,8 @@ type Store struct {
 func Open(dir string) *Store { return &Store{dir: dir} }
 
 func (s *Store) path(pkgPath string) string {
-	return filepath.Join(s.dir, escape(pkgPath)+".json")
-}
-
-// escape maps an import path to a file name. The map is reversible, thus 2
-// paths never share a file.
-func escape(pkgPath string) string {
-	var b strings.Builder
-	for _, r := range pkgPath {
-		switch {
-		case r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || r == '.' || r == '-' || r == '_':
-			b.WriteRune(r)
-		default:
-			fmt.Fprintf(&b, "%%%02x", r)
-		}
-	}
-	return b.String()
+	sum := sha256.Sum256([]byte(pkgPath))
+	return filepath.Join(s.dir, hex.EncodeToString(sum[:])+".json")
 }
 
 func (s *Store) Read(pkgPath string) (*Archive, bool) {

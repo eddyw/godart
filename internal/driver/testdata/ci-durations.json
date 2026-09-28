@@ -2011,7 +2011,7 @@
   "driver/full/TestSocketOptionErrors": 77.74,
   "driver/full/TestTCPDialFamilyUpstream": 73.88,
   "driver/full/TestTestingTimeoutTargets": 347.1,
-  "driver/full/TestTestingTimeoutUpstream": 79.95,
+  "driver/full/TestTestingTimeoutUpstream": 75.98,
   "driver/full/TestTimeLayout": 318.83,
   "driver/short/TestBench": 19.28,
   "driver/short/TestBenchFilter": 20.94,

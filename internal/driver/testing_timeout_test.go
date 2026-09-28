@@ -58,14 +58,6 @@ func TestTestingTimeoutUpstream(t *testing.T) {
 					args := strings.Fields(strings.TrimPrefix(line, "go "))
 					native = programOutcome(t, dir, "go", args...)
 					gartArgs := append([]string{"test", "-o", out, "-runtime", runtimeDir(t)}, args[1:]...)
-					if name == "test_timeout.txt" {
-						// An explicit file avoids the unsupported GOPATH import identity.
-						for i, arg := range gartArgs {
-							if arg == "." {
-								gartArgs[i] = "./timeout_test.go"
-							}
-						}
-					}
 					gart = programOutcome(t, dir, cli, gartArgs...)
 					if native.Exit != 0 || gart.Exit != 0 {
 						t.Fatalf("%s\nGo: %+v\nGart: %+v", line, native, gart)

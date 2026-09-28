@@ -290,9 +290,10 @@ func Surface() []string {
 // package, and the verifier rejects an import of it.
 //
 // Callers must first recognize local modules and synthetic file-list packages.
-// Domain-qualified paths and external test packages remain outside this table.
+// Domain-qualified paths, anonymous imports, and external test packages
+// remain outside this table.
 func Outside(pkgPath string) bool {
-	if strings.HasSuffix(pkgPath, "_test") {
+	if strings.HasPrefix(pkgPath, "_/") || strings.HasSuffix(pkgPath, "_test") {
 		return false
 	}
 	first, _, _ := strings.Cut(pkgPath, "/")

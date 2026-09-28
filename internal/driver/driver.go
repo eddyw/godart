@@ -503,10 +503,10 @@ func inModule(pkgPath, module string) bool {
 		pkgPath == module+"_test" || pkgPath == module+".test"
 }
 
-// A domain-qualified import can also name a GOPATH package without module metadata.
+// Domain-qualified and anonymous imports can name GOPATH packages.
 func external(pkgPath string) bool {
 	first, _, _ := strings.Cut(pkgPath, "/")
-	return strings.Contains(first, ".")
+	return strings.HasPrefix(pkgPath, "_/") || strings.Contains(first, ".")
 }
 
 // stdModule is the module of a build of a GOROOT package. No import path of
