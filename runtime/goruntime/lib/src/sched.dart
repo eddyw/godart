@@ -143,6 +143,15 @@ final class Goroutine {
   /// The number of the goroutine. Go numbers each goroutine from 1.
   final int id;
 
+  final (String, String, int, int)? creator;
+
+  String get creatorFrame {
+    final origin = creator;
+    return origin == null
+        ? ''
+        : 'created by ${origin.$1} in goroutine ${origin.$4}|${origin.$2}|${origin.$3}';
+  }
+
   /// The bubble of the goroutine, and null outside a bubble. A goroutine that
   /// a bubble starts joins that bubble.
   Bubble? bubble;
@@ -154,7 +163,7 @@ final class Goroutine {
   Object? _result;
   void Function()? _hook;
 
-  Goroutine({this.isMain = false}) : id = ++_lastId;
+  Goroutine({this.isMain = false, this.creator}) : id = ++_lastId;
 
   /// True after the goroutine ended. A goroutine ends 3 ways: the body
   /// returns, a panic leaves the body, and `runtime.Goexit` stops it.
@@ -471,13 +480,23 @@ void _schedule() {
 /// The parameter takes the type `void Function()`, because the emitted Dart
 /// writes a closure with no result. A body that gives a value is a subtype of
 /// that type, thus the field [Goroutine.start] still keeps the value.
-Goroutine $go(void Function() body) => _spawn(body, $current?.bubble);
+/// The compiler supplies the creator name, file, and line for a Go statement.
+/// An origin requires a current Go goroutine.
+Goroutine $go(void Function() body, [(String, String, int)? origin]) => _spawn(
+  body,
+  $current?.bubble,
+  origin == null ? null : (origin.$1, origin.$2, origin.$3, $current!.id),
+);
 
 /// Starts a goroutine inside the bubble b, and gives its handle. A null bubble
 /// starts a goroutine outside each bubble.
-Goroutine _spawn(void Function() body, Bubble? b) {
+Goroutine _spawn(
+  void Function() body,
+  Bubble? b, [
+  (String, String, int, int)? creator,
+]) {
   _live++;
-  final Goroutine g = Goroutine()..start = body;
+  final Goroutine g = Goroutine(creator: creator)..start = body;
   if (b != null) {
     g.bubble = b;
     b.members.add(g);

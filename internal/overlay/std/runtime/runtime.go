@@ -232,6 +232,7 @@ func (f *Func) Entry() uintptr { return f.pc }
 // Stack writes the stack trace of the goroutine that calls it into buf, and it
 // gives the count of bytes that the write took. A trace that does not fit
 // gives the part that fits.
+// Each trace also identifies its Go creator, when one exists.
 //
 // The flag all asks for the trace of each other goroutine after the trace of
 // this one. A function that gives up control leaves the Dart stack, thus the
@@ -244,6 +245,9 @@ func Stack(buf []byte, all bool) int {
 	// Frame 0 is this function, thus the skip starts at 1.
 	for _, frame := range dart.Stack(1) {
 		text = appendFrame(text, frame)
+	}
+	if origin := dart.Creator(); origin != "" {
+		text = appendFrame(text, origin)
 	}
 	if all {
 		for _, block := range dart.Parked() {
@@ -264,13 +268,16 @@ func Stack(buf []byte, all bool) int {
 	return copy(buf, text)
 }
 
-// appendFrame writes 1 frame of the runtime in the form of Go. The item holds
-// "function|file|line".
+// appendFrame writes 1 stack entry in the Go trace format.
+// An entry holds "function|file|line" or a creator name with the same source fields.
 func appendFrame(out []byte, frame string) []byte {
 	name, rest, _ := strings.Cut(frame, "|")
 	file, line, _ := strings.Cut(rest, "|")
 	out = append(out, name...)
-	out = append(out, "()\n\t"...)
+	if !strings.HasPrefix(name, "created by ") {
+		out = append(out, "()"...)
+	}
+	out = append(out, "\n\t"...)
 	out = append(out, file...)
 	out = append(out, ':')
 	out = append(out, line...)

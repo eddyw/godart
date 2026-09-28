@@ -335,6 +335,8 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return "$goid()", true
 	case "CaptureOut":
 		return fmt.Sprintf("$captureOut(%s)", args[0]), true
+	case "Creator":
+		return "$creator()", true
 	case "Parked":
 		return "$parked()", true
 	case "Gosched":

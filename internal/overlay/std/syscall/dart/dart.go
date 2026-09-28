@@ -74,6 +74,12 @@ func GoID() int {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// Creator gives the current goroutine creator in the frame format of Parked.
+// An empty string identifies a goroutine without a Go creator.
+func Creator() string {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // Parked gives the state of each goroutine that gave up control, except the
 // goroutine that runs now.
 //

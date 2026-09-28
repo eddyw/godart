@@ -75,6 +75,8 @@ void _yieldEvent(Goroutine g) {
 /// goroutine runs on. This is the shape of runtime.Goexit.
 Never $goexit() => throw const GoStop();
 
+GoString $creator() => GoString.fromString($current?.creatorFrame ?? '');
+
 /// The state of each goroutine that gave up control, except the goroutine that
 /// runs now.
 ///
@@ -88,9 +90,10 @@ Slice<GoString> $parked() {
     final String reason = g.frame == null ? 'runnable' : $waitReason(g.frame);
     final List<TraceFrame> stack = $traceFrames(g.frame);
     final StringBuffer text = StringBuffer('${g.id}|$reason');
-    for (final TraceFrame t in stack) {
+    for (final TraceFrame t in stack.reversed) {
       text.write('\n${t.$name}|${t.$goFile}|${t.$goLine}');
     }
+    if (g.creator != null) text.write('\n${g.creatorFrame}');
     out.add(GoString.fromString(text.toString()));
   }
   return Slice.of(out);

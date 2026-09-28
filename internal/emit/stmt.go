@@ -389,8 +389,12 @@ func (e *emitter) goStmt(s *ir.Go) {
 	e.sourceFrame = false
 	call := e.expr(s.Call)
 	e.sourceFrame = previous
+	origin := ""
+	if pos := ir.PosOf(s); e.cfg.Fset != nil && pos.IsValid() && e.curGoName != "" {
+		origin = fmt.Sprintf(", (%s, %s, %d)", dartString(e.curGoName), dartString(e.goFile(pos)), e.cfg.Fset.Position(pos).Line)
+	}
 	e.markDrop()
-	e.line("$go(() { %s; });", call)
+	e.line("$go(() { %s; }%s);", call, origin)
 }
 
 func (e *emitter) ifStmt(s *ir.If) {
