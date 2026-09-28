@@ -115,7 +115,7 @@ func runTestProg(t *testing.T, binary, name string) string {
 			var result programResult
 			args = upstreamTestArgs("-test.run=^TestPanicTraceback$")
 			if target == "vm" {
-				result = programOutcome(t, validator, "dart", append([]string{filepath.Join(validatorOut, stats.Binaries[0].Entry)}, args...)...)
+				result = upstreamOutcome(t, validator, nil, runLimit, "dart", append([]string{filepath.Join(validatorOut, stats.Binaries[0].Entry)}, args...)...)
 			} else {
 				result = runUpstreamTarget(t, target, validatorOut, stats.Binaries[0].Entry, validator, args)
 			}

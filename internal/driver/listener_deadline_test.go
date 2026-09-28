@@ -69,7 +69,7 @@ func newLocalListener(t testing.TB, network string) Listener {
 	prepareDart(t, out)
 	const filter = "^(TestAcceptTimeout|TestAcceptTimeoutMustReturn|TestAcceptTimeoutMustNotReturn)$"
 	args := upstreamTestArgs("-test.run=" + filter)
-	result := programOutcome(t, netDir, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, args...)...)
+	result := upstreamOutcome(t, netDir, nil, runLimit, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, args...)...)
 	compareUpstream(t, "net-listener-deadlines", "net", filter, "vm", netDir, result.Text, result.Exit, true)
 	t.Run("aot", func(t *testing.T) {
 		result := runUpstreamTarget(t, "aot", out, stats.Binaries[0].Entry, netDir, args)

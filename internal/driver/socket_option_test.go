@@ -224,7 +224,7 @@ func newLocalListener(t testing.TB, network string) net.Listener {
 			}
 			var original programResult
 			if target == "vm" {
-				original = programOutcome(t, dir, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, upstreamTestArgs("-test.run=^TestNotTemporaryRead$")...)...)
+				original = upstreamOutcome(t, dir, nil, runLimit, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, upstreamTestArgs("-test.run=^TestNotTemporaryRead$")...)...)
 			} else {
 				original = runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, upstreamTestArgs("-test.run=^TestNotTemporaryRead$"))
 			}

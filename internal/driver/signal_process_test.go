@@ -73,7 +73,7 @@ func TestSignalProcessesUpstream(t *testing.T) {
 				t.Run(name, func(t *testing.T) {
 					filter := "^" + name + "$"
 					args := upstreamTestArgs("-test.run=" + filter)
-					got := programOutcome(t, dir, launcher, args...)
+					got := upstreamOutcome(t, dir, nil, runLimit, launcher, args...)
 					compareUpstream(t, "signal-process-"+name, "os/signal", filter, target, dir, got.Text, got.Exit, true)
 				})
 			}

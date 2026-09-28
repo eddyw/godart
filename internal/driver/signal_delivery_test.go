@@ -52,7 +52,7 @@ func TestSignalDeliveryUpstream(t *testing.T) {
 					args := upstreamTestArgs("-test.run=" + suite.filter)
 					var got programResult
 					if target == "vm" {
-						got = programOutcome(t, dir, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, args...)...)
+						got = upstreamOutcome(t, dir, nil, runLimit, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, args...)...)
 					} else {
 						got = runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, args)
 					}

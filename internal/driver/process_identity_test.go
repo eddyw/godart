@@ -111,7 +111,7 @@ func main() {
 			args := upstreamTestArgs("-test.run=^TestZeroSysProcAttr$")
 			var result programResult
 			if target == "vm" {
-				result = programOutcome(t, dir, "dart", append([]string{filepath.Join(testOut, stats.Binaries[0].Entry)}, args...)...)
+				result = upstreamOutcome(t, dir, nil, runLimit, "dart", append([]string{filepath.Join(testOut, stats.Binaries[0].Entry)}, args...)...)
 			} else {
 				result = runUpstreamTarget(t, target, testOut, stats.Binaries[0].Entry, dir, args)
 			}

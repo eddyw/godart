@@ -63,7 +63,7 @@ func run(t *testing.T,f func(*testing.T,testMode)) {
 		t.Run(target, func(t *testing.T) {
 			var result programResult
 			if target == "vm" {
-				result = programOutcome(t, dir, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, args...)...)
+				result = upstreamOutcome(t, dir, nil, runLimit, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, args...)...)
 			} else {
 				result = runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, args, "--import", prelude)
 			}

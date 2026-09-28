@@ -169,7 +169,7 @@ func TestCloseRebind(t *testing.T) {
 			var result programResult
 			args := upstreamTestArgs("-test.run=^TestUDPConnLocalAndRemoteNames$")
 			if target == "vm" {
-				result = programOutcome(t, dir, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, args...)...)
+				result = upstreamOutcome(t, dir, nil, runLimit, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, args...)...)
 			} else {
 				result = runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, args)
 			}

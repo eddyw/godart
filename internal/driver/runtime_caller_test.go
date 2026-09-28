@@ -46,7 +46,7 @@ func TestRuntimeCaller(t *testing.T) {
 	prepareDart(t, out)
 	const filter = "^(TestCaller|TestNilName|TestLineNumber|TestCallers|TestCallersPanic|TestCallersDoublePanic|TestCallersAfterRecovery|TestCallersAbortedPanic|TestCallersAbortedPanic2|TestCallersEndlineno|TestStackOutput|TestStackAllOutput|TestTracebackGeneric|TestStackWrapperCaller|TestStackWrapperCallers|TestStackWrapperStack|TestStackWrapperStackPanic|TestCallersFromWrapper)$"
 	args := upstreamTestArgs("-test.run=" + filter)
-	result := programOutcome(t, dir, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, args...)...)
+	result := upstreamOutcome(t, dir, nil, runLimit, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, args...)...)
 	compareUpstream(t, "runtime-caller", "runtime", filter, "vm", dir, result.Text, result.Exit, true)
 	for _, target := range []string{"aot", "js", "wasm"} {
 		t.Run(target, func(t *testing.T) {

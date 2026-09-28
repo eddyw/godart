@@ -50,7 +50,7 @@ func TestRFC6724(t *testing.T) {
 		t.Run(target, func(t *testing.T) {
 			var result programResult
 			if target == "vm" {
-				result = programOutcome(t, netDir, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, args...)...)
+				result = upstreamOutcome(t, netDir, nil, runLimit, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, args...)...)
 			} else {
 				result = runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, netDir, args)
 			}

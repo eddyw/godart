@@ -226,7 +226,7 @@ func TestUDPDestinationErrors(t *testing.T) {
 			args := upstreamTestArgs("-test.run=" + filter)
 			var r programResult
 			if target == "vm" {
-				r = programOutcome(t, dir, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, args...)...)
+				r = upstreamOutcome(t, dir, nil, runLimit, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, args...)...)
 			} else {
 				r = runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, args)
 			}
