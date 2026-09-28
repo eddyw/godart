@@ -69,15 +69,17 @@ class ProductionContracts(unittest.TestCase):
 
     def test_structural_go_edits(self):
         cases = [
-            ('package main\nimport "fmt"\nfunc value() int{return 1}\nfunc main(){fmt.Println(value())}\n', '1'),
-            ('package main\nimport "fmt"\nfunc value() string{return "two"}\nfunc main(){fmt.Println(value())}\n', 'two'),
-            ('package main\nimport("fmt";"strings")\nfunc value() string{return "three"}\nfunc main(){fmt.Println(strings.ToUpper(value()))}\n', 'THREE'),
-            ('package main\nfunc main(){println("four")}\n', 'four'),
+            ('package main\nimport "fmt"\nfunc value() int{return 1}\nfunc main(){fmt.Println(value())}\n', '1\n', ''),
+            ('package main\nimport "fmt"\nfunc value() string{return "two"}\nfunc main(){fmt.Println(value())}\n', 'two\n', ''),
+            ('package main\nimport("fmt";"strings")\nfunc value() string{return "three"}\nfunc main(){fmt.Println(strings.ToUpper(value()))}\n', 'THREE\n', ''),
+            ('package main\nfunc main(){println("four")}\n', '', 'four'),
         ]
-        for index, (source, want) in enumerate(cases):
+        for index, (source, stdout, stderr) in enumerate(cases):
             (self.source / 'main.go').write_text(source)
             result = self.run_gart()
-            self.assertEqual(result.stdout, want + '\n')
+            self.assertEqual(result.stdout, stdout)
+            if stderr:
+                self.assertIn(stderr, result.stderr.splitlines())
             mode = 'cold' if index == 0 else 'incremental'
             self.assertIn('phase=kernel-' + mode + ' ', result.stderr)
 
@@ -127,14 +129,17 @@ class ProductionContracts(unittest.TestCase):
     def test_worker_and_service_crash_recovery(self):
         source = self.source / 'main.go'
         source.write_text('package main\nfunc main(){println("first")}\n')
-        self.assertIn('first', self.run_gart().stdout)
+        result = self.run_gart()
+        self.assertEqual(result.stdout, '')
+        self.assertIn('first', result.stderr.splitlines())
         service = self.service()
         worker = next(pid for pid, parent, cmd in self.processes() if parent == service and 'frontend_server_aot' in cmd)
         os.kill(worker, signal.SIGKILL)
         time.sleep(.1)
         source.write_text(source.read_text().replace('first', 'other'))
         result = self.run_gart()
-        self.assertIn('other', result.stdout)
+        self.assertEqual(result.stdout, '')
+        self.assertIn('other', result.stderr.splitlines())
         self.assertIn('phase=kernel-cold ', result.stderr)
         child = next(pid for pid, parent, cmd in self.processes() if parent == service and 'frontend_server_aot' in cmd)
         os.kill(service, signal.SIGKILL)
@@ -144,7 +149,8 @@ class ProductionContracts(unittest.TestCase):
             time.sleep(.02)
         source.write_text(source.read_text().replace('other', 'third'))
         result = self.run_gart()
-        self.assertIn('third', result.stdout)
+        self.assertEqual(result.stdout, '')
+        self.assertIn('third', result.stderr.splitlines())
         self.assertIn('phase=kernel-cold ', result.stderr)
         self.assertNotEqual(self.service(), service)
 
