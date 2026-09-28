@@ -278,10 +278,6 @@ final Map<int, _Watch> _watches = <int, _Watch>{};
 int _nextWatch = 1;
 bool _watchRelease = false;
 
-/// _signalOf maps a signal number to the value of dart:io.
-///
-/// The overlay of the package syscall holds only the numbers that macOS and
-/// Linux agree on, thus the table needs no platform test.
 ProcessSignal? _signalOf(int number) => switch (number) {
   1 => ProcessSignal.sighup,
   2 => ProcessSignal.sigint,
@@ -290,6 +286,10 @@ ProcessSignal? _signalOf(int number) => switch (number) {
   14 => ProcessSignal.sigalrm,
   15 => ProcessSignal.sigterm,
   28 => ProcessSignal.sigwinch,
+  10 when Platform.isLinux || Platform.isAndroid => ProcessSignal.sigusr1,
+  12 when Platform.isLinux || Platform.isAndroid => ProcessSignal.sigusr2,
+  30 when Platform.isMacOS || Platform.isIOS => ProcessSignal.sigusr1,
+  31 when Platform.isMacOS || Platform.isIOS => ProcessSignal.sigusr2,
   _ => null,
 };
 

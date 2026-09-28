@@ -35,6 +35,8 @@ var catchable = []syscall.Signal{
 	syscall.SIGHUP,
 	syscall.SIGINT,
 	syscall.SIGTERM,
+	syscall.SIGUSR1,
+	syscall.SIGUSR2,
 	syscall.SIGWINCH,
 }
 

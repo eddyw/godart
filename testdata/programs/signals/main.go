@@ -28,6 +28,27 @@ func main() {
 	}
 	fmt.Println("got", <-c)
 
+	for _, all := range []bool{false, true} {
+		for _, sig := range []os.Signal{syscall.SIGUSR1, syscall.SIGUSR2} {
+			user := make(chan os.Signal, 10)
+			if all {
+				signal.Notify(user)
+			} else {
+				signal.Notify(user, sig)
+			}
+			if err := self.Signal(sig); err != nil {
+				panic(err)
+			}
+			for got := range user {
+				if got == sig {
+					fmt.Println("user", all, got)
+					break
+				}
+			}
+			signal.Stop(user)
+		}
+	}
+
 	signal.Ignore(syscall.SIGHUP)
 	fmt.Println("ignored hup:", signal.Ignored(syscall.SIGHUP))
 	signal.Reset(syscall.SIGHUP)

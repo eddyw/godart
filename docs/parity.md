@@ -72,7 +72,8 @@ Other native hosts and browsers do not support `os.File.Fd`.
 returns an explicit error because inherited listener descriptors remain unsupported.
 
 Linux and macOS support `syscall.Kill` and `syscall.Getpid` through native APIs.
-Signal watches currently support SIGHUP, SIGINT, SIGTERM, and SIGWINCH.
+Signal watches support SIGHUP, SIGINT, SIGTERM, SIGUSR1, SIGUSR2, and SIGWINCH.
+Gart can terminate on an unregistered SIGUSR1 that native Go ignores.
 Other native signal watches remain unsupported. Browser builds cannot send
 or receive operating system signals.
 
