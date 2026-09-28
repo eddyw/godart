@@ -59,6 +59,8 @@ This evidence covers certificate verification. It does not establish Dart key-ge
 
 The TLS comparisons preserve original source, key generation, and assertions.
 Go and Gart receive identical short or full selections for each target.
+VM comparisons divide the selection into groups of at most 100 declarations.
+Each group retains the standard command limit and a separate report.
 Full AOT executes the exhaustive certificate matrix.
 VM and short AOT exclude that matrix because it exceeds their command limits.
 Reports retain these target exclusions. They do not count them as passes.

@@ -6,6 +6,9 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/eddyw/godart/internal/driver"
@@ -48,14 +51,27 @@ func TestTLSUpstream(t *testing.T) {
 			} else {
 				exclusions = map[string]string{"TestFIPSCertAlgs": "The exhaustive certificate matrix exceeds the unchanged VM command limit. Full VM parity remains unverified."}
 			}
-			args := upstreamTestArgs("-test.run=" + filter)
-			var result programResult
+			filters := []string{filter}
 			if target == "vm" {
-				result = programOutcome(t, dir, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, args...)...)
-			} else {
-				result = runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, args)
+				filters = nil
+				for names := range slices.Chunk(strings.Split(filter[2:len(filter)-2], "|"), 100) {
+					filters = append(filters, "^("+strings.Join(names, "|")+")$")
+				}
 			}
-			compareUpstreamInventory(t, "tls-selected", "crypto/tls", filter, target, dir, result.Text, result.Exit, inventory, nil, nil, exclusions, true)
+			for index, filter := range filters {
+				t.Run(strconv.Itoa(index), func(t *testing.T) {
+					args := upstreamTestArgs("-test.run=" + filter)
+					var result programResult
+					name := "tls-selected"
+					if target == "vm" {
+						name += "/vm-" + strconv.Itoa(index)
+						result = programOutcome(t, dir, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, args...)...)
+					} else {
+						result = runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, args)
+					}
+					compareUpstreamInventory(t, name, "crypto/tls", filter, target, dir, result.Text, result.Exit, inventory, nil, nil, exclusions, true)
+				})
+			}
 		})
 	}
 }
