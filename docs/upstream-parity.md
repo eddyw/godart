@@ -57,6 +57,14 @@ The adapter preserves the original 4096-bit keys, SAN counts, and verification a
 Reports retain the generator source, original source, exact substitutions, output hashes, and process results.
 This evidence covers certificate verification. It does not establish Dart key-generation performance.
 
+The TLS comparisons preserve original source, key generation, and assertions.
+Go and Gart receive identical short or full selections for each target.
+Full AOT executes the exhaustive certificate matrix.
+VM and short AOT exclude that matrix because it exceeds their command limits.
+Reports retain these target exclusions. They do not count them as passes.
+Separate omissions cover native FIPS subprocesses, linker symbols, forced GC,
+the BoringSSL runner, and external services.
+
 The Linux fallback-root adapter replaces namespace mounts with private directories and certificate environment paths.
 Both compilers receive the same fixture patch. The original assertions and separate child processes remain unchanged.
 Reports retain the original source hash, patch, adapted source, and adapted source hash.
@@ -71,7 +79,7 @@ This configuration does not claim assembly implementation or native FIPS module 
 The Gart side preserves the original assertions, expected values, and fixture bytes.
 Adapters supply unavailable private test infrastructure without a duplicate assertion implementation.
 
-The `go/build`, `debug/buildinfo`, and X.509 adapters supply the active Go SDK through `GOROOT`.
+The `go/build`, `debug/buildinfo`, X.509, and TLS adapters supply the active Go SDK through `GOROOT`.
 The full buildinfo suite uses its original `-all` option and selects the SDK platform's `pie` and `exe` fixtures.
 Both Go and Gart read native artifacts from that SDK. This selection does not cover `c-shared` or cgo.
 Gart preserves its compiler and architecture identity during source selection.

@@ -40,5 +40,43 @@
       "classification": "target-limit",
       "reason": "The original assertion requires a native memory protection fault when a write modifies shared field metadata. Dart uses independent mutable metadata arrays."
     }
+  },
+  "crypto/tls": {
+    "TestFIPSServerProtocolVersion": {
+      "classification": "target-limit",
+      "reason": "The declaration reruns itself with GODEBUG=fips140=only. Gart rejects FIPS 140-3 mode. The original subprocess assertions remain intact."
+    },
+    "TestFIPSServerCipherSuites": {
+      "classification": "target-limit",
+      "reason": "The declaration reruns itself with GODEBUG=fips140=only. Gart rejects FIPS 140-3 mode. The original subprocess assertions remain intact."
+    },
+    "TestFIPSServerCurves": {
+      "classification": "target-limit",
+      "reason": "The declaration reruns itself with GODEBUG=fips140=only. Gart rejects FIPS 140-3 mode. The original subprocess assertions remain intact."
+    },
+    "TestFIPSServerSignatureAndHash": {
+      "classification": "target-limit",
+      "reason": "The declaration reruns itself with GODEBUG=fips140=only. Gart rejects FIPS 140-3 mode. The original subprocess assertions remain intact."
+    },
+    "TestLinkerGC": {
+      "classification": "target-limit",
+      "reason": "The assertion uses go build and go tool nm to inspect native Go linker symbols. A pass would assess the native Go compiler, not Gart."
+    },
+    "TestWeakCertCache": {
+      "classification": "target-limit",
+      "reason": "The original weak-certificate cache assertion requires forced garbage collection. Dart does not guarantee that collection, and the original assertion times out."
+    },
+    "TestBogoSuite": {
+      "classification": "test-adapter",
+      "reason": "The declaration requires the separate BoringSSL conformance runner and an executable TLS shim. That integration remains unverified."
+    },
+    "TestVerifyHostname": {
+      "classification": "unassessed",
+      "reason": "The declaration requires a public TLS service. The local acceptance selection does not assess that external service."
+    },
+    "TestRealResumption": {
+      "classification": "unassessed",
+      "reason": "The declaration requires a public TLS service. The local acceptance selection does not assess that external service."
+    }
   }
 }

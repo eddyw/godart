@@ -13934,6 +13934,12 @@
       "gart": "skip",
       "native": "skip",
       "reason": "The original upstream test skips this case in short mode.",
+      "test": "TestConnReadNonzeroAndEOF"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips this case in short mode.",
       "test": "TestDeadlineOnWrite"
     },
     {
@@ -13941,6 +13947,36 @@
       "native": "skip",
       "reason": "The original upstream test skips this case in short mode.",
       "test": "TestDialTimeout"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips this case in short mode.",
+      "test": "TestDowngradeCanary"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips this case in short mode.",
+      "test": "TestGenerateCertificates"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips this case in short mode.",
+      "test": "TestHandshakeRace"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips this case in short mode.",
+      "test": "TestResumption/TLSv12"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips this case in short mode.",
+      "test": "TestResumption/TLSv13"
     }
   ]
 }
