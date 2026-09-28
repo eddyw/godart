@@ -1,10 +1,12 @@
 package normalize
 
 import (
+	"fmt"
 	"go/ast"
 	"go/constant"
 	"go/token"
 	"go/types"
+	"path/filepath"
 
 	"github.com/eddyw/godart/internal/ir"
 	"github.com/eddyw/godart/internal/typeset"
@@ -596,6 +598,10 @@ func (b *builder) funcLit(e *ast.FuncLit) ir.Expr {
 	out.Body.List = append(b.returnState(), out.Body.List...)
 	out.Defers = inner.Defers
 	out.Captured = b.litCaptures(e)
+	if b.litIndependent(e) {
+		position := b.fset.PositionFor(e.Pos(), false)
+		out.StaticName = fmt.Sprintf("$literal%x_%d_%d", filepath.Base(position.Filename), position.Line, position.Column)
+	}
 	b.fn = prev
 	b.pending = prevPending
 	b.gotoLabels = prevGoto

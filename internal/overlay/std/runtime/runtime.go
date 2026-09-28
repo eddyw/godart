@@ -292,7 +292,12 @@ func AddCleanup[T, S any](ptr *T, cleanup func(S), arg S) Cleanup {
 	if ptr == nil {
 		panic("runtime: AddCleanup: ptr is nil")
 	}
-	return Cleanup{handle: dart.AddCleanup(ptr, func() { cleanup(arg) })}
+	return Cleanup{handle: dart.AddCleanup(ptr, cleanupCallback(cleanup, arg))}
+}
+
+// The cleanup closure must not retain the target through a shared context.
+func cleanupCallback[S any](cleanup func(S), arg S) func() {
+	return func() { cleanup(arg) }
 }
 
 // GC provokes a collection and gives up control, thus each cleanup of a value

@@ -90,9 +90,10 @@ func newEmitter(p *ir.Package, tpkg *types.Package, cfg Config) *emitter {
 		shadowed:     map[string]map[string]bool{},
 		nilChans:     map[string]types.Type{}, instDescs: map[string]types.Type{},
 		descTexts: map[string]string{}, cfg: cfg,
-		funcIds:   map[any]int{},
-		funcByObj: map[types.Object]*ir.Func{},
-		varLitId:  map[string]int{}}
+		freeFuncSeen: map[*ir.FuncLit]bool{},
+		funcIds:      map[any]int{},
+		funcByObj:    map[types.Object]*ir.Func{},
+		varLitId:     map[string]int{}}
 	e.setPrefixes(cfg.Imports)
 	e.groupMethods(p)
 	return e
@@ -122,6 +123,7 @@ func (e *emitter) resetDiscovery() {
 	// The emitter runs 2 passes, and the second one writes the output. A frame
 	// class that the first pass counted must reach the file of the second pass.
 	e.frameSeen = nil
+	e.freeFuncSeen = map[*ir.FuncLit]bool{}
 	e.extra = nil
 	e.errs = nil
 	e.labelSeq = 0
@@ -244,7 +246,9 @@ type emitter struct {
 	captures []capture
 	// frames holds the class of each frame that the file still needs. Dart
 	// holds no class inside a function, thus each one waits for package level.
-	frames []string
+	frames       []string
+	freeFuncs    []string
+	freeFuncSeen map[*ir.FuncLit]bool
 	// frameSeen holds the name of each frame class that the emitter already
 	// wrote. placeLocalFuncs of stage 4 declares 1 literal in each state that
 	// reads it, and the class of that literal stands at package level, thus a
@@ -472,13 +476,17 @@ func (e *emitter) goFuncName(f *ir.Func) string {
 
 // flushFrames writes the class of each frame that a declaration made.
 func (e *emitter) flushFrames() {
-	if len(e.frames) != 0 {
+	if len(e.frames) != 0 || len(e.freeFuncs) != 0 {
 		e.markDrop()
 	}
 	for _, text := range e.frames {
 		e.line("%s", text)
 	}
 	e.frames = nil
+	for _, text := range e.freeFuncs {
+		e.line("%s", text)
+	}
+	e.freeFuncs = nil
 }
 
 // topName maps the name of a function, a variable, or a constant at package

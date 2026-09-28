@@ -344,3 +344,29 @@ func (b *builder) assignedVars(body ast.Node) map[*types.Var]bool {
 	})
 	return out
 }
+
+func (b *builder) litIndependent(lit *ast.FuncLit) bool {
+	independent := true
+	ast.Inspect(lit, func(n ast.Node) bool {
+		id, ok := n.(*ast.Ident)
+		if !ok || !independent {
+			return independent
+		}
+		obj := b.info.Uses[id]
+		switch obj := obj.(type) {
+		case *types.Var:
+			if obj.IsField() {
+				return true
+			}
+		case *types.Const, *types.TypeName:
+		default:
+			return true
+		}
+		if obj.Parent() == nil || obj.Pkg() == nil || obj.Parent() == obj.Pkg().Scope() {
+			return true
+		}
+		independent = obj.Pos() >= lit.Pos() && obj.Pos() <= lit.End()
+		return independent
+	})
+	return independent
+}

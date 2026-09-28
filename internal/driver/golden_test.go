@@ -12,22 +12,27 @@ import (
 // TestDeterministic proves that equal input gives byte equal output. The
 // incremental compiler of Dart needs this rule, and so does the cache.
 func TestDeterministic(t *testing.T) {
-	source, err := filepath.Abs("../../testdata/programs/multi")
-	if err != nil {
-		t.Fatal(err)
-	}
-	first := buildOnce(t, source)
-	second := buildOnce(t, source)
-	if len(first) == 0 {
-		t.Fatal("the build wrote no file")
-	}
-	if len(first) != len(second) {
-		t.Fatalf("the 2 builds wrote %d files and %d files", len(first), len(second))
-	}
-	for name, text := range first {
-		if second[name] != text {
-			t.Errorf("the file %s differs between 2 builds", name)
-		}
+	for _, program := range []string{"multi", "funcpc", "literalnames"} {
+		t.Run(program, func(t *testing.T) {
+			source, err := filepath.Abs(filepath.Join("../../testdata/programs", program))
+			if err != nil {
+				t.Fatal(err)
+			}
+			first := buildOnce(t, source)
+			second := buildOnce(t, source)
+			if len(first) == 0 {
+				t.Fatal("the build wrote no file")
+			}
+			if len(first) != len(second) {
+				t.Fatalf("the 2 builds wrote %d files and %d files", len(first), len(second))
+			}
+			for name, text := range first {
+				if second[name] != text {
+					t.Errorf("the file %s differs between 2 builds", name)
+				}
+			}
+
+		})
 	}
 }
 

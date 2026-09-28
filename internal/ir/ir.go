@@ -619,6 +619,9 @@ type (
 		// box at each pass of a loop, thus the literal takes a copy of the box
 		// of its own pass.
 		Captured []*Var
+
+		// StaticName identifies a literal that needs no outer local scope.
+		StaticName string
 	}
 
 	// SelectList builds the case list of a select statement.

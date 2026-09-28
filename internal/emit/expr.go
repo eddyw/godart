@@ -691,9 +691,10 @@ func (e *emitter) funcLit(x *ir.FuncLit) string {
 		cfg:             e.cfg, nilPrefix: e.nilPrefix,
 		typeParams: e.typeParams,
 		funcIds:    e.funcIds, funcByObj: e.funcByObj, varLitId: e.varLitId,
-		frameSeen: e.frameSeen,
-		lits:      e.lits,
-		renames:   e.withRenames(e.captureRenames(x.Captured))}
+		frameSeen:    e.frameSeen,
+		freeFuncSeen: e.freeFuncSeen,
+		lits:         e.lits,
+		renames:      e.withRenames(e.captureRenames(x.Captured))}
 	inner.curGoName = e.literalName(x)
 	inner.inLiteral = !x.Range
 	inner.funcFile = e.funcFile
@@ -715,6 +716,7 @@ func (e *emitter) funcLit(x *ir.FuncLit) string {
 	e.labelSeq = inner.labelSeq
 	e.dictReads = inner.dictReads
 	e.frames = append(e.frames, inner.frames...)
+	e.freeFuncs = append(e.freeFuncs, inner.freeFuncs...)
 	e.frameSeen = inner.frameSeen
 	// The 2 emitters share the map of the prefixes and hold a list of the
 	// added imports of their own. An import that the body of the literal
@@ -722,11 +724,21 @@ func (e *emitter) funcLit(x *ir.FuncLit) string {
 	e.extra = append(e.extra, inner.extra...)
 	b.WriteString(inner.buf.String())
 	b.WriteString("}")
+	text := b.String()
+	if x.StaticName != "" && !x.Async && len(e.typeParams) == 0 {
+		// Dart closures can retain unrelated locals through a shared context.
+		name := x.StaticName
+		if !e.freeFuncSeen[x] {
+			e.freeFuncSeen[x] = true
+			e.freeFuncs = append(e.freeFuncs, e.resultText(x.Results)+" "+name+text)
+		}
+		text = name
+	}
 	if e.cfg.Fset == nil || !x.Pos.IsValid() {
-		return b.String()
+		return text
 	}
 	info := fmt.Sprintf("%s|%s|%d", inner.curGoName, inner.funcFile, inner.funcLine)
-	return fmt.Sprintf("$functionValue(%s, %s)", b.String(), e.stringLit(info))
+	return fmt.Sprintf("$functionValue(%s, %s)", text, e.stringLit(info))
 }
 
 func (e *emitter) literalName(literal *ir.FuncLit) string {

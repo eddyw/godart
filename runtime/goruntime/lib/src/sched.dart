@@ -509,9 +509,9 @@ final Finalizer<void Function()> _cleanups = Finalizer<void Function()>((
 ///
 /// Dart gives no way to force a collection, thus the time of the run follows the
 /// collector of Dart. Read docs/parity.md.
-int $addCleanup(Object target, void Function() run) {
+int $addCleanup(Object target, void Function()? run) {
   final Object token = Object();
-  _cleanups.attach(target, run, detach: token);
+  _cleanups.attach(target, run!, detach: token);
   _cleanupTokens.add(token);
   return _cleanupTokens.length;
 }
