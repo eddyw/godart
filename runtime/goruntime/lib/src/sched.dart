@@ -496,16 +496,16 @@ void $boot(void Function() body) {
   $schedule();
 }
 
-/// The cleanups of the program, by token. A cleanup that Stop dropped holds
-/// null.
-final List<Object?> _cleanupTokens = <Object?>[];
+final Map<int, Object> _cleanupTokens = <int, Object>{};
+// Callers can retain Cleanup copies, thus handles must remain unique.
+int _nextCleanupHandle = 0;
 
-final Finalizer<void Function()> _cleanups = Finalizer<void Function()>((
-  void Function() body,
-) {
-  $go(body);
-  $schedule();
-});
+final Finalizer<(int, void Function())> _cleanups =
+    Finalizer<(int, void Function())>((cleanup) {
+      _cleanupTokens.remove(cleanup.$1);
+      $go(cleanup.$2);
+      $schedule();
+    });
 
 /// Attaches a cleanup to a value and gives its handle.
 ///
@@ -531,19 +531,18 @@ int $addCleanup(
       ),
     );
   }
+  final int handle = ++_nextCleanupHandle;
   final Object token = Object();
-  _cleanups.attach(value, run!, detach: token);
-  _cleanupTokens.add(token);
-  return _cleanupTokens.length;
+  _cleanups.attach(value, (handle, run!), detach: token);
+  _cleanupTokens[handle] = token;
+  return handle;
 }
 
 /// Drops a cleanup that no collection ran.
 void $stopCleanup(int handle) {
-  if (handle <= 0 || handle > _cleanupTokens.length) return;
-  final Object? token = _cleanupTokens[handle - 1];
+  final Object? token = _cleanupTokens.remove(handle);
   if (token == null) return;
   _cleanups.detach(token);
-  _cleanupTokens[handle - 1] = null;
 }
 
 /// Marks the start of a wait on the Dart event loop.

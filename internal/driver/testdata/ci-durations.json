@@ -2016,6 +2016,7 @@
   "driver/short/TestCacheBlockDigest": 2.48,
   "driver/short/TestCacheRemovesObsoleteParts": 4.71,
   "driver/short/TestCallerPrograms": 472.94,
+  "driver/short/TestCleanupHandles": 6.21,
   "driver/short/TestClosedNetworkError": 164.07,
   "driver/short/TestCompilerTypeAssertions": 85.97,
   "driver/short/TestConnectionErrorsUpstream": 38.79,
