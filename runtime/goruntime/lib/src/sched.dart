@@ -489,6 +489,7 @@ Goroutine _spawn(void Function() body, Bubble? b) {
 
 /// Runs package main as the first goroutine.
 void $boot(void Function() body) {
+  $releases.add($platformSignalDefaults());
   _live++;
   final Goroutine g = Goroutine(isMain: true)..start = body;
   _liveSet.add(g);

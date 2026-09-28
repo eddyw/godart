@@ -73,7 +73,8 @@ returns an explicit error because inherited listener descriptors remain unsuppor
 
 Linux and macOS support `syscall.Kill` and `syscall.Getpid` through native APIs.
 Signal watches support SIGHUP, SIGINT, SIGTERM, SIGUSR1, SIGUSR2, and SIGWINCH.
-Gart can terminate on an unregistered SIGUSR1 that native Go ignores.
+Standalone native programs ignore SIGUSR1 and SIGUSR2 before registration, as Go does.
+Dart-hosted libraries do not install these default handlers.
 Other native signal watches remain unsupported. Browser builds cannot send
 or receive operating system signals.
 

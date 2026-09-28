@@ -17,7 +17,7 @@ func TestSignalDeliveryUpstream(t *testing.T) {
 		t.Skip("native signal validation requires macOS or Linux")
 	}
 	dir := filepath.Join(runtime.GOROOT(), "src/os/signal")
-	names := []string{"TestSignal", "TestStress", "TestTime", "TestReset", "TestIgnore", "TestNotifyContextCause", "testCancel", "waitSig", "waitSigAll", "waitSig1", "quiesce", "settleTime", "fatalWaitingTime", "init"}
+	names := []string{"TestSignal", "TestStress", "TestTime", "TestReset", "TestIgnore", "TestNotifyContextCause", "testCancel", "waitSig", "waitSigAll", "waitSig1", "quiesce", "settleTime", "fatalWaitingTime", "init", "TestStop", "sendUncaughtSighup", "dieFromSighup"}
 	files, err := filepath.Glob(filepath.Join(dir, "*_test.go"))
 	if err != nil {
 		t.Fatal(err)
@@ -43,17 +43,23 @@ func TestSignalDeliveryUpstream(t *testing.T) {
 		t.Fatalf("got %d test binaries", len(stats.Binaries))
 	}
 	prepareDart(t, out)
-	const filter = "^(TestSignal|TestStress|TestTime|TestReset|TestIgnore|TestNotifyContextCause)$"
-	args := []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=" + filter}
 	for _, target := range []string{"vm", "aot"} {
 		t.Run(target, func(t *testing.T) {
-			var got programResult
-			if target == "vm" {
-				got = programOutcome(t, dir, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, args...)...)
-			} else {
-				got = runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, args)
+			for _, suite := range []struct{ name, filter string }{
+				{"signal-delivery", "^(TestSignal|TestStress|TestTime|TestReset|TestIgnore|TestNotifyContextCause)$"},
+				{"signal-stop", "^TestStop$"},
+			} {
+				t.Run(suite.name, func(t *testing.T) {
+					args := []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=" + suite.filter}
+					var got programResult
+					if target == "vm" {
+						got = programOutcome(t, dir, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, args...)...)
+					} else {
+						got = runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, args)
+					}
+					compareUpstream(t, suite.name, "os/signal", suite.filter, target, dir, got.Text, got.Exit)
+				})
 			}
-			compareUpstream(t, "signal-delivery", "os/signal", filter, target, dir, got.Text, got.Exit)
 		})
 	}
 }

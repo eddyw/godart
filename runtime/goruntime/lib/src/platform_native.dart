@@ -2,6 +2,7 @@
 /// VM. A web build takes platform_web.dart in its place.
 library;
 
+import 'dart:async';
 import 'dart:io';
 
 String $platformGODEBUG() => Platform.environment['GODEBUG'] ?? '';
@@ -19,3 +20,22 @@ void $platformStderrText(String text) => stderr.write(text);
 Never $platformExit(int code) => exit(code);
 
 bool get $platformExiting => false;
+
+// Native Go ignores user signals before Notify registers a channel.
+void Function() $platformSignalDefaults() {
+  if (!Platform.isLinux &&
+      !Platform.isMacOS &&
+      !Platform.isAndroid &&
+      !Platform.isIOS) {
+    return () {};
+  }
+  final subscriptions = [
+    ProcessSignal.sigusr1.watch().listen((_) {}),
+    ProcessSignal.sigusr2.watch().listen((_) {}),
+  ];
+  return () {
+    for (final subscription in subscriptions) {
+      unawaited(subscription.cancel());
+    }
+  };
+}

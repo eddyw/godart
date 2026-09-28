@@ -110,3 +110,5 @@ Never $platformExit(int code) {
   _errBuffer = '';
   throw StateError('exit $code');
 }
+
+void Function() $platformSignalDefaults() => () {};
