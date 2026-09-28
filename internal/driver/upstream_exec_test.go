@@ -9,11 +9,33 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 )
 
 type nativeImage struct {
 	Command []string `json:"command"`
 	SHA256  string   `json:"sha256"`
+}
+
+// upstreamOutcome retains external timeouts for the parity report.
+// The comparison must reject a nonzero exit, including the timeout code 124.
+func upstreamOutcome(t *testing.T, dir string, env []string, limit time.Duration, name string, args ...string) programResult {
+	t.Helper()
+	start := time.Now()
+	text, err, completed := output(dir, env, limit, name, args...)
+	t.Logf("command=%s %v duration=%.3fs", name, args, time.Since(start).Seconds())
+	if !completed {
+		return programResult{string(text), 124}
+	}
+	code := 0
+	if err != nil {
+		if e, ok := err.(*exec.ExitError); ok {
+			code = e.ExitCode()
+		} else {
+			t.Fatal(err)
+		}
+	}
+	return programResult{cutTrace(string(text)), code}
 }
 
 func prepareUpstreamNativeImage(t *testing.T, dir, out, entry string) nativeImage {

@@ -65,7 +65,7 @@ func TestTLSUpstream(t *testing.T) {
 					name := "tls-selected"
 					if target == "vm" {
 						name += "/vm-" + strconv.Itoa(index)
-						result = programOutcome(t, dir, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, args...)...)
+						result = upstreamOutcome(t, dir, nil, runLimit, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, args...)...)
 					} else {
 						result = runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, args)
 					}

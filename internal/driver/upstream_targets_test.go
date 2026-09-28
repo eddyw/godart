@@ -124,11 +124,11 @@ func runUpstreamTargetEnv(t *testing.T, target, out, entry, dir string, args, en
 	case "aot":
 		exe := filepath.Join(out, "tests.exe")
 		run(t, out, "dart", "compile", "exe", "runner.dart", "-o", exe)
-		result = programOutcomeWithLimitEnv(t, dir, env, upstreamLimit(), exe)
+		result = upstreamOutcome(t, dir, env, upstreamLimit(), exe)
 	case "js":
 		run(t, out, "dart", "compile", "js", "runner.dart", "-o", "main.js")
 		writeFile(t, filepath.Join(out, "run.js"), "globalThis.self = globalThis;\nrequire('./main.js');\n")
-		result = programOutcomeWithLimitEnv(t, dir, env, upstreamLimit(), "node", append(slices.Clone(nodeArgs), filepath.Join(out, "run.js"))...)
+		result = upstreamOutcome(t, dir, env, upstreamLimit(), "node", append(slices.Clone(nodeArgs), filepath.Join(out, "run.js"))...)
 	case "wasm":
 		compiled := programOutcomeWithLimit(t, out, 16*time.Minute, "dart", "compile", "wasm", "runner.dart", "-o", "main.wasm")
 		if compiled.Exit != 0 {
@@ -140,7 +140,7 @@ const app = await compile(await readFile(new URL('./main.wasm', import.meta.url)
 const instance = await app.instantiate({});
 instance.invokeMain();
 `)
-		result = programOutcomeWithLimitEnv(t, dir, env, upstreamLimit(), "node", append(slices.Clone(nodeArgs), filepath.Join(out, "run.mjs"))...)
+		result = upstreamOutcome(t, dir, env, upstreamLimit(), "node", append(slices.Clone(nodeArgs), filepath.Join(out, "run.mjs"))...)
 	}
 	return result
 }

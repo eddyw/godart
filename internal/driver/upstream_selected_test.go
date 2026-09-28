@@ -536,7 +536,7 @@ func newLocalListener(t testing.TB, network string) net.Listener {
 				launcher = prepareUpstreamSelfExec(t, out, stats.Binaries[0].Entry)
 			}
 			args := upstreamTestArgs("-test.run="+filter, "-test.skip="+upstreamSkip(t, pkg))
-			result := programOutcome(t, dir, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, args...)...)
+			result := upstreamOutcome(t, dir, nil, runLimit, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, args...)...)
 			name := pkg + "-selected"
 			if pkg == "net/http" {
 				name = pkg + "-content-type"
@@ -568,7 +568,7 @@ func newLocalListener(t testing.TB, network string) net.Listener {
 			}
 			if pkg == "sync" || pkg == "internal/godebug" {
 				run(t, out, "dart", "compile", "exe", stats.Binaries[0].Entry, "-o", launcher)
-				result := programOutcome(t, dir, launcher, args...)
+				result := upstreamOutcome(t, dir, nil, runLimit, launcher, args...)
 				compareUpstreamInputs(t, name, pkg, filter, "aot", dir, result.Text, result.Exit, certificates, resolver, true)
 			}
 		})
