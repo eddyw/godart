@@ -75,6 +75,8 @@ Linux and macOS support `syscall.Kill` and `syscall.Getpid` through native APIs.
 Signal watches support SIGHUP, SIGINT, SIGTERM, SIGUSR1, SIGUSR2, and SIGWINCH.
 Standalone native programs ignore SIGUSR1 and SIGUSR2 before registration, as Go does.
 Dart-hosted libraries do not install these default handlers.
+`Stop` releases a watch when no channel or explicit ignore needs it.
+Concurrent `Stop` and signal delivery can lose a pending signal.
 Other native signal watches remain unsupported. Browser builds cannot send
 or receive operating system signals.
 

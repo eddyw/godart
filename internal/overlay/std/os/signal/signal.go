@@ -120,8 +120,11 @@ func Notify(c chan<- os.Signal, sig ...os.Signal) {
 // Stop takes the channel out of each watch.
 func Stop(c chan<- os.Signal) {
 	delete(all, c)
-	for _, w := range watches {
+	for n, w := range watches {
 		delete(w.users, c)
+		if len(w.users) == 0 && len(all) == 0 && !ignored[n] {
+			reset(n)
+		}
 	}
 }
 
