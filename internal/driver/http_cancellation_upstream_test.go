@@ -16,7 +16,7 @@ import (
 
 func TestHTTPCancellationUpstream(t *testing.T) {
 	dir := filepath.Join(runtime.GOROOT(), "src/net/http")
-	names := []string{"cancelTest", "runCancelTestTransport", "runCancelTestChannel", "runCancelTestContext", "runCancelTest", "TestTransportCancelRequest", "testTransportCancelRequest", "TestTransportCancelRequestInDo", "testTransportCancelRequestInDo", "TestTransportCancelRequestWithBodyInDo", "TestTransportCancelRequestWithBody", "testTransportCancelRequestWithBody", "TestTransportClosesRequestBody", "testTransportClosesRequestBody", "countCloseReader", "TestTransportCancelRequestBeforeDo", "testTransportCancelRequestBeforeDo", "TestTransportCancelRequestBeforeResponseHeaders", "testTransportCancelRequestBeforeResponseHeaders", "TestTransportCloseResponseBody", "testTransportCloseResponseBody"}
+	names := []string{"cancelTest", "runCancelTestTransport", "runCancelTestChannel", "runCancelTestContext", "runCancelTest", "TestTransportCancelRequest", "testTransportCancelRequest", "TestTransportCancelRequestInDo", "testTransportCancelRequestInDo", "TestTransportCancelRequestWithBodyInDo", "TestTransportCancelRequestWithBody", "testTransportCancelRequestWithBody", "TestTransportClosesRequestBody", "testTransportClosesRequestBody", "countCloseReader", "TestTransportCancelRequestBeforeDo", "testTransportCancelRequestBeforeDo", "TestTransportCancelRequestBeforeResponseHeaders", "testTransportCancelRequestBeforeResponseHeaders", "TestTransportCloseResponseBody", "testTransportCloseResponseBody", "TestTransportClosesBodyOnError", "testTransportClosesBodyOnError", "closerFunc", "closerFunc.Close", "TestTransportDialContext", "testTransportDialContext", "TestTransportFlushesBodyChunks", "logWritesConn", "TestTransportFlushesRequestHeader", "testTransportFlushesRequestHeader"}
 	files, err := filepath.Glob(filepath.Join(dir, "*_test.go"))
 	if err != nil {
 		t.Fatal(err)
@@ -26,6 +26,8 @@ func TestHTTPCancellationUpstream(t *testing.T) {
 		switch filepath.Base(path) {
 		case "transport_test.go":
 			sources[path] = []byte(selectedUpstreamSource(t, path, names))
+		case "serve_test.go":
+			sources[path] = []byte(strings.Replace(selectedUpstreamSource(t, path, []string{"neverEnding", "neverEnding.Read"}), ". \"net/http\"\n", "", 1))
 		case "main_test.go":
 			sources[path] = []byte(selectedUpstreamSource(t, path, []string{"TestMain", "interestingGoroutines", "goroutineLeaked", "runningBenchmarks", "waitCondition", "afterTest", "leakReported"}))
 		case "export_test.go":
@@ -59,7 +61,7 @@ func TestHTTPCancellationUpstream(t *testing.T) {
 		t.Fatalf("got %d test binaries", len(stats.Binaries))
 	}
 	prepareDart(t, out)
-	const filter = "^(TestTransportCancelRequest|TestTransportCancelRequestWithBody|TestTransportCancelRequestInDo|TestTransportCancelRequestWithBodyInDo|TestTransportClosesRequestBody|TestTransportCancelRequestBeforeDo|TestTransportCancelRequestBeforeResponseHeaders|TestTransportCloseResponseBody)$/^(h1|h2)$"
+	const filter = "^(TestTransportCancelRequest|TestTransportCancelRequestWithBody|TestTransportCancelRequestInDo|TestTransportCancelRequestWithBodyInDo|TestTransportClosesRequestBody|TestTransportCancelRequestBeforeDo|TestTransportCancelRequestBeforeResponseHeaders|TestTransportCloseResponseBody|TestTransportClosesBodyOnError|TestTransportDialContext|TestTransportFlushesBodyChunks|TestTransportFlushesRequestHeader)$/^(h1|h2)$"
 	args := []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=" + filter}
 	for _, target := range []string{"vm", "aot"} {
 		t.Run(target, func(t *testing.T) {
