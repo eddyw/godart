@@ -2,36 +2,55 @@ package analyze
 
 // Recursive calls need resumable frames even when they do not wait for I/O.
 func (a *analyzer) recursive() {
-	state := map[any]int{}
 	index := map[any]int{}
+	low := map[any]int{}
+	active := map[any]bool{}
 	var stack []any
+	next := 0
 	var visit func(any)
 	visit = func(key any) {
-		if state[key] == 2 {
+		next++
+		index[key], low[key] = next, next
+		active[key] = true
+		stack = append(stack, key)
+		self := false
+		for _, site := range a.summaries[key].sites {
+			for _, target := range site.targets {
+				target = blockTarget(target)
+				if a.summaries[target] == nil {
+					continue
+				}
+				self = self || target == key
+				if index[target] == 0 {
+					visit(target)
+					low[key] = min(low[key], low[target])
+				} else if active[target] {
+					low[key] = min(low[key], index[target])
+				}
+			}
+		}
+		if low[key] != index[key] {
 			return
 		}
-		if state[key] == 1 {
-			for _, member := range stack[index[key]:] {
+		var component []any
+		for {
+			member := stack[len(stack)-1]
+			stack = stack[:len(stack)-1]
+			active[member] = false
+			component = append(component, member)
+			if member == key {
+				break
+			}
+		}
+		if len(component) > 1 || self {
+			for _, member := range component {
 				a.result.blocking[member] = true
 			}
-			return
 		}
-		summary := a.summaries[key]
-		if summary == nil {
-			return
-		}
-		state[key] = 1
-		index[key] = len(stack)
-		stack = append(stack, key)
-		for _, site := range summary.sites {
-			for _, target := range site.targets {
-				visit(blockTarget(target))
-			}
-		}
-		stack = stack[:len(stack)-1]
-		state[key] = 2
 	}
 	for _, key := range a.order {
-		visit(key)
+		if index[key] == 0 {
+			visit(key)
+		}
 	}
 }
