@@ -61,6 +61,8 @@ final class GoPanic implements Exception {
   final StackTrace trace;
   final List<(String, String, int)> callers;
   final int goroutineID;
+  // A normal method call omits its implicit wrapper from the trace.
+  String? wrapper;
 
   final GoPanic? traceParent;
   // A recovered panic remains visible until its deferred call returns.
@@ -259,6 +261,15 @@ Never $panicWrap(String name, String method, String short) => throw GoPanic(
     plain: true,
   ),
 );
+
+Never $panicMethod(String name, Never Function() body) {
+  try {
+    return body();
+  } on GoPanic catch (panic) {
+    panic.wrapper = name;
+    rethrow;
+  }
+}
 
 Never $panicDivide() => throw GoPanic($runtimeError('integer divide by zero'));
 

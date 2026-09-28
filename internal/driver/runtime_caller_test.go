@@ -26,7 +26,7 @@ func TestRuntimeCaller(t *testing.T) {
 		file  string
 		names []string
 	}{
-		{"stack_test.go", []string{"TestStackOutput", "TestStackAllOutput"}},
+		{"stack_test.go", []string{"TestStackOutput", "TestStackAllOutput", "TestStackWrapperCaller", "TestStackWrapperCallers", "TestStackWrapperStack", "TestStackWrapperStackPanic", "TestCallersFromWrapper", "structWithMethod", "I", "testStackWrapperPanic"}},
 		{"traceback_test.go", []string{"TestTracebackGeneric", "testTracebackGenericFn", "testTracebackGenericFnInlined", "testTracebackGenericTyp"}},
 		{"runtime_test.go", []string{"flagQuick"}},
 	} {
@@ -44,7 +44,7 @@ func TestRuntimeCaller(t *testing.T) {
 		t.Fatalf("got %d binaries", len(stats.Binaries))
 	}
 	prepareDart(t, out)
-	const filter = "^(TestCaller|TestNilName|TestLineNumber|TestCallers|TestCallersPanic|TestCallersDoublePanic|TestCallersAfterRecovery|TestCallersAbortedPanic|TestCallersAbortedPanic2|TestCallersEndlineno|TestStackOutput|TestStackAllOutput|TestTracebackGeneric)$"
+	const filter = "^(TestCaller|TestNilName|TestLineNumber|TestCallers|TestCallersPanic|TestCallersDoublePanic|TestCallersAfterRecovery|TestCallersAbortedPanic|TestCallersAbortedPanic2|TestCallersEndlineno|TestStackOutput|TestStackAllOutput|TestTracebackGeneric|TestStackWrapperCaller|TestStackWrapperCallers|TestStackWrapperStack|TestStackWrapperStackPanic|TestCallersFromWrapper)$"
 	args := upstreamTestArgs("-test.run=" + filter)
 	result := programOutcome(t, dir, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, args...)...)
 	compareUpstream(t, "runtime-caller", "runtime", filter, "vm", dir, result.Text, result.Exit, true)

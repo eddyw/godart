@@ -1115,6 +1115,33 @@ func (e *emitter) funcInst(x *ir.FuncInst) string {
 	return fmt.Sprintf("((%s) => %s)", strings.Join(params, ", "), call)
 }
 
+func methodWrapperName(recv types.Type, fn *types.Func) string {
+	base := types.Unalias(recv)
+	pointer, isPointer := base.(*types.Pointer)
+	if isPointer {
+		base = types.Unalias(pointer.Elem())
+	}
+	name := "go:" + qualifiedTypeText(base, functionQualifier, true)
+	if named, ok := base.(*types.Named); ok {
+		obj := named.Obj()
+		name = obj.Name()
+		if named.TypeParams().Len() > 0 {
+			name += "[...]"
+		}
+		if isPointer {
+			name = "(*" + name + ")"
+		}
+		if obj.Pkg() != nil {
+			name = functionQualifier(obj.Pkg()) + "." + name
+		}
+	}
+	name += "." + fn.Name()
+	if fn.Signature().TypeParams().Len() > 0 {
+		name += "[...]"
+	}
+	return name
+}
+
 func (e *emitter) methodExpr(x *ir.MethodExpr) string {
 	sig, ok := x.Type.(*types.Signature)
 	if !ok || sig.Params().Len() == 0 {
@@ -1132,7 +1159,15 @@ func (e *emitter) methodExpr(x *ir.MethodExpr) string {
 	closure := func(call string) string {
 		origin := x.Obj.Origin().Type().(*types.Signature)
 		call = e.eraseResults(origin.Results(), sig.Results(), call)
+		if isInterfaceType(x.Recv) {
+			call = fmt.Sprintf("(%s == null ? $panicMethod(%s, $panicNil) : %s)", names[0], dartString(methodWrapperName(x.Recv, x.Obj)), call)
+		} else if ptr, ok := types.Unalias(x.Recv).(*types.Pointer); ok && types.Identical(ptr.Elem(), msig.Recv().Type()) {
+			call = fmt.Sprintf("(%s == null ? $panicMethod(%s, () => %s) : %s)", names[0], dartString(methodWrapperName(x.Recv, x.Obj)), e.wrapPanic(ptr.Elem(), x.Obj), call)
+		}
 		text := fmt.Sprintf("((%s) => %s)", strings.Join(params, ", "), call)
+		if e.cfg.Fset != nil && x.Pos.IsValid() {
+			text = fmt.Sprintf("((%s) =>\n%s0\n%s\n%s%d|%s\n)", strings.Join(params, ", "), lineMark, call, lineMark, e.cfg.Fset.Position(x.Pos).Line, e.goFile(x.Pos))
+		}
 		if tp, ok := types.Unalias(x.Recv).(*types.TypeParam); ok {
 			return fmt.Sprintf("$copyFunctionPC(%s, %s.desc.methods[%s])", text, e.dictOf(tp), e.methodKeyText(x.Obj.Id(), msig))
 		}
