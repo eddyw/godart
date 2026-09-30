@@ -355,9 +355,6 @@ func (r *Root) resolveNoFollow(op, name string) (string, error) {
 }
 
 func (r *Root) check(op, name string, follow bool) (string, error) {
-	if strings.ContainsRune(name, 0) {
-		return "", &PathError{Op: op, Path: name, Err: ErrInvalid}
-	}
 	if err := checkPathEscapesInternal(r, name, !follow); err != nil {
 		return "", &PathError{Op: op, Path: name, Err: err}
 	}
