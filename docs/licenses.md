@@ -12,7 +12,7 @@ The signal context adapter preserves the NotifyContext declarations from
 Go 1.27.1 `src/os/signal/signal.go`. Its source retains the Go BSD header.
 
 The command overlay adapts Go `src/os/exec/lp_unix.go` and
-`src/os/exec/exec.go`.
+`src/os/exec/exec.go`. Child directory validation adapts `src/os/exec_posix.go`.
 The overlay retains its Go BSD header and uses the overlay license.
 
 Generated Pub package names use the reserved-word list from Dart Pub

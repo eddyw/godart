@@ -94,21 +94,17 @@ Future<int> _fill(_Pipe pipe) {
   Slice<GoString> argv,
   GoString dir,
   Slice<GoString> env,
-  bool useEnv,
 ) {
   final List<String> parts = <String>[];
   for (int i = 0; i < argv.len; i++) {
     parts.add(argv[i].toDartString());
   }
-  Map<String, String>? environment;
-  if (useEnv) {
-    environment = <String, String>{};
-    for (int i = 0; i < env.len; i++) {
-      final String pair = env[i].toDartString();
-      final int eq = pair.indexOf('=');
-      if (eq <= 0) continue;
-      environment[pair.substring(0, eq)] = pair.substring(eq + 1);
-    }
+  final environment = <String, String>{};
+  for (int i = 0; i < env.len; i++) {
+    final pair = env[i].toDartString();
+    final eq = pair.indexOf('=');
+    if (eq < 0) continue;
+    environment[pair.substring(0, eq)] = pair.substring(eq + 1);
   }
   $await(
     Process.start(
@@ -116,7 +112,7 @@ Future<int> _fill(_Pipe pipe) {
       parts.sublist(1),
       workingDirectory: dir.length == 0 ? null : dir.toDartString(),
       environment: environment,
-      includeParentEnvironment: !useEnv,
+      includeParentEnvironment: false,
     ).then((Process p) {
       _procs[p.pid] = _Proc(p);
       return (p.pid, _empty);

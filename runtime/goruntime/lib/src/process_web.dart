@@ -21,7 +21,6 @@ final GoString _noSys = GoString.fromString('function not implemented');
   Slice<GoString> argv,
   GoString dir,
   Slice<GoString> env,
-  bool useEnv,
 ) => (0, _noSys);
 
 (int, GoString) $procWrite(int pid, Slice<GoInt> p) => (0, _noSys);

@@ -224,7 +224,26 @@ func (c *Cmd) Start() error {
 		path = filepath.Join(c.Dir, path)
 	}
 	full := append([]string{path}, argv[1:]...)
-	pid, cause := dart.ProcStart(full, c.Dir, c.Env, c.Env != nil)
+	env, err := c.environ()
+	if err != nil {
+		return err
+	}
+	if c.Dir != "" {
+		if _, err := os.Stat(c.Dir); err != nil {
+			pe := err.(*os.PathError)
+			pe.Op = "chdir"
+			return pe
+		}
+	}
+	if strings.IndexByte(c.Path, 0) >= 0 {
+		return &os.PathError{Op: "fork/exec", Path: c.Path, Err: syscall.EINVAL}
+	}
+	for _, arg := range argv {
+		if strings.IndexByte(arg, 0) >= 0 {
+			return &os.PathError{Op: "fork/exec", Path: c.Path, Err: syscall.EINVAL}
+		}
+	}
+	pid, cause := dart.ProcStart(full, c.Dir, env)
 	if cause != "" {
 		return &Error{Name: c.Path, Err: errors.New(cause)}
 	}

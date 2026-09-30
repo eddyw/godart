@@ -1619,12 +1619,13 @@ func BubbleWait() bool {
 
 // ProcStart starts a process. argv holds the program and each argument, dir
 // holds the working directory, and env holds each variable in the form
-// name=value. An empty dir keeps the directory of the program. useEnv tells
-// whether env replaces the environment, because a nil list and an empty list
-// differ in Go. The results are the process id and the cause of a failure.
+// name=value. An empty dir keeps the directory of the program.
+// env supplies the complete environment, including when the list is empty.
+// The caller must reject NUL in all strings before this call.
+// The results are the process id and the cause of a failure.
 //
 // The call blocks the goroutine, thus the caller becomes an async function.
-func ProcStart(argv []string, dir string, env []string, useEnv bool) (int, string) {
+func ProcStart(argv []string, dir string, env []string) (int, string) {
 	panic("syscall/dart needs the gart compiler")
 }
 
