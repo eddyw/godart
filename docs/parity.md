@@ -71,6 +71,10 @@ Other native hosts and browsers do not support `os.File.Fd`.
 `net/http/fcgi` supports supplied listeners. `Serve` with a nil listener
 returns an explicit error because inherited listener descriptors remain unsupported.
 
+`os.UserConfigDir` and `os.UserCacheDir` use the native macOS locations.
+Unix targets reject relative XDG directory values and preserve the HOME fallback.
+Windows user-directory behavior remains incomplete.
+
 `os/exec.LookPath` uses effective user and group execute access on Linux and macOS.
 It rejects directories and continues past non-executable PATH candidates.
 The native errno capture limitation also applies to these access calls.

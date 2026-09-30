@@ -207,30 +207,6 @@ func UserHomeDir() (string, error) {
 	return "", errors.New("$HOME is not defined")
 }
 
-// UserConfigDir gives the directory of the settings of the user.
-func UserConfigDir() (string, error) {
-	if dir := Getenv("XDG_CONFIG_HOME"); dir != "" {
-		return dir, nil
-	}
-	home, err := UserHomeDir()
-	if err != nil {
-		return "", errors.New("neither $XDG_CONFIG_HOME nor $HOME are defined")
-	}
-	return home + "/.config", nil
-}
-
-// UserCacheDir gives the directory of the cache of the user.
-func UserCacheDir() (string, error) {
-	if dir := Getenv("XDG_CACHE_HOME"); dir != "" {
-		return dir, nil
-	}
-	home, err := UserHomeDir()
-	if err != nil {
-		return "", errors.New("neither $XDG_CACHE_HOME nor $HOME are defined")
-	}
-	return home + "/.cache", nil
-}
-
 // A SyscallError names the operation of a call of the system and its cause.
 type SyscallError struct {
 	Syscall string
