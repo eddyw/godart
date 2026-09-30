@@ -73,6 +73,7 @@ returns an explicit error because inherited listener descriptors remain unsuppor
 
 `os.Root.FS` implements `fs.ReadDirFS` and `fs.ReadLinkFS`, with sorted directory entries and link metadata.
 Root paths still do not track directory renames. Concurrent path changes can escape the root.
+On Linux and macOS, `Root.Link` preserves the final symbolic link and its inode identity.
 
 `os.UserConfigDir` and `os.UserCacheDir` use the native macOS locations.
 Unix targets reject relative XDG directory values and preserve the HOME fallback.

@@ -183,6 +183,7 @@ int $nativeChtimes(
 (GoString, int) $nativeReadlink(GoString path) => (GoString.empty, 38);
 
 int $nativeLink(GoString from, GoString to) => 38;
+int $nativeLinkNoFollow(GoString from, GoString to) => 38;
 int $nativeSymlink(GoString from, GoString to) => 38;
 
 (int, int) $syscallOpen(GoString path, int flags, int mode) => (-1, 38);

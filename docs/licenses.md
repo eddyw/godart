@@ -8,7 +8,8 @@ The importer input adapters retain Go `gcimporter` and `srcimporter` test setup.
 The import configuration helper retains Go `internal/testenv/testenv.go`.
 Their sources retain the Go BSD notices and use the overlay license.
 
-The root filesystem adapter follows Go `src/os/root.go` with its 2024 BSD notice.
+The root filesystem adapter follows Go `src/os/root.go` and `src/os/root_openat.go`
+with their 2024 BSD notices.
 
 The signal context adapter preserves the NotifyContext declarations from
 Go 1.27.1 `src/os/signal/signal.go`. Its source retains the Go BSD header.

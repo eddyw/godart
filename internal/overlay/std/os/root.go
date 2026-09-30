@@ -276,26 +276,27 @@ func (r *Root) Chtimes(name string, atime time.Time, mtime time.Time) error {
 	return rootError("chtimesat", name, Chtimes(full, atime, mtime))
 }
 
-// Link makes newname of the root as a hard link of oldname of the root.
-//
-// A symbolic link at oldname gives an error. The platform of the surface holds
-// no link of a link.
+// Link creates a hard link to oldname. Linux and macOS preserve a final symlink.
 func (r *Root) Link(oldname, newname string) error {
 	from, err := r.resolveNoFollow("linkat", oldname)
 	if err != nil {
-		return err
-	}
-	if info, cause := Lstat(from); cause == nil && info.Mode()&ModeSymlink != 0 {
-		return &PathError{Op: "linkat", Path: oldname,
-			Err: errors.New("cannot create a hard link to a symlink")}
+		return &LinkError{Op: "linkat", Old: oldname, New: newname, Err: underlyingError(err)}
 	}
 	to, err := r.resolveNoFollow("linkat", newname)
 	if err != nil {
-		return err
+		return &LinkError{Op: "linkat", Old: oldname, New: newname, Err: underlyingError(err)}
+	}
+	if dart.HasNativeStat() {
+		if code := dart.NativeLinkNoFollow(from, to); code != 0 {
+			return &LinkError{Op: "linkat", Old: oldname, New: newname, Err: syscall.Errno(code)}
+		}
+		return nil
+	}
+	if info, cause := Lstat(from); cause == nil && info.Mode()&ModeSymlink != 0 {
+		return &LinkError{Op: "linkat", Old: oldname, New: newname, Err: errors.New("cannot create a hard link to a symlink")}
 	}
 	if cause := Link(from, to); cause != nil {
-		return &LinkError{Op: "linkat", Old: oldname, New: newname,
-			Err: underlyingError(cause)}
+		return &LinkError{Op: "linkat", Old: oldname, New: newname, Err: underlyingError(cause)}
 	}
 	return nil
 }

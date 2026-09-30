@@ -670,6 +670,8 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$lstat(%s)", args[0]), true
 	case "NativeLink":
 		return fmt.Sprintf("$nativeLink(%s, %s)", args[0], args[1]), true
+	case "NativeLinkNoFollow":
+		return fmt.Sprintf("$nativeLinkNoFollow(%s, %s)", args[0], args[1]), true
 	case "NativeSymlink":
 		return fmt.Sprintf("$nativeSymlink(%s, %s)", args[0], args[1]), true
 	case "Symlink":

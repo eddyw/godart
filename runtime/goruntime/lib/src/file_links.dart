@@ -19,6 +19,12 @@ final _link = _libc
       Int Function(Pointer<Uint8>, Pointer<Uint8>),
       int Function(Pointer<Uint8>, Pointer<Uint8>)
     >('link');
+final _linkat = _libc
+    .lookupFunction<
+      Int Function(Int, Pointer<Uint8>, Int, Pointer<Uint8>, Int),
+      int Function(int, Pointer<Uint8>, int, Pointer<Uint8>, int)
+    >('linkat');
+final _atCurrentDirectory = Platform.isMacOS ? -2 : -100;
 final _symlink = _libc
     .lookupFunction<
       Int Function(Pointer<Uint8>, Pointer<Uint8>),
@@ -30,6 +36,13 @@ final _errno = _libc
     );
 
 int $nativeLink(GoString from, GoString to) => _createLink(from, to, _link);
+
+int $nativeLinkNoFollow(GoString from, GoString to) => _createLink(
+  from,
+  to,
+  (oldName, newName) =>
+      _linkat(_atCurrentDirectory, oldName, _atCurrentDirectory, newName, 0),
+);
 
 int $nativeSymlink(GoString from, GoString to) =>
     _createLink(from, to, _symlink);

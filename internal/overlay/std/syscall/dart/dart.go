@@ -1826,6 +1826,10 @@ func NativeLink(from, to string) int {
 	panic("syscall/dart needs the gart compiler")
 }
 
+func NativeLinkNoFollow(from, to string) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
 func NativeSymlink(from, to string) int {
 	panic("syscall/dart needs the gart compiler")
 }
