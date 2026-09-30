@@ -40,6 +40,12 @@ func (p *Process) Signal(sig Signal) error {
 	if !ok {
 		return errors.New("os: unsupported signal type")
 	}
+	if p.Pid == 0 {
+		return errors.New("os: process not initialized")
+	}
+	if p.Pid == -1 {
+		return errors.New("os: process already released")
+	}
 	if cause := dart.KillPid(p.Pid, int(number)); cause != "" {
 		return processError(cause)
 	}
