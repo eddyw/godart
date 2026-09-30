@@ -6,7 +6,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
+
+	"github.com/eddyw/godart/internal/driver"
+	"github.com/eddyw/godart/internal/sdk"
 )
 
 // stamp holds the versions that wrote 1 pack of the node set.
@@ -47,6 +51,20 @@ func packStamps(dir string) ([]stamp, error) {
 // host does not read, and no error stands. The stamp of the generated file
 // thus decides whether the node set matches the machine.
 func (a *app) doctor() error {
+	fmt.Printf("Glutter %s, Gart %s.\n", version, driver.Version)
+	fmt.Println("compiler build Go:", runtime.Version())
+	goEnv, err := sdk.ReadGoEnvironment(a.modulePath())
+	if err != nil {
+		return err
+	}
+	fmt.Println("active Go:", goEnv.Version)
+	fmt.Println("Go source root:", goEnv.Root)
+	fmt.Println("module:", goEnv.Module)
+	language := goEnv.ModuleVersion
+	if language == "" {
+		language = "not declared"
+	}
+	fmt.Println("module Go directive:", language)
 	live, err := liveVersions()
 	if err != nil {
 		return err

@@ -85,4 +85,6 @@ fvm exec make flutter-test
 
 The maintained fixture covers the core without local examples.
 `doctor` is an explicit diagnostic, not an automatic guarantee of compatibility.
+It also reports the Glutter and Gart releases and the Go version that built the compiler.
+The active Go SDK and the module's Go directive appear separately.
 Use the [SDK upgrade procedure](sdk-upgrades.md) before a support claim.

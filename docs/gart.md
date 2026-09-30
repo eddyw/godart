@@ -14,11 +14,18 @@ See [SDK compatibility](sdk-upgrades.md) for supported SDK selection.
 | `gart watch ./...` | Rebuild after Go source changes. |
 | `gart load ./...` | Show loaded packages. |
 | `gart version` | Show the compiler version. |
+| `gart version -v` | Show build Go, active Go, module language, Dart SDK, and selected frontend. |
 | `gart licenses` | Show bundled license notices. |
 
 Put compiler flags before package patterns. The test command also accepts
 flags after package patterns. For `gart run`, arguments after `--` belong to
 the application. Commands default to `./...` when no pattern is present.
+
+`gart version -v` reports the module in the current directory.
+It separates the Go version that built Gart from the active Go SDK and the module's declared language version.
+`-frontend=auto|resident|source` selects the frontend for this report.
+The report does not compile the module or change its language semantics.
+`gart version` needs no installed Go or Dart SDK.
 
 ## Build flags
 

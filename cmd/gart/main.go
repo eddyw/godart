@@ -35,6 +35,8 @@ The commands are:
 	version    print the version of the compiler
 	licenses   print bundled license notices
 
+The version command accepts -v for SDK and module diagnostics.
+
 The build, run, test, and watch commands take these flags:
 
 	-o dir         write the Dart package into dir
@@ -46,7 +48,7 @@ The build, run, test, and watch commands take these flags:
 	-complete      require function bodies or external declarations in root packages
 	-e=false       report at most 10 errors per package (default: all errors)
 
-The run and test commands also take this flag:
+The run, test, and version -v commands also take this flag:
 
 	-frontend mode  select auto, resident, or source Dart execution
 
@@ -89,8 +91,7 @@ func run(args []string) error {
 		fmt.Print(notices.Compiler)
 		return nil
 	case "version":
-		fmt.Println("gart", version)
-		return nil
+		return runVersion(args[1:])
 	case "build":
 		return runBuild(args[1:], false)
 	case "watch":
