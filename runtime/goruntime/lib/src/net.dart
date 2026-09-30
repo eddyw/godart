@@ -434,7 +434,7 @@ final class _Packet {
   String localHost;
   final closed = Completer<void>();
 
-  /// The host is empty for a socket of a listen.
+  /// The host is empty when the native socket has no peer.
   String remoteHost = '';
   int remotePort = 0;
 

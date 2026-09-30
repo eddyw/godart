@@ -101,10 +101,10 @@ SocketException datagramError(int code) {
     }
     final local = _readAddress(bytes, ipv6);
     size.value = length;
-    // Go retains the requested peer when getpeername fails, including port 0 on Linux.
+    // An empty peer lets the overlay retain the original Go address when getpeername fails.
     final peer = _getpeername(fd, memory, size) == 0
         ? _readAddress(bytes, ipv6)
-        : remote.address;
+        : '';
     return (fd, local, peer);
   } finally {
     _release(memory);

@@ -57,12 +57,6 @@ func (c *UDPConn) SetWriteBuffer(bytes int) error {
 	return c.setOption("sndbuf", bytes)
 }
 
-// newDialedUDPConn wraps a socket that a dial connected to a peer.
-func newDialedUDPConn(p *packet, host string, port int) *UDPConn {
-	p.remote = udpAddrOf(host, port)
-	return &UDPConn{p: p, host: host, port: port}
-}
-
 // connected reports whether a dial named the peer of the socket.
 func (c *UDPConn) connected() bool { return c.host != "" }
 
@@ -228,7 +222,7 @@ func (c *UDPConn) RemoteAddr() Addr {
 	if !c.connected() {
 		return nil
 	}
-	return udpAddrOf(c.host, c.port)
+	return c.p.remote
 }
 
 // SetDeadline writes the deadline of a read and of a write.
@@ -291,11 +285,16 @@ func DialUDP(network string, laddr, raddr *UDPAddr) (*UDPConn, error) {
 	if cause != "" {
 		return nil, &OpError{Op: "dial", Net: network, Source: laddr.opAddr(), Addr: raddr, Err: socketSyscallCause(call, cause, code)}
 	}
-	return newDialedUDPConn(
-		&packet{handle: handle, network: network, local: udpAddrOf(localIP, local)},
-		remoteIP,
-		raddr.Port,
-	), nil
+	remote := raddr
+	if remoteIP != "" {
+		host = remoteIP
+		remote = udpAddrOf(remoteIP, raddr.Port)
+	}
+	return &UDPConn{
+		p:    &packet{handle: handle, network: network, local: udpAddrOf(localIP, local), remote: remote},
+		host: host,
+		port: raddr.Port,
+	}, nil
 }
 
 // ListenUDP opens a datagram socket on an address. The network is udp, udp4,

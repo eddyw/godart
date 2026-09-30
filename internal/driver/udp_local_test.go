@@ -26,7 +26,7 @@ func TestUDPLocalAddress(t *testing.T) {
 	}
 	writeFile(t, filepath.Join(dir, "LICENSE"), string(license))
 	writeFile(t, filepath.Join(dir, "local_test.go"), `package udplocal
-import (. "net"; "context"; "errors"; "net/netip"; "runtime"; "testing"; "time")
+import (. "net"; "context"; "errors"; "net/netip"; "os"; "runtime"; "testing"; "time")
 func testableNetwork(network string) bool {
  c,err:=ListenUDP(network,&UDPAddr{IP:IPv4(127,0,0,1)})
  if err!=nil{return false};c.Close();return true
@@ -247,6 +247,34 @@ func TestUDPIPv4RemoteZone(t *testing.T) {
  }
 }
 
+func TestUDPZeroPortFallback(t *testing.T) {
+ if runtime.GOOS != "linux" { t.Skip("Linux permits a UDP peer with port 0") }
+ for _, tt := range []struct{network string; ip IP}{
+  {"udp", nil}, {"udp", IPv4zero}, {"udp", IPv6zero},
+  {"udp4", nil}, {"udp4", IPv4zero},
+  {"udp6", nil}, {"udp6", IPv4zero}, {"udp6", IPv6zero},
+ } {
+  remote := &UDPAddr{IP: tt.ip}
+  c, err := DialUDP(tt.network, nil, remote)
+  if err != nil { t.Fatal(err) }
+  actual := c.RemoteAddr().(*UDPAddr)
+  if actual.String() != remote.String() || len(actual.IP) != len(remote.IP) { t.Fatalf("%s %v: remote = %#v, want %#v", tt.network, tt.ip, actual, remote) }
+  c.SetWriteDeadline(time.Unix(1,0))
+  n, err := c.Write([]byte("deadline"))
+  var op *OpError
+  if n != 0 || !errors.Is(err, os.ErrDeadlineExceeded) || !errors.As(err, &op) || op.Addr.String() != remote.String() { t.Fatalf("write error: %d %v", n, err) }
+  server, err := ListenUDP(tt.network, &UDPAddr{IP: c.LocalAddr().(*UDPAddr).IP})
+  if err != nil { t.Fatal(err) }
+  c.SetReadDeadline(time.Now().Add(time.Second))
+  if _, err := server.WriteToUDP([]byte("ok"), c.LocalAddr().(*UDPAddr)); err != nil { t.Fatal(err) }
+  var b [2]byte
+  n, from, err := c.ReadFromUDP(b[:])
+  if n != 2 || err != nil || string(b[:]) != "ok" || from.String() != server.LocalAddr().String() { t.Fatalf("read: %d %v %v %q", n, from, err, b) }
+  server.Close()
+  c.Close()
+ }
+}
+
 func TestUDPZeroPortPeer(t *testing.T) {
  if runtime.GOOS != "linux" { t.Skip("Linux permits a UDP peer with port 0") }
  for _, host := range []string{"127.0.0.1", "::1"} {
@@ -276,9 +304,9 @@ func TestUDPZeroPortPeer(t *testing.T) {
 			}
 			compareUpstream(t, "udp-local", "net", "^TestUDPConnLocalAndRemoteNames$", target, filepath.Join(runtime.GOROOT(), "src/net"), result.Text, result.Exit, false)
 			if target == "vm" {
-				t.Log(run(t, dir, "dart", filepath.Join(out, stats.Binaries[0].Entry), "-test.v", "-test.short="+strconv.FormatBool(testing.Short()), "-test.run=^Test(LocalBind|CloseRebind|DialerUDP|DialerUDPCanceled|DialerUDPInvalidLocal|UDPWildcardPeer|UDPZeroPortPeer|UDPIPv4LocalZone|UDPIPv4RemoteZone)$"))
+				t.Log(run(t, dir, "dart", filepath.Join(out, stats.Binaries[0].Entry), "-test.v", "-test.short="+strconv.FormatBool(testing.Short()), "-test.run=^Test(LocalBind|CloseRebind|DialerUDP|DialerUDPCanceled|DialerUDPInvalidLocal|UDPWildcardPeer|UDPZeroPortPeer|UDPIPv4LocalZone|UDPIPv4RemoteZone|UDPZeroPortFallback)$"))
 			} else {
-				result = runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=^Test(LocalBind|CloseRebind|DialerUDP|DialerUDPCanceled|DialerUDPInvalidLocal|UDPWildcardPeer|UDPZeroPortPeer|UDPIPv4LocalZone|UDPIPv4RemoteZone)$"})
+				result = runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=^Test(LocalBind|CloseRebind|DialerUDP|DialerUDPCanceled|DialerUDPInvalidLocal|UDPWildcardPeer|UDPZeroPortPeer|UDPIPv4LocalZone|UDPIPv4RemoteZone|UDPZeroPortFallback)$"})
 				t.Log(result.Text)
 				if result.Exit != 0 {
 					t.Fatal(result.Text)
