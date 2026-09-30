@@ -60,6 +60,33 @@ func TestDialPorts(t *testing.T) {
   }
  }
 }
+func TestDialArguments(t *testing.T) {
+ for _, local := range []*net.UDPAddr{nil, {IP: net.IPv4(127, 0, 0, 1), Port: 1}} {
+  for _, remote := range []*net.UDPAddr{nil, {IP: net.IPv4(127, 0, 0, 1), Port: 2}} {
+   for _, network := range []string{"", "tcp", "udp", "udp4", "udp6"} {
+    unknown := network == "" || network == "tcp"
+    if !unknown && remote != nil { continue }
+    conn, err := net.DialUDP(network, local, remote)
+    if conn != nil { conn.Close(); t.Fatal("invalid dial arguments succeeded") }
+    var op *net.OpError
+    if !errors.As(err, &op) || op.Op != "dial" || op.Net != network {
+     t.Fatalf("incorrect dial error: %v", err)
+    }
+    if local == nil && op.Source != nil || local != nil && op.Source != local {
+     t.Fatalf("incorrect source: %#v", op.Source)
+    }
+    if remote == nil && op.Addr != nil || remote != nil && op.Addr != remote {
+     t.Fatalf("incorrect destination: %#v", op.Addr)
+    }
+    if unknown {
+     var cause net.UnknownNetworkError
+     if !errors.As(err, &cause) || string(cause) != network { t.Fatalf("incorrect network error: %v", err) }
+    } else if op.Err.Error() != "missing address" { t.Fatalf("incorrect missing address error: %v", err) }
+   }
+  }
+ }
+}
+
 `)
 	run(t, dir, "go", "test", "-v", ".")
 	stats, err := driver.BuildWithStats(driver.Options{Dir: dir, Patterns: []string{"."}, Out: out, Runtime: runtimeDir(t), Tests: true})
@@ -67,12 +94,16 @@ func TestDialPorts(t *testing.T) {
 		t.Fatal(err)
 	}
 	prepareDart(t, out)
-	for _, target := range []string{"vm", "aot"} {
+	for _, target := range []string{"vm", "aot", "js", "wasm"} {
 		t.Run(target, func(t *testing.T) {
 			if target == "vm" {
 				run(t, dir, "dart", filepath.Join(out, stats.Binaries[0].Entry), "-test.v")
 			} else {
-				result := runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, []string{"-test.v"})
+				args := []string{"-test.v"}
+				if target == "js" || target == "wasm" {
+					args = append(args, "-test.run=^TestDialArguments$")
+				}
+				result := runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, args)
 				if result.Exit != 0 {
 					t.Fatal(result.Text)
 				}

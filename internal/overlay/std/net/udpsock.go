@@ -238,10 +238,10 @@ func DialUDP(network string, laddr, raddr *UDPAddr) (*UDPConn, error) {
 	switch network {
 	case "udp", "udp4", "udp6":
 	default:
-		return nil, UnknownNetworkError(network)
+		return nil, &OpError{Op: "dial", Net: network, Source: laddr.opAddr(), Addr: raddr.opAddr(), Err: UnknownNetworkError(network)}
 	}
 	if raddr == nil {
-		return nil, errors.New("dial " + network + ": the address is missing")
+		return nil, &OpError{Op: "dial", Net: network, Source: laddr.opAddr(), Err: errMissingAddress}
 	}
 	host := raddr.IP.String()
 	if len(raddr.IP) == 0 {
