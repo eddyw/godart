@@ -1683,11 +1683,18 @@ Future<(int, GoString, int)> _sendTo(
   String host,
   int port,
 ) async {
-  final int n = s.nativeFD >= 0
-      ? sendDatagram(s.nativeFD, bytes)
-      : Platform.isLinux || Platform.isMacOS
-      ? sendDatagramTo(s.socket, bytes, await _address(host), port)
-      : s.socket.send(bytes, await _address(host), port);
+  final int n;
+  if (s.nativeFD >= 0) {
+    n = sendDatagram(s.nativeFD, bytes);
+  } else {
+    final address = await _address(host);
+    if (port < 0 || port > 65535) {
+      throw const OSError('invalid argument', 22);
+    }
+    n = Platform.isLinux || Platform.isMacOS
+        ? sendDatagramTo(s.socket, bytes, address, port)
+        : s.socket.send(bytes, address, port);
+  }
   if (n == 0 && bytes.isNotEmpty) {
     return (0, GoString.fromString('the send buffer of the socket is full'), 0);
   }

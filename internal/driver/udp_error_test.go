@@ -192,6 +192,58 @@ func TestUDPDestinationErrors(t *testing.T) {
  }
 }
 
+func TestUDPWritePorts(t *testing.T) {
+ for _, host := range []string{"127.0.0.1", "::1"} {
+  server, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.ParseIP(host)})
+  if err != nil { t.Fatal(err) }
+  defer server.Close()
+  for _, state := range []string{"bound", "connected", "closed", "deadline"} {
+   var c *net.UDPConn
+   if state == "connected" {
+    c, err = net.DialUDP("udp", nil, server.LocalAddr().(*net.UDPAddr))
+   } else {
+    c, err = net.ListenUDP("udp", &net.UDPAddr{IP: net.ParseIP(host)})
+   }
+   if err != nil { t.Fatal(err) }
+   local := c.LocalAddr().String()
+   if state == "closed" { c.Close() }
+   if state == "deadline" { c.SetWriteDeadline(time.Unix(1, 0)) }
+   for _, port := range []int{-1, 65536} {
+    remote := &net.UDPAddr{IP: net.ParseIP(host), Port: port}
+    for _, api := range []string{"WriteTo", "WriteToUDP"} {
+     var n int
+     if api == "WriteTo" { n, err = c.WriteTo(nil, remote) } else { n, err = c.WriteToUDP(nil, remote) }
+     if n != 0 { t.Fatalf("%s %s %d: wrote %d bytes", state, api, port, n) }
+     var op *net.OpError
+     if !errors.As(err, &op) || op.Op != "write" || op.Net != "udp" || op.Source.String() != local || op.Addr != remote {
+      t.Fatalf("%s %s %d: incorrect error metadata: %v", state, api, port, err)
+     }
+     switch state {
+     case "connected":
+      if !errors.Is(err, net.ErrWriteToConnected) { t.Fatalf("incorrect connected error: %v", err) }
+     case "closed":
+      if !errors.Is(err, net.ErrClosed) { t.Fatalf("incorrect closed error: %v", err) }
+     case "deadline":
+      if !errors.Is(err, os.ErrDeadlineExceeded) { t.Fatalf("incorrect deadline error: %v", err) }
+     default:
+      var call *os.SyscallError
+      if !errors.Is(err, syscall.EINVAL) || !errors.As(err, &call) || call.Syscall != "sendto" {
+       t.Fatalf("%s %d: incorrect port error: %v", api, port, err)
+      }
+     }
+    }
+   }
+   if state == "bound" {
+    if n, err := c.WriteToUDP([]byte("ok"), server.LocalAddr().(*net.UDPAddr)); n != 2 || err != nil { t.Fatalf("valid write: %d %v", n, err) }
+    server.SetReadDeadline(time.Now().Add(time.Second))
+    var b [2]byte
+    if n, _, err := server.ReadFromUDP(b[:]); n != 2 || err != nil || string(b[:]) != "ok" { t.Fatalf("valid read: %d %v %q", n, err, b) }
+   }
+   c.Close()
+  }
+ }
+}
+
 `)
 	source := selectedUpstreamSource(t, filepath.Join(runtime.GOROOT(), "src/net/udpsock_test.go"), []string{"TestUDPZeroBytePayload", "TestUDPZeroByteBuffer", "TestUDPReadSizeError", "TestUDPReadTimeout"})
 	source = strings.ReplaceAll(source, `"internal/testenv"`, `"example.com/udperrors/testenv"`)
@@ -231,7 +283,7 @@ func TestUDPDestinationErrors(t *testing.T) {
 				r = runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, args)
 			}
 			compareUpstream(t, "udp-datagram-errors", "net", filter, target, filepath.Join(runtime.GOROOT(), "src/net"), r.Text, r.Exit, false)
-			args = []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=^(TestUDPErrorCodes|TestUDPReadError|TestUDPQueuedDatagrams|TestUDPConcurrentReads|TestUDPBlockedReads|TestConnectedWriteDestination|TestUDPDestinationErrors)$"}
+			args = []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=^(TestUDPErrorCodes|TestUDPReadError|TestUDPQueuedDatagrams|TestUDPConcurrentReads|TestUDPBlockedReads|TestConnectedWriteDestination|TestUDPDestinationErrors|TestUDPWritePorts)$"}
 			if target == "vm" {
 				r = programOutcome(t, dir, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, args...)...)
 			} else {
