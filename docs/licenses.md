@@ -120,6 +120,7 @@ TCP fallback and partial deadlines retain Go `src/net/dial.go` and
 `ipsock.go`, `tcpsock_posix.go`, and `hook.go` declarations with their BSD notices.
 Typed UDP context setup adapts Go `src/net/dial.go` and retains its BSD notice.
 UDP dial order follows Go `src/net/sock_posix.go` and `src/net/ipsock_posix.go`.
+UDP source address conversion follows Go `src/net/udpsock_posix.go` with its BSD notice.
 Network error classification adapts Go `src/net/net.go` and `src/net/error_unix.go` with their BSD notices.
 TCP listener address conversion adapts Go `src/net/ipsock_posix.go`.
 Its overlay source retains the Go BSD notice.

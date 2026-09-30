@@ -103,11 +103,11 @@ func (c *UDPConn) ReadFromUDPAddrPort(b []byte) (int, netip.AddrPort, error) {
 	if err != nil {
 		return n, netip.AddrPort{}, err
 	}
-	addr, ok := netip.AddrFromSlice(ParseIP(host))
-	if !ok {
+	addr, err := netip.ParseAddr(host)
+	if err != nil {
 		return n, netip.AddrPort{}, &ParseError{Type: "IP address", Text: host}
 	}
-	return n, netip.AddrPortFrom(addr.Unmap(), uint16(port)), nil
+	return n, netip.AddrPortFrom(addr, uint16(port)), nil
 }
 
 // readFrom reads 1 datagram and gives the host and the port of its source.
