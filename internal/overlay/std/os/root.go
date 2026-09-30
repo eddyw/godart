@@ -8,6 +8,7 @@ package os
 
 import (
 	"errors"
+	"io"
 	"io/fs"
 	"strings"
 	"syscall"
@@ -132,24 +133,25 @@ func (r *Root) Lstat(name string) (FileInfo, error) {
 
 // ReadFile reads the whole content of a file of the root.
 func (r *Root) ReadFile(name string) ([]byte, error) {
-	full, err := r.resolve("readfile", name)
+	f, err := r.Open(name)
 	if err != nil {
 		return nil, err
 	}
-	b, cause := ReadFile(full)
-	if cause != nil {
-		return nil, rename(cause, name)
-	}
-	return b, nil
+	defer f.Close()
+	return io.ReadAll(f)
 }
 
 // WriteFile writes the data to a file of the root.
 func (r *Root) WriteFile(name string, data []byte, perm FileMode) error {
-	full, err := r.resolve("writefile", name)
+	f, err := r.OpenFile(name, O_WRONLY|O_CREATE|O_TRUNC, perm)
 	if err != nil {
 		return err
 	}
-	return rename(WriteFile(full, data, perm), name)
+	_, err = f.Write(data)
+	if err1 := f.Close(); err == nil {
+		err = err1
+	}
+	return err
 }
 
 // Mkdir makes 1 directory of the root.
