@@ -17,11 +17,11 @@ import 'string.dart';
 /// the same text for the errno ENOSYS.
 final GoString _noSys = GoString.fromString('function not implemented');
 
-(int, GoString) $procStart(
+(int, int, GoString) $procStart(
   Slice<GoString> argv,
   GoString dir,
   Slice<GoString> env,
-) => (0, _noSys);
+) => (0, 0, _noSys);
 
 (int, GoString) $procWrite(int pid, Slice<GoInt> p) => (0, _noSys);
 

@@ -90,7 +90,7 @@ Future<int> _fill(_Pipe pipe) {
 /// Starts a process and gives its process id. The results are the id and the
 /// cause of a failure. Go keeps a child alive when the program ends, thus the
 /// table holds no release hook.
-(int, GoString) $procStart(
+(int, int, GoString) $procStart(
   Slice<GoString> argv,
   GoString dir,
   Slice<GoString> env,
@@ -115,11 +115,15 @@ Future<int> _fill(_Pipe pipe) {
       includeParentEnvironment: false,
     ).then((Process p) {
       _procs[p.pid] = _Proc(p);
-      return (p.pid, _empty);
+      return (p.pid, 0, _empty);
     }),
-    (Object cause) => (-1, _cause(cause)),
+    (Object cause) => (
+      -1,
+      cause is ProcessException ? cause.errorCode : 0,
+      _cause(cause),
+    ),
   );
-  return (-1, _empty);
+  return (-1, 0, _empty);
 }
 
 (int, GoString) $procWrite(int pid, Slice<int> p) {

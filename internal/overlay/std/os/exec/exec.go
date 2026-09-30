@@ -243,7 +243,10 @@ func (c *Cmd) Start() error {
 			return &os.PathError{Op: "fork/exec", Path: c.Path, Err: syscall.EINVAL}
 		}
 	}
-	pid, cause := dart.ProcStart(full, c.Dir, env)
+	pid, code, cause := dart.ProcStart(full, c.Dir, env)
+	if code > 0 {
+		return &os.PathError{Op: "fork/exec", Path: c.Path, Err: syscall.Errno(code)}
+	}
 	if cause != "" {
 		return &Error{Name: c.Path, Err: errors.New(cause)}
 	}

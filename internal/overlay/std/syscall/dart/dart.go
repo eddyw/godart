@@ -1622,10 +1622,11 @@ func BubbleWait() bool {
 // name=value. An empty dir keeps the directory of the program.
 // env supplies the complete environment, including when the list is empty.
 // The caller must reject NUL in all strings before this call.
-// The results are the process id and the cause of a failure.
+// The results are the process id, the OS error code, and the error text.
+// An error code of 0 means that Dart supplied no OS error code.
 //
 // The call blocks the goroutine, thus the caller becomes an async function.
-func ProcStart(argv []string, dir string, env []string) (int, string) {
+func ProcStart(argv []string, dir string, env []string) (int, int, string) {
 	panic("syscall/dart needs the gart compiler")
 }
 

@@ -78,6 +78,7 @@ The native errno capture limitation also applies to these access calls.
 After `Start`, `StdoutPipe` and `StderrPipe` support explicit `Close` and preserve closed-pipe errors.
 Pipe adapters still lack pre-Start operations and native descriptor access.
 Dart stream buffering does not preserve native pipe backpressure.
+Dart can start a shell for an invalid executable format where Go returns `ENOEXEC`.
 
 Linux and macOS support `syscall.Kill` and `syscall.Getpid` through native APIs.
 `os.Process.Signal` supports the standard signals that Dart exposes, plus SIGIO and the native signal-0 query.
