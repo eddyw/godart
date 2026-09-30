@@ -1466,12 +1466,12 @@ Future<void> _joinGroup(_Packet p, String group, String name) async {
 }
 
 Future<_Packet> _bindUDP(String host, int port) async {
+  final address = await _address(host);
+  if (port < 0 || port > 65535) {
+    throw const OSError('invalid argument', 22);
+  }
   return _Packet(
-    await RawDatagramSocket.bind(
-      await _address(host),
-      port,
-      reuseAddress: false,
-    ),
+    await RawDatagramSocket.bind(address, port, reuseAddress: false),
   );
 }
 
@@ -1499,82 +1499,42 @@ Future<_Packet> _bindShared(String host, int port) async {
   );
 }
 
-/// Opens a datagram socket that holds a remote address, and gives its handle
-/// and the local port that the system took.
-///
-/// The socket drops a datagram of another source, exactly as a connected
-/// socket of the system does.
-(int, GoString, int, GoString, int, GoString, GoString) $dialUDP(
+/// Connects a bound datagram socket and reports its actual addresses.
+(GoString, GoString, GoString, int) $connectUDP(
+  int handle,
   GoString host,
   int port,
-  GoString localHost,
-  int localPort,
 ) {
   $await(
-    _connectUDP(host.toDartString(), port, localHost.toDartString(), localPort),
-    (Object cause) => throw cause,
+    _connectUDP(_packetAt(handle)!, host.toDartString(), port),
+    (Object cause) => (_empty, _empty, _cause(cause), _socketErrno(cause)),
   );
-  return (-1, _empty, 0, _empty, 0, _empty, _empty);
+  return (_empty, _empty, _empty, 0);
 }
 
-Future<(int, GoString, int, GoString, int, GoString, GoString)> _connectUDP(
+Future<(GoString, GoString, GoString, int)> _connectUDP(
+  _Packet s,
   String host,
   int port,
-  String localHost,
-  int localPort,
 ) async {
-  RawDatagramSocket? socket;
-  var call = 'bind';
-  try {
-    final InternetAddress target = await _address(host);
-    final localAddress = localHost.isNotEmpty
-        ? await _address(localHost)
-        : target.type == InternetAddressType.IPv6
-        ? InternetAddress.anyIPv6
-        : InternetAddress.anyIPv4;
-    if (localPort < 0 || localPort > 65535) {
-      throw const OSError('invalid argument', 22);
-    }
-    socket = await RawDatagramSocket.bind(
-      localAddress,
-      localPort,
-      reuseAddress: false,
-    );
-    call = 'connect';
-    // Go binds the local address before it validates the remote port.
-    if (port < 0 || port > 65535) {
-      throw const OSError('invalid argument', 22);
-    }
-    final _Packet s = _Packet(socket);
-    s.remoteHost = target.address;
-    if (Platform.isLinux || Platform.isMacOS) {
-      final local = connectDatagram(socket, target, port);
-      s.nativeFD = local.$1;
-      s.localHost = local.$2;
-      s.remoteHost = local.$3;
-    }
-    s.remotePort = port;
-    return (
-      _packetSlot(s),
-      GoString.fromString(s.localHost),
-      socket.port,
-      _empty,
-      0,
-      _empty,
-      GoString.fromString(s.remoteHost),
-    );
-  } catch (cause) {
-    socket?.close();
-    return (
-      -1,
-      _empty,
-      0,
-      _cause(cause),
-      _socketErrno(cause),
-      GoString.fromString(call),
-      _empty,
-    );
+  final target = await _address(host);
+  if (port < 0 || port > 65535) {
+    throw const OSError('invalid argument', 22);
   }
+  s.remoteHost = target.address;
+  if (Platform.isLinux || Platform.isMacOS) {
+    final local = connectDatagram(s.socket, target, port);
+    s.nativeFD = local.$1;
+    s.localHost = local.$2;
+    s.remoteHost = local.$3;
+  }
+  s.remotePort = port;
+  return (
+    GoString.fromString(s.localHost),
+    GoString.fromString(s.remoteHost),
+    _empty,
+    0,
+  );
 }
 
 /// _fillPacket waits for 1 datagram. It gives 0 for a datagram and 1 for the

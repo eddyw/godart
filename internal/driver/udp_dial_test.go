@@ -62,6 +62,63 @@ func TestDialPorts(t *testing.T) {
   }
  }
 }
+func TestDialRemoteArguments(t *testing.T) {
+ for _, tt := range []struct{network string; ip net.IP; ipv6 bool}{
+  {"udp", net.IP{1}, false}, {"udp", net.IP{1,2,3,4,5}, true},
+  {"udp4", net.IP{1}, false}, {"udp4", net.IP{1,2,3,4,5}, false}, {"udp4", net.IPv6loopback, false},
+  {"udp6", net.IP{1}, true}, {"udp6", net.IP{1,2,3,4,5}, true},
+ } {
+  ip := net.IPv4(127,0,0,1)
+  message := "non-IPv4 address"
+  if tt.ipv6 { ip = net.IPv6loopback; message = "non-IPv6 address" }
+  for _, mode := range []string{"free", "occupied", "invalid-port"} {
+   for _, port := range []int{9,65536} {
+    server, err := net.ListenUDP(tt.network, &net.UDPAddr{IP: ip})
+    if err != nil { t.Fatal(err) }
+    local := server.LocalAddr().(*net.UDPAddr)
+    if mode != "occupied" { server.Close() }
+    if mode == "invalid-port" { local.Port = -1 }
+    remote := &net.UDPAddr{IP: tt.ip, Port: port}
+    c, err := net.DialUDP(tt.network, local, remote)
+    if c != nil { c.Close(); t.Fatal("invalid remote returned a connection") }
+    var op *net.OpError
+    if !errors.As(err,&op) || op.Op != "dial" || op.Net != tt.network || op.Source != local || op.Addr != remote { t.Fatalf("operation error: %T %v",err,err) }
+    if mode == "free" {
+     var address *net.AddrError
+     if !errors.As(err,&address) || address.Err != message || address.Addr != tt.ip.String() { t.Fatalf("%s %v port=%d: %T %v, want %s",tt.network,tt.ip,port,err,err,message) }
+     rebound, err := net.ListenUDP(tt.network, local)
+     if err != nil { t.Fatalf("failed dial retained local port: %v",err) }
+     rebound.Close()
+    } else {
+     want := syscall.EADDRINUSE
+     if mode == "invalid-port" { want = syscall.EINVAL }
+     var call *os.SyscallError
+     if !errors.Is(err,want) || !errors.As(err,&call) || call.Syscall != "bind" { t.Fatalf("%s %v %s port=%d: %v, want bind %v",tt.network,tt.ip,mode,port,err,want) }
+    }
+    if mode == "occupied" { server.Close() }
+   }
+  }
+ }
+}
+
+func TestDialRemoteAutomatic(t *testing.T) {
+ for _, tt := range []struct{network string; ip net.IP; message string}{
+  {"udp", net.IP{1}, "non-IPv4 address"}, {"udp", net.IP{1,2,3,4,5}, "non-IPv6 address"},
+  {"udp4", net.IP{1}, "non-IPv4 address"}, {"udp4", net.IP{1,2,3,4,5}, "non-IPv4 address"},
+  {"udp4", net.IPv6loopback, "non-IPv4 address"},
+  {"udp6", net.IP{1}, "non-IPv6 address"}, {"udp6", net.IP{1,2,3,4,5}, "non-IPv6 address"},
+ } {
+  for _, port := range []int{9,65536} {
+   remote := &net.UDPAddr{IP: tt.ip, Port: port}
+   c, err := net.DialUDP(tt.network, nil, remote)
+   if c != nil { c.Close(); t.Fatal("invalid remote returned a connection") }
+   var op *net.OpError
+   var address *net.AddrError
+   if !errors.As(err,&op) || op.Op != "dial" || op.Net != tt.network || op.Source != nil || op.Addr != remote || !errors.As(err,&address) || address.Err != tt.message || address.Addr != tt.ip.String() { t.Fatalf("%s %v port=%d: %T %v, want %s",tt.network,tt.ip,port,err,err,tt.message) }
+  }
+ }
+}
+
 func TestDialArguments(t *testing.T) {
  for _, local := range []*net.UDPAddr{nil, {IP: net.IPv4(127, 0, 0, 1), Port: 1}, {IP: net.IP{1,2,3}, Port: -1}} {
   for _, remote := range []*net.UDPAddr{nil, {IP: net.IPv4(127, 0, 0, 1), Port: 2}} {
@@ -179,7 +236,7 @@ func TestDialerArguments(t *testing.T) {
 			} else {
 				args := []string{"-test.v"}
 				if target == "js" || target == "wasm" {
-					args = append(args, "-test.run=^(TestDialArguments|TestDialLocalArguments|TestDialerArguments)$")
+					args = append(args, "-test.run=^(TestDialArguments|TestDialLocalArguments|TestDialerArguments|TestDialRemoteAutomatic)$")
 				}
 				result := runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, args)
 				if result.Exit != 0 {

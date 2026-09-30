@@ -119,6 +119,7 @@ The CIDR parser adapts Go `src/net/ip.go` and retains its BSD notice.
 TCP fallback and partial deadlines retain Go `src/net/dial.go` and
 `ipsock.go`, `tcpsock_posix.go`, and `hook.go` declarations with their BSD notices.
 Typed UDP context setup adapts Go `src/net/dial.go` and retains its BSD notice.
+UDP dial order follows Go `src/net/sock_posix.go` and `src/net/ipsock_posix.go`.
 TCP listener address conversion adapts Go `src/net/ipsock_posix.go`.
 Its overlay source retains the Go BSD notice.
 Resolver fixtures retain Go `src/net/main_test.go` setup inputs from a native SDK execution.

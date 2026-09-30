@@ -248,27 +248,27 @@ func DialUDP(network string, laddr, raddr *UDPAddr) (*UDPConn, error) {
 	ipv6 := network == "udp6" || network == "udp" &&
 		(len(raddr.IP) > IPv4len && raddr.IP.To4() == nil ||
 			laddr != nil && len(laddr.IP) > IPv4len && laddr.IP.To4() == nil)
-	if laddr != nil {
-		ip := laddr.IP
+	addressError := func(ip IP) error {
 		if len(ip) != 0 && (ip.To16() == nil || !ipv6 && ip.To4() == nil) {
 			cause := "non-IPv4 address"
 			if ipv6 {
 				cause = "non-IPv6 address"
 			}
-			return nil, &OpError{Op: "dial", Net: network, Source: laddr, Addr: raddr, Err: &AddrError{Err: cause, Addr: ip.String()}}
+			return &AddrError{Err: cause, Addr: ip.String()}
 		}
+		return nil
 	}
-	host := raddr.IP.String()
-	if len(raddr.IP) == 0 {
-		host = "127.0.0.1"
+	if laddr != nil {
+		if err := addressError(laddr.IP); err != nil {
+			return nil, &OpError{Op: "dial", Net: network, Source: laddr, Addr: raddr, Err: err}
+		}
+	} else if err := addressError(raddr.IP); err != nil {
+		return nil, &OpError{Op: "dial", Net: network, Addr: raddr, Err: err}
 	}
-	if ipv6 && (len(raddr.IP) == 0 || raddr.IP.Equal(IPv4zero)) {
-		host = "::1"
+	localHost, localPort := "0.0.0.0", 0
+	if ipv6 {
+		localHost = "::"
 	}
-	if raddr.Zone != "" && (ipv6 || len(raddr.IP) != 0 && raddr.IP.To4() == nil) {
-		host += "%" + raddr.Zone
-	}
-	localHost, localPort := "", 0
 	if laddr != nil {
 		if len(laddr.IP) != 0 {
 			localHost = laddr.IP.String()
@@ -281,9 +281,30 @@ func DialUDP(network string, laddr, raddr *UDPAddr) (*UDPConn, error) {
 		}
 		localPort = laddr.Port
 	}
-	handle, localIP, local, cause, code, call, remoteIP := dart.DialUDP(host, raddr.Port, localHost, localPort)
+	handle, local, cause, code := dart.ListenUDP(localHost, localPort)
 	if cause != "" {
-		return nil, &OpError{Op: "dial", Net: network, Source: laddr.opAddr(), Addr: raddr, Err: socketSyscallCause(call, cause, code)}
+		return nil, &OpError{Op: "dial", Net: network, Source: laddr.opAddr(), Addr: raddr, Err: socketSyscallCause("bind", cause, code)}
+	}
+	if laddr != nil {
+		if err := addressError(raddr.IP); err != nil {
+			dart.PacketClose(handle)
+			return nil, &OpError{Op: "dial", Net: network, Source: laddr, Addr: raddr, Err: err}
+		}
+	}
+	host := raddr.IP.String()
+	if len(raddr.IP) == 0 {
+		host = "127.0.0.1"
+	}
+	if ipv6 && (len(raddr.IP) == 0 || raddr.IP.Equal(IPv4zero)) {
+		host = "::1"
+	}
+	if ipv6 && raddr.Zone != "" {
+		host += "%" + raddr.Zone
+	}
+	localIP, remoteIP, cause, code := dart.ConnectUDP(handle, host, raddr.Port)
+	if cause != "" {
+		dart.PacketClose(handle)
+		return nil, &OpError{Op: "dial", Net: network, Source: laddr.opAddr(), Addr: raddr, Err: socketSyscallCause("connect", cause, code)}
 	}
 	remote := raddr
 	if remoteIP != "" {
