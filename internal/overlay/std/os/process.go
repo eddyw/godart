@@ -105,20 +105,11 @@ func (p *ProcessState) status() syscall.WaitStatus {
 }
 
 func (p *ProcessState) String() string {
+	if p == nil {
+		return "<nil>"
+	}
 	if p.code < 0 {
-		return "signal: " + signalName(-p.code)
+		return "signal: " + syscall.Signal(-p.code).String()
 	}
 	return "exit status " + strconv.Itoa(p.code)
-}
-
-func signalName(sig int) string {
-	switch sig {
-	case 2:
-		return "interrupt"
-	case 9:
-		return "killed"
-	case 15:
-		return "terminated"
-	}
-	return "signal " + strconv.Itoa(sig)
 }

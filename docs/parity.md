@@ -77,6 +77,9 @@ Standalone native programs ignore SIGUSR1 and SIGUSR2 before registration, as Go
 Dart-hosted libraries do not install these default handlers.
 `Stop` releases a watch when no channel or explicit ignore needs it.
 Concurrent `Stop` and signal delivery can lose a pending signal.
+Shell children can inherit Dart's ignored SIGPIPE disposition on Linux and macOS.
+The same child terminates on SIGPIPE under native Go.
+Process-state text preserves the actual exit result, but child signal disposition parity remains incomplete.
 Other native signal watches remain unsupported. Browser builds cannot send
 or receive operating system signals.
 
