@@ -54,6 +54,9 @@ func (p *Process) Signal(sig Signal) error {
 
 // Wait waits for the end of the process and gives its state.
 func (p *Process) Wait() (*ProcessState, error) {
+	if p.Pid == -1 {
+		return nil, syscall.EINVAL
+	}
 	code, cause := dart.ProcWait(p.Pid)
 	if cause != "" {
 		return nil, errors.New(cause)
@@ -61,9 +64,11 @@ func (p *Process) Wait() (*ProcessState, error) {
 	return &ProcessState{pid: p.Pid, code: code}, nil
 }
 
-// Release drops the resources of the process. The runtime holds the child in
-// a table by id, thus there is nothing to drop.
-func (p *Process) Release() error { return nil }
+// Release invalidates this Process. The runtime owns the child and its IO.
+func (p *Process) Release() error {
+	p.Pid = -1
+	return nil
+}
 
 // WithHandle runs f with a handle of the process.
 //
