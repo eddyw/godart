@@ -11,7 +11,8 @@ import (
 
 // Process identifies a process by its id.
 type Process struct {
-	Pid int
+	Pid  int
+	done bool
 }
 
 // FindProcess gives a Process for a process id. Wait requires a child process.
@@ -46,6 +47,16 @@ func (p *Process) Signal(sig Signal) error {
 	if p.Pid == -1 {
 		return errors.New("os: process already released")
 	}
+	if p.done {
+		return ErrProcessDone
+	}
+	if number == 0 {
+		err := syscall.Kill(p.Pid, number)
+		if err == syscall.ESRCH {
+			return ErrProcessDone
+		}
+		return err
+	}
 	if cause := dart.KillPid(p.Pid, int(number)); cause != "" {
 		return processError(cause)
 	}
@@ -61,6 +72,7 @@ func (p *Process) Wait() (*ProcessState, error) {
 	if cause != "" {
 		return nil, errors.New(cause)
 	}
+	p.done = true
 	return &ProcessState{pid: p.Pid, code: code}, nil
 }
 
