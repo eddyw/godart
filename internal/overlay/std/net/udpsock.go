@@ -284,7 +284,7 @@ func DialUDP(network string, laddr, raddr *UDPAddr) (*UDPConn, error) {
 			if ipv6 && laddr.IP.Equal(IPv4zero) {
 				localHost = IPv6zero.String()
 			}
-			if laddr.Zone != "" {
+			if ipv6 && laddr.Zone != "" {
 				localHost += "%" + laddr.Zone
 			}
 		}
