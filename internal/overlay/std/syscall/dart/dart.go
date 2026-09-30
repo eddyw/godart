@@ -1114,6 +1114,12 @@ func NativeChmod(path string, mode int) int {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// NativeExecutableAccess tests execute access with effective user and group IDs.
+// Call only when HasNativeStat reports native support. The result is errno.
+func NativeExecutableAccess(path string) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // NativeRename moves a native path and returns errno.
 func NativeRename(from, to string) int {
 	panic("syscall/dart needs the gart compiler")

@@ -60,6 +60,9 @@ GoString $fileSync(int handle) => _noSys;
 
 const bool $hasNativeStat = false;
 
+int $nativeExecutableAccess(GoString path) =>
+    throw UnsupportedError('native executable access');
+
 int $nativeRename(GoString from, GoString to) => 38;
 
 (Slice<int>, int) $nativeStat(GoString path, bool follow) =>

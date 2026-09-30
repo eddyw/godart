@@ -71,6 +71,10 @@ Other native hosts and browsers do not support `os.File.Fd`.
 `net/http/fcgi` supports supplied listeners. `Serve` with a nil listener
 returns an explicit error because inherited listener descriptors remain unsupported.
 
+`os/exec.LookPath` uses effective user and group execute access on Linux and macOS.
+It rejects directories and continues past non-executable PATH candidates.
+The native errno capture limitation also applies to these access calls.
+
 Linux and macOS support `syscall.Kill` and `syscall.Getpid` through native APIs.
 `os.Process.Signal` supports the standard signals that Dart exposes, plus SIGIO and the native signal-0 query.
 SIGSTOP and SIGCONT preserve child stop and resume behavior.

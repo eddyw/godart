@@ -156,6 +156,19 @@ int _pathAttribute(GoString path, int Function(Pointer<Uint8>) apply) {
 int $nativeChmod(GoString path, int mode) =>
     _pathAttribute(path, (name) => _chmod(name, mode));
 
+final _faccessat = _libc
+    .lookupFunction<
+      Int Function(Int, Pointer<Uint8>, Int, Int),
+      int Function(int, Pointer<Uint8>, int, int)
+    >('faccessat');
+
+int $nativeExecutableAccess(GoString path) {
+  final access = _faccessat;
+  final directory = Platform.isMacOS ? -2 : -100;
+  final effective = Platform.isMacOS ? 0x10 : 0x200;
+  return _pathAttribute(path, (name) => access(directory, name, 1, effective));
+}
+
 int $nativeChown(GoString path, int uid, int gid, bool follow) =>
     _pathAttribute(
       path,

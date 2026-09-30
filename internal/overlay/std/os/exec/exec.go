@@ -1,3 +1,7 @@
+// Copyright 2010 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 //go:build dart
 
 // Package exec runs a child process over Process of dart:io.
@@ -7,8 +11,7 @@
 //
 // The gaps against Go: no SysProcAttr, no ExtraFiles, no process group,
 // argv[0] cannot differ from the program, a pipe of StdinPipe or StdoutPipe
-// works only after Start, and LookPath cannot read the execute bit because
-// Dart names no permission bit.
+// works only after Start.
 package exec
 
 import (
@@ -22,6 +25,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"syscall"
 	"syscall/dart"
 	"time"
 )
@@ -621,9 +625,8 @@ func dedupEnvCase(caseInsensitive, nulOK bool, env []string) ([]string, error) {
 	return out, err
 }
 
-// LookPath searches the directories of the variable PATH for the file. A name
-// with a separator skips the search. Dart names no permission bit, thus a
-// plain file passes without the check of the execute bit.
+// LookPath searches PATH for an executable file. A name with a separator
+// skips the search.
 //
 // A member of PATH that is relative gives the path and an error that errors.Is
 // reads as ErrDot, exactly as Go does.
@@ -655,7 +658,19 @@ func findExecutable(file string) error {
 		return err
 	}
 	if d.IsDir() {
-		return fs.ErrPermission
+		return syscall.EISDIR
 	}
-	return nil
+	if dart.HasNativeStat() {
+		code := dart.NativeExecutableAccess(file)
+		if code == 0 {
+			return nil
+		}
+		if code != int(syscall.ENOSYS) && code != int(syscall.EPERM) {
+			return syscall.Errno(code)
+		}
+	}
+	if d.Mode()&0111 != 0 {
+		return nil
+	}
+	return fs.ErrPermission
 }

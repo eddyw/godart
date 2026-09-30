@@ -11,6 +11,9 @@ Their sources retain the Go BSD notices and use the overlay license.
 The signal context adapter preserves the NotifyContext declarations from
 Go 1.27.1 `src/os/signal/signal.go`. Its source retains the Go BSD header.
 
+Executable access checks adapt Go `src/os/exec/lp_unix.go`.
+The overlay retains its Go BSD header and uses the overlay license.
+
 Generated Pub package names use the reserved-word list from Dart Pub
 `lib/src/utils.dart` at commit `a9ed06f7fb180b39b950aec878d4aa0911b7675e`.
 `internal/driver/LICENSE-Dart` and `AUTHORS-Dart` preserve its BSD terms and attribution.
