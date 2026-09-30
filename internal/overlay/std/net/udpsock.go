@@ -147,11 +147,13 @@ func (c *UDPConn) writeTo(b []byte, addr *UDPAddr) (int, error) {
 		}
 		return 0, &AddrError{Err: cause, Addr: ip.String()}
 	}
-	host := addr.IP.String()
-	if len(addr.IP) == 0 {
-		host = "127.0.0.1"
+	if len(ip) == 0 {
+		ip = IPv4zero
 	}
-	n, cause, code := dart.PacketWrite(c.p.handle, b, host, addr.Port)
+	if !ipv4 && ip.Equal(IPv4zero) {
+		ip = IPv6zero
+	}
+	n, cause, code := dart.PacketWrite(c.p.handle, b, ip.String(), addr.Port)
 	if cause != "" {
 		return n, socketSyscallCause("sendto", cause, code)
 	}
