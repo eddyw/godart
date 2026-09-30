@@ -2,6 +2,7 @@ package driver_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -83,6 +84,7 @@ func main() {
 	if len(observed) < 6 || observed[4] != os.Getpid() {
 		t.Fatalf("native parent contract: %v", observed)
 	}
+	t.Run("node", func(t *testing.T) { testNodeIdentity(t, observed[:4]) })
 	out := t.TempDir()
 	if err := driver.Build(driver.Options{Dir: dir, Patterns: []string{"."}, Out: out, Runtime: runtimeDir(t)}); err != nil {
 		t.Fatal(err)
@@ -116,6 +118,72 @@ func main() {
 				result = runUpstreamTarget(t, target, testOut, stats.Binaries[0].Entry, dir, args)
 			}
 			compareUpstream(t, "syscall-process-group", "syscall", "^TestZeroSysProcAttr$", target, dir, result.Text, result.Exit, false)
+		})
+	}
+}
+
+func testNodeIdentity(t *testing.T, native []int) {
+	out := t.TempDir()
+	writeFile(t, filepath.Join(out, "pubspec.yaml"), fmt.Sprintf("name: node_identity\nenvironment:\n  sdk: ^3.13.0\ndependencies:\n  goruntime:\n    path: %q\n", runtimeDir(t)))
+	writeFile(t, filepath.Join(out, "main.dart"), `import 'dart:convert';
+import 'package:goruntime/src/identity_web.dart';
+void main() => print(jsonEncode([$getuid(), $geteuid(), $getgid(), $getegid()]));
+`)
+	run(t, out, "dart", "pub", "get")
+	cases := []struct {
+		name, setup string
+		want        []int
+	}{
+		{"native", "", native},
+		{"absent", "globalThis.process=undefined;", []int{-1, -1, -1, -1}},
+		{"missing", "globalThis.process={};", []int{-1, -1, -1, -1}},
+	}
+	methods := []string{"getuid", "geteuid", "getgid", "getegid"}
+	for missing := -1; missing < len(methods); missing++ {
+		name := "distinct"
+		if missing >= 0 {
+			name = "missing-" + methods[missing]
+		}
+		fields := []string{"marker:true"}
+		want := []int{101, 202, 303, 404}
+		for i, method := range methods {
+			if i == missing {
+				want[i] = -1
+				continue
+			}
+			fields = append(fields, fmt.Sprintf("%s(){if(this.marker!==true)throw Error('receiver');return %d;}", method, want[i]))
+		}
+		cases = append(cases, struct {
+			name, setup string
+			want        []int
+		}{name, "globalThis.process={" + strings.Join(fields, ",") + "};", want})
+	}
+	for _, target := range []string{"js", "wasm"} {
+		t.Run(target, func(t *testing.T) {
+			run(t, out, "dart", "compile", target, "main.dart", "-o", "main."+target)
+			for _, tc := range cases {
+				t.Run(tc.name, func(t *testing.T) {
+					entry := "run.js"
+					source := "globalThis.self=globalThis;\n" + tc.setup + "\nrequire('./main.js');\n"
+					if target == "wasm" {
+						entry = "run.mjs"
+						source = `import {compile} from './main.mjs';
+import {readFile} from 'node:fs/promises';
+const app=await compile(await readFile(new URL('./main.wasm',import.meta.url)));
+const instance=await app.instantiate({});
+` + tc.setup + "\ninstance.invokeMain();\n"
+					}
+					writeFile(t, filepath.Join(out, entry), source)
+					want, err := json.Marshal(tc.want)
+					if err != nil {
+						t.Fatal(err)
+					}
+					got := programOutcome(t, out, "node", entry)
+					if got.Exit != 0 || got.Text != string(want) {
+						t.Fatalf("identity contract differs: %+v", got)
+					}
+				})
+			}
 		})
 	}
 }

@@ -87,8 +87,11 @@ On Linux and macOS, x64 and arm64 builds use native directory descriptors
 for recursive removal. Other native hosts retain Dart filesystem adapters.
 
 Linux and macOS programs read native user IDs, group IDs, supplementary
-groups, parent process IDs, and memory page sizes. Other targets retain
-placeholder numeric values and report supplementary groups as unsupported.
+groups, parent process IDs, and memory page sizes. Node programs read real
+and effective user IDs and group IDs when Node exposes these methods.
+Node retains placeholders for the other numeric values and does not support
+supplementary groups. Browser targets retain placeholders for all these
+numeric values and do not support supplementary groups.
 
 Linux and macOS expose network interface indexes, names, MTU values,
 hardware addresses, and flags. The table includes interfaces without IP addresses.

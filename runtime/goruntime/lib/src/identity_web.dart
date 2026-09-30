@@ -1,9 +1,21 @@
+import 'dart:js_interop';
+import 'dart:js_interop_unsafe';
+
 import 'slice.dart';
 
-int $getuid() => -1;
-int $geteuid() => -1;
-int $getgid() => -1;
-int $getegid() => -1;
+@JS('globalThis.process')
+external JSObject? get _process;
+
+int _identity(String method) {
+  final process = _process;
+  if (process == null || !process.has(method)) return -1;
+  return process.callMethod<JSNumber>(method.toJS).toDartInt;
+}
+
+int $getuid() => _identity('getuid');
+int $geteuid() => _identity('geteuid');
+int $getgid() => _identity('getgid');
+int $getegid() => _identity('getegid');
 int $getppid() => 0;
 int $getpgrp() => -1;
 (int, int) $getpgid(int pid) => (-1, -1);
