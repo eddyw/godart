@@ -229,7 +229,8 @@ Compile evidence records the wrapper hash and remains separate from runtime evid
 The `language-reject` audit compares exact `errorcheck` recipes. It preserves original source bytes and uses the installed SDK's annotation matcher.
 Both compilers must reject the source and satisfy the active upstream policy.
 The exact `errorcheck -e` recipe retains the native compiler option for all diagnostics.
-Recipes that limit diagnostics, such as `-e=0`, remain unassessed.
+The `errorcheck -e=0` recipe retains the 10-error limit for both compilers.
+The unchanged upstream assertion requires the first 10 import errors and the final `too many errors` diagnostic.
 Reports retain diagnostics, matcher results, and source fingerprints.
 A successful diagnostic result requires all original assertions to pass.
 The adapter reads expected failures from the upstream runner and requires both original matchers to fail for those fixtures.
@@ -248,6 +249,7 @@ The `language-generated` audit compares exact `runoutput` recipes. Native Go exe
 Both compilers then receive its exact output bytes. Reports retain the generator command, exit, source bytes, and source hash.
 Both programs must satisfy the original output assertion. This establishes parity for the generated program, not for generator execution.
 Generator arguments require a separate adapter. This audit remains separate from the routine CI matrix because unresolved cases can fail.
+Generator companion files retain their original paths, source bytes, and hashes.
 
 The `language-directories` suite executes `runindir` recipes on VM, AOT,
 JS, and Wasm. It copies original companion sources without import changes.
