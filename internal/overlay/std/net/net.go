@@ -74,10 +74,6 @@ type Error interface {
 
 // OpError holds the error of a network operation. It names the operation, the
 // network, the 2 addresses, and the cause.
-//
-// The overlay holds no system call error, thus Timeout and Temporary read the
-// cause alone. Go also reads an os.SyscallError inside the cause, and this
-// package builds no such error.
 type OpError struct {
 	// Op names the operation, such as "read", "write", or "dial".
 	Op string
@@ -130,6 +126,15 @@ func (e *OpError) Timeout() bool {
 
 // Temporary reports a cause that a second try may pass.
 func (e *OpError) Temporary() bool {
+	if e.Op == "accept" {
+		if code, ok := e.Err.(syscall.Errno); ok && (code == syscall.ECONNRESET || code == syscall.ECONNABORTED) {
+			return true
+		}
+	}
+	if cause, ok := e.Err.(*os.SyscallError); ok {
+		t, ok := cause.Err.(interface{ Temporary() bool })
+		return ok && t.Temporary()
+	}
 	t, ok := e.Err.(interface{ Temporary() bool })
 	return ok && t.Temporary()
 }
