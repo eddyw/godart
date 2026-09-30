@@ -563,9 +563,13 @@ func (c *Cmd) StderrPipe() (io.ReadCloser, error) {
 type procReader struct {
 	c         *Cmd
 	errStream bool
+	closed    bool
 }
 
 func (r *procReader) Read(p []byte) (int, error) {
+	if r.closed || r.c.ProcessState != nil {
+		return 0, &os.PathError{Op: "read", Path: "|0", Err: os.ErrClosed}
+	}
 	if r.c.Process == nil {
 		return 0, errors.New("exec: not started")
 	}
@@ -579,13 +583,28 @@ func (r *procReader) Read(p []byte) (int, error) {
 	if cause != "" {
 		return n, errors.New(cause)
 	}
-	if n == 0 {
+	if n == 0 && (r.closed || r.c.ProcessState != nil) {
+		return 0, &os.PathError{Op: "read", Path: "|0", Err: os.ErrClosed}
+	}
+	if n == 0 && len(p) != 0 {
 		return 0, io.EOF
 	}
 	return n, nil
 }
 
-func (r *procReader) Close() error { return nil }
+func (r *procReader) Close() error {
+	if r.closed || r.c.ProcessState != nil {
+		return &os.PathError{Op: "close", Path: "|0", Err: os.ErrClosed}
+	}
+	if r.c.Process == nil {
+		return errors.New("exec: not started")
+	}
+	r.closed = true
+	if cause := dart.ProcCloseOutput(r.c.Process.Pid, r.errStream); cause != "" {
+		return errors.New(cause)
+	}
+	return nil
+}
 
 // Environ gives the environment of the command as it stands now. A nil Env
 // reads the environment of this program, and a Dir that is not empty adds PWD.
