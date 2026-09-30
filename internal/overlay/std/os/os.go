@@ -19,6 +19,7 @@ import (
 	"errors"
 	"io"
 	"io/fs"
+	"runtime"
 	"slices"
 	"syscall"
 	"syscall/dart"
@@ -1130,7 +1131,20 @@ func Chdir(path string) error {
 }
 
 // TempDir gives the directory that the system holds for a temporary file.
-func TempDir() string { return dart.TempDir() }
+func TempDir() string {
+	if runtime.GOOS == "windows" {
+		return dart.TempDir()
+	}
+	dir := Getenv("TMPDIR")
+	if dir == "" {
+		if runtime.GOOS == "android" {
+			dir = "/data/local/tmp"
+		} else {
+			dir = "/tmp"
+		}
+	}
+	return dir
+}
 
 // tempSeq numbers each temporary name of the process.
 var tempSeq int
