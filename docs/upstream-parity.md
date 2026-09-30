@@ -153,6 +153,9 @@ A short-mode pass establishes parity only for that configuration.
 The upstream comparison drivers use the same test timeout for Go and Gart.
 Use `upstreamTestArgs` for direct test binaries.
 External process limits remain separate.
+Upstream reports retain Dart compiler failures, command errors, and partial output.
+A required SDK version probe must succeed before a report can count as parity.
+The `tool_errors` field retains a failed version probe.
 
 The manual workflow accepts `upstream_mode=full` for the original long suites.
 Locally, set `GART_UPSTREAM_MODE=full` before the standard library or upstream target command.

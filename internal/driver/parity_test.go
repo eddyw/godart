@@ -78,6 +78,7 @@ type upstreamKernel struct {
 
 type upstreamEvidence struct {
 	SchemaVersion     int                 `json:"schema_version"`
+	ToolErrors        map[string]string   `json:"tool_errors,omitempty"`
 	Kernel            *upstreamKernel     `json:"kernel,omitempty"`
 	ImporterInputs    *importerInputs     `json:"importer_inputs,omitempty"`
 	TargetExclusions  map[string]string   `json:"target_exclusions,omitempty"`
@@ -234,7 +235,8 @@ func compareUpstreamSDKInventory(t *testing.T, name, pkg, filter, target, dir, d
 		if e, ok := err.(*exec.ExitError); ok {
 			nativeExit = e.ExitCode()
 		} else {
-			t.Fatal(err)
+			nativeExit = 127
+			nativeText, _ = json.Marshal(map[string]string{"Action": "output", "Output": err.Error()})
 		}
 	}
 	base := ""
@@ -339,16 +341,27 @@ func compareUpstreamSDKInventory(t *testing.T, name, pkg, filter, target, dir, d
 	external := externalFixtures(t, string(nativeText)+"\n"+dartText)
 	comparison := parity.Compare(native, gart, expected, selectedRules)
 	if base != "" {
-		dartVersion := strings.TrimSpace(runProgram(t, "", "dart", "--version"))
-		nodeVersion := ""
+		tools := []string{"dart"}
 		if target == "js" || target == "wasm" {
-			nodeVersion = strings.TrimSpace(runProgram(t, "", "node", "--version"))
+			tools = append(tools, "node")
+		}
+		versions := map[string]string{}
+		toolErrors := map[string]string{}
+		for _, tool := range tools {
+			result := upstreamOutcome(t, "", nil, runLimit, tool, "--version")
+			if result.Exit != 0 {
+				toolErrors[tool] = result.Text
+				comparison.Problems = append(comparison.Problems, fmt.Sprintf("%s version probe exit %d", tool, result.Exit))
+				comparison.Passed = nil
+				continue
+			}
+			versions[tool] = strings.TrimSpace(result.Text)
 		}
 		env := map[string]string{"GODEBUG": os.Getenv("GODEBUG"), "GOEXPERIMENT": os.Getenv("GOEXPERIMENT")}
 		if pkg == "crypto/tls" || pkg == "go/build" || pkg == "debug/buildinfo" || pkg == "internal/testenv" || importer != nil || pkg == "go/importer" || pkg == "go/internal/gccgoimporter" || pkg == "internal/types/errors" {
 			env["GOROOT"] = build.Default.GOROOT
 		}
-		data, err := json.MarshalIndent(upstreamEvidence{SchemaVersion: 1, ImporterInputs: importer, TargetExclusions: targetExclusions, Selection: name, ResolverInputs: resolver, CertificateInputs: inputs, NativeImages: images, ExternalFixtures: external, NativeArgs: args, NativeTrimPath: false, Short: testing.Short(), Timeout: upstreamLimit().String(), NodeVersion: nodeVersion, GartBuildTags: []string{"dart"}, TrimPath: trimPath, Kernel: kernel, Environment: env, GoVersion: runtime.Version(), DartVersion: dartVersion, GOOS: runtime.GOOS, GOARCH: runtime.GOARCH, BuildTags: nativeTags, ToolTags: build.Default.ToolTags, Cgo: build.Default.CgoEnabled, SourceSHA256: inventory.SourceSHA256, Fixtures: inventory.Fixtures, Expected: expected, Skip: upstreamSkip(t, pkg), Target: target, Package: pkg, Filter: filter, Native: native, Gart: gart, Comparison: comparison}, "", "  ")
+		data, err := json.MarshalIndent(upstreamEvidence{SchemaVersion: 1, ToolErrors: toolErrors, ImporterInputs: importer, TargetExclusions: targetExclusions, Selection: name, ResolverInputs: resolver, CertificateInputs: inputs, NativeImages: images, ExternalFixtures: external, NativeArgs: args, NativeTrimPath: false, Short: testing.Short(), Timeout: upstreamLimit().String(), NodeVersion: versions["node"], GartBuildTags: []string{"dart"}, TrimPath: trimPath, Kernel: kernel, Environment: env, GoVersion: runtime.Version(), DartVersion: versions["dart"], GOOS: runtime.GOOS, GOARCH: runtime.GOARCH, BuildTags: nativeTags, ToolTags: build.Default.ToolTags, Cgo: build.Default.CgoEnabled, SourceSHA256: inventory.SourceSHA256, Fixtures: inventory.Fixtures, Expected: expected, Skip: upstreamSkip(t, pkg), Target: target, Package: pkg, Filter: filter, Native: native, Gart: gart, Comparison: comparison}, "", "  ")
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -17,8 +17,9 @@ type nativeImage struct {
 	SHA256  string   `json:"sha256"`
 }
 
-// upstreamOutcome retains external timeouts for the parity report.
-// The comparison must reject a nonzero exit, including the timeout code 124.
+// upstreamOutcome retains process failures for the parity report.
+// Exit 124 indicates a timeout. Exit 127 indicates a command error without
+// an exit status.
 func upstreamOutcome(t *testing.T, dir string, env []string, limit time.Duration, name string, args ...string) programResult {
 	t.Helper()
 	start := time.Now()
@@ -32,7 +33,7 @@ func upstreamOutcome(t *testing.T, dir string, env []string, limit time.Duration
 		if e, ok := err.(*exec.ExitError); ok {
 			code = e.ExitCode()
 		} else {
-			t.Fatal(err)
+			return programResult{fmt.Sprintf("%s\ncommand %s: %v", text, name, err), 127}
 		}
 	}
 	return programResult{cutTrace(string(text)), code}
