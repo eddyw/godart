@@ -470,7 +470,7 @@ func (c *Cmd) Output() ([]byte, error) {
 	var stdout bytes.Buffer
 	c.Stdout = &stdout
 	capture := c.Stderr == nil
-	var stderr bytes.Buffer
+	stderr := prefixSuffixSaver{N: 32 << 10}
 	if capture {
 		c.Stderr = &stderr
 	}
