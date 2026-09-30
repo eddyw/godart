@@ -71,6 +71,9 @@ Other native hosts and browsers do not support `os.File.Fd`.
 `net/http/fcgi` supports supplied listeners. `Serve` with a nil listener
 returns an explicit error because inherited listener descriptors remain unsupported.
 
+`os.Root.FS` implements `fs.ReadDirFS` and `fs.ReadLinkFS`, with sorted directory entries and link metadata.
+Root paths still do not track directory renames. Concurrent path changes can escape the root.
+
 `os.UserConfigDir` and `os.UserCacheDir` use the native macOS locations.
 Unix targets reject relative XDG directory values and preserve the HOME fallback.
 Windows user-directory behavior remains incomplete.

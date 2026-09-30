@@ -1,3 +1,7 @@
+// Copyright 2024 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 //go:build dart
 
 package os
@@ -64,12 +68,7 @@ func (r *Root) Close() error {
 
 // Open opens a file of the root for reading.
 func (r *Root) Open(name string) (*File, error) {
-	full, err := r.resolve("open", name)
-	if err != nil {
-		return nil, err
-	}
-	f, cause := Open(full)
-	return r.openIn(f, cause, name)
+	return r.OpenFile(name, O_RDONLY, 0)
 }
 
 // OpenFile opens a file of the root with the flag and the permission.
@@ -77,7 +76,7 @@ func (r *Root) OpenFile(name string, flag int, perm FileMode) (*File, error) {
 	if perm&0o777 != perm {
 		return nil, &PathError{Op: "openat", Path: name, Err: errors.New("unsupported file mode")}
 	}
-	full, err := r.resolve("open", name)
+	full, err := r.resolve("openat", name)
 	if err != nil {
 		return nil, err
 	}
@@ -87,12 +86,7 @@ func (r *Root) OpenFile(name string, flag int, perm FileMode) (*File, error) {
 
 // Create makes a file of the root, or it truncates the file that stands there.
 func (r *Root) Create(name string) (*File, error) {
-	full, err := r.resolve("create", name)
-	if err != nil {
-		return nil, err
-	}
-	f, cause := Create(full)
-	return r.openIn(f, cause, name)
+	return r.OpenFile(name, O_RDWR|O_CREATE|O_TRUNC, 0666)
 }
 
 // OpenRoot opens a directory of the root and gives the Root of it.
@@ -111,13 +105,13 @@ func (r *Root) OpenRoot(name string) (*Root, error) {
 
 // Stat reads the metadata of a name of the root.
 func (r *Root) Stat(name string) (FileInfo, error) {
-	full, err := r.resolve("stat", name)
+	full, err := r.resolve("statat", name)
 	if err != nil {
 		return nil, err
 	}
 	info, cause := Stat(full)
 	if cause != nil {
-		return nil, rename(cause, name)
+		return nil, rootError("statat", name, cause)
 	}
 	return info, nil
 }
@@ -125,13 +119,13 @@ func (r *Root) Stat(name string) (FileInfo, error) {
 // Lstat reads the metadata of a name of the root, and it follows no symbolic
 // link of the last element.
 func (r *Root) Lstat(name string) (FileInfo, error) {
-	full, err := r.resolveNoFollow("lstat", name)
+	full, err := r.resolveNoFollow("statat", name)
 	if err != nil {
 		return nil, err
 	}
 	info, cause := Lstat(full)
 	if cause != nil {
-		return nil, rename(cause, name)
+		return nil, rootError("statat", name, cause)
 	}
 	return info, nil
 }
@@ -311,13 +305,13 @@ func rootError(op, name string, err error) error {
 
 // Readlink gives the target of a symbolic link of the root.
 func (r *Root) Readlink(name string) (string, error) {
-	full, err := r.resolveNoFollow("readlink", name)
+	full, err := r.resolveNoFollow("readlinkat", name)
 	if err != nil {
 		return "", err
 	}
 	target, cause := Readlink(full)
 	if cause != nil {
-		return "", rename(cause, name)
+		return "", rootError("readlinkat", name, cause)
 	}
 	return target, nil
 }
@@ -326,36 +320,10 @@ func (r *Root) Readlink(name string) (string, error) {
 // root.
 func (r *Root) FS() fs.FS { return rootFS{r} }
 
-type rootFS struct{ root *Root }
-
-func (f rootFS) Open(name string) (fs.File, error) {
-	if !fs.ValidPath(name) {
-		return nil, &PathError{Op: "open", Path: name, Err: ErrInvalid}
-	}
-	if name == "." {
-		return f.root.Open(".")
-	}
-	return f.root.Open(name)
-}
-
-func (f rootFS) Stat(name string) (fs.FileInfo, error) {
-	if !fs.ValidPath(name) {
-		return nil, &PathError{Op: "stat", Path: name, Err: ErrInvalid}
-	}
-	return f.root.Stat(name)
-}
-
-func (f rootFS) ReadFile(name string) ([]byte, error) {
-	if !fs.ValidPath(name) {
-		return nil, &PathError{Op: "readfile", Path: name, Err: ErrInvalid}
-	}
-	return f.root.ReadFile(name)
-}
-
 // openIn preserves the caller's names for File.Name and PathError.
 func (r *Root) openIn(f *File, err error, name string) (*File, error) {
 	if err != nil {
-		return nil, rename(err, name)
+		return nil, rootError("openat", name, err)
 	}
 	f.name = joinPath(r.name, name)
 	return f, nil
