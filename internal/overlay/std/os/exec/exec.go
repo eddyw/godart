@@ -1,4 +1,5 @@
 // Copyright 2010 The Go Authors. All rights reserved.
+// Copyright 2011 The Go Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -26,6 +27,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"syscall"
 	"syscall/dart"
 	"time"
@@ -131,6 +133,8 @@ type Cmd struct {
 	// ioDone closes when the copy of each of the 3 pipes ended.
 	ioDone chan struct{}
 
+	startCalled int32
+
 	inPipe  bool
 	outPipe bool
 	errPipe bool
@@ -173,19 +177,32 @@ func CommandContext(ctx context.Context, name string, arg ...string) *Cmd {
 }
 
 func (c *Cmd) String() string {
+	if c.Err != nil {
+		return strings.Join(c.Args, " ")
+	}
 	b := new(strings.Builder)
 	b.WriteString(c.Path)
-	for _, a := range c.Args[1:] {
+	for _, a := range c.argv()[1:] {
 		b.WriteByte(' ')
 		b.WriteString(a)
 	}
 	return b.String()
 }
 
+func (c *Cmd) argv() []string {
+	if len(c.Args) != 0 {
+		return c.Args
+	}
+	return []string{c.Path}
+}
+
 // Start starts the child and returns. Wait collects the state.
 func (c *Cmd) Start() error {
-	if c.Process != nil {
+	if atomic.SwapInt32(&c.startCalled, 1) != 0 {
 		return errors.New("exec: already started")
+	}
+	if c.Path == "" && c.Err == nil {
+		c.Err = errors.New("exec: no command")
 	}
 	if c.Err != nil {
 		return c.Err
@@ -200,10 +217,7 @@ func (c *Cmd) Start() error {
 		default:
 		}
 	}
-	argv := c.Args
-	if len(argv) == 0 {
-		argv = []string{c.Path}
-	}
+	argv := c.argv()
 	// Go gives the child its directory before the exec, thus a relative Path
 	// resolves against Dir. Process.start of Dart resolves against the
 	// directory of the parent, thus the join stands here.

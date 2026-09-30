@@ -11,7 +11,7 @@ Their sources retain the Go BSD notices and use the overlay license.
 The signal context adapter preserves the NotifyContext declarations from
 Go 1.27.1 `src/os/signal/signal.go`. Its source retains the Go BSD header.
 
-Executable access and lookup adapt Go `src/os/exec/lp_unix.go` and
+The command overlay adapts Go `src/os/exec/lp_unix.go` and
 `src/os/exec/exec.go`.
 The overlay retains its Go BSD header and uses the overlay license.
 
