@@ -61,7 +61,7 @@ func TestDialPorts(t *testing.T) {
  }
 }
 func TestDialArguments(t *testing.T) {
- for _, local := range []*net.UDPAddr{nil, {IP: net.IPv4(127, 0, 0, 1), Port: 1}} {
+ for _, local := range []*net.UDPAddr{nil, {IP: net.IPv4(127, 0, 0, 1), Port: 1}, {IP: net.IP{1,2,3}, Port: -1}} {
   for _, remote := range []*net.UDPAddr{nil, {IP: net.IPv4(127, 0, 0, 1), Port: 2}} {
    for _, network := range []string{"", "tcp", "udp", "udp4", "udp6"} {
     unknown := network == "" || network == "tcp"
@@ -87,6 +87,42 @@ func TestDialArguments(t *testing.T) {
  }
 }
 
+func TestDialLocalArguments(t *testing.T) {
+ for _, tt := range []struct{network string; local, remote net.IP; cause string}{
+  {"udp4", net.IP{1}, nil, "non-IPv4 address"},
+  {"udp4", net.IP{1,2,3}, net.IPv4(127,0,0,1), "non-IPv4 address"},
+  {"udp4", net.IP{1,2,3,4,5}, net.IPv6loopback, "non-IPv4 address"},
+  {"udp4", make(net.IP,17), nil, "non-IPv4 address"},
+  {"udp4", net.IPv6loopback, net.IPv4(127,0,0,1), "non-IPv4 address"},
+  {"udp4", net.IPv6zero, net.IPv6loopback, "non-IPv4 address"},
+  {"udp6", net.IP{1}, nil, "non-IPv6 address"},
+  {"udp6", net.IP{1,2,3}, net.IPv4(127,0,0,1), "non-IPv6 address"},
+  {"udp6", net.IP{1,2,3,4,5}, net.IPv6loopback, "non-IPv6 address"},
+  {"udp6", make(net.IP,17), nil, "non-IPv6 address"},
+  {"udp", net.IP{1}, nil, "non-IPv4 address"},
+  {"udp", net.IP{1,2,3}, net.IPv4(127,0,0,1), "non-IPv4 address"},
+  {"udp", net.IP{1}, net.IPv6loopback, "non-IPv6 address"},
+  {"udp", net.IP{1,2,3,4,5}, nil, "non-IPv6 address"},
+  {"udp", make(net.IP,17), net.IPv4(127,0,0,1), "non-IPv6 address"},
+  {"udp", net.IP{1,2,3,4,5}, net.IPv6loopback, "non-IPv6 address"},
+ } {
+  for _, port := range []int{0, -1} {
+   local := &net.UDPAddr{IP: tt.local, Port: port}
+   remote := &net.UDPAddr{IP: tt.remote, Port: 9}
+   c, err := net.DialUDP(tt.network, local, remote)
+   if c != nil { c.Close(); t.Fatal("invalid local address succeeded") }
+   var op *net.OpError
+   var cause *net.AddrError
+   if !errors.As(err, &op) || op.Op != "dial" || op.Net != tt.network || op.Source != local || op.Addr != remote {
+    t.Fatalf("incorrect local address metadata: %v", err)
+   }
+   if !errors.As(err, &cause) || cause.Err != tt.cause || cause.Addr != tt.local.String() {
+    t.Fatalf("%s %v -> %v: %v, want %s", tt.network, local, remote, err, tt.cause)
+   }
+  }
+ }
+}
+
 `)
 	run(t, dir, "go", "test", "-v", ".")
 	stats, err := driver.BuildWithStats(driver.Options{Dir: dir, Patterns: []string{"."}, Out: out, Runtime: runtimeDir(t), Tests: true})
@@ -101,7 +137,7 @@ func TestDialArguments(t *testing.T) {
 			} else {
 				args := []string{"-test.v"}
 				if target == "js" || target == "wasm" {
-					args = append(args, "-test.run=^TestDialArguments$")
+					args = append(args, "-test.run=^(TestDialArguments|TestDialLocalArguments)$")
 				}
 				result := runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, args)
 				if result.Exit != 0 {

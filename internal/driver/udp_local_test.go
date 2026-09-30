@@ -67,7 +67,7 @@ func TestDialerUDP(t *testing.T) {
  for _, family := range []struct{network, host string}{{"udp4", "127.0.0.1"}, {"udp6", "::1"}} {
   for _, network := range []string{"udp", family.network} {
    for _, api := range []string{"dial", "context", "typed"} {
-    for _, localMode := range []string{"automatic", "explicit", "empty", "port"} {
+    for _, localMode := range []string{"automatic", "explicit", "empty", "unspecified", "port"} {
      t.Run(network+"/"+family.host+"/"+api+"/"+localMode,func(t *testing.T) {
       server,err:=ListenUDP(family.network,&UDPAddr{IP:ParseIP(family.host)})
       if err!=nil {t.Fatal(err)}
@@ -76,6 +76,7 @@ func TestDialerUDP(t *testing.T) {
       switch localMode {
       case "explicit":local=&UDPAddr{IP:ParseIP(family.host)}
       case "empty":local=&UDPAddr{}
+      case "unspecified":local=&UDPAddr{IP:IPv4zero}
       case "port":
        reserve,err:=ListenUDP(family.network,&UDPAddr{IP:ParseIP(family.host)})
        if err!=nil {t.Fatal(err)}

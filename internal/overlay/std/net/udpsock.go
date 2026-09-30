@@ -254,11 +254,23 @@ func DialUDP(network string, laddr, raddr *UDPAddr) (*UDPConn, error) {
 	if raddr == nil {
 		return nil, &OpError{Op: "dial", Net: network, Source: laddr.opAddr(), Err: errMissingAddress}
 	}
+	ipv6 := network == "udp6" || network == "udp" &&
+		(len(raddr.IP) > IPv4len && raddr.IP.To4() == nil ||
+			laddr != nil && len(laddr.IP) > IPv4len && laddr.IP.To4() == nil)
+	if laddr != nil {
+		ip := laddr.IP
+		if len(ip) != 0 && (ip.To16() == nil || !ipv6 && ip.To4() == nil) {
+			cause := "non-IPv4 address"
+			if ipv6 {
+				cause = "non-IPv6 address"
+			}
+			return nil, &OpError{Op: "dial", Net: network, Source: laddr, Addr: raddr, Err: &AddrError{Err: cause, Addr: ip.String()}}
+		}
+	}
 	host := raddr.IP.String()
 	if len(raddr.IP) == 0 {
 		host = "127.0.0.1"
 	}
-	ipv6 := network == "udp6" || network == "udp" && laddr != nil && len(laddr.IP) > IPv4len && laddr.IP.To4() == nil
 	if ipv6 && (len(raddr.IP) == 0 || raddr.IP.Equal(IPv4zero)) {
 		host = "::1"
 	}
@@ -269,6 +281,9 @@ func DialUDP(network string, laddr, raddr *UDPAddr) (*UDPConn, error) {
 	if laddr != nil {
 		if len(laddr.IP) != 0 {
 			localHost = laddr.IP.String()
+			if ipv6 && laddr.IP.Equal(IPv4zero) {
+				localHost = IPv6zero.String()
+			}
 			if laddr.Zone != "" {
 				localHost += "%" + laddr.Zone
 			}
