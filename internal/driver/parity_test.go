@@ -371,6 +371,7 @@ func compareUpstreamSDKInventory(t *testing.T, name, pkg, filter, target, dir, d
 	}
 	t.Logf("upstream parity: %d passes, %d partial, %d explicit exclusions, %d target exclusions", len(comparison.Passed), len(comparison.Partial), len(comparison.Excluded), len(targetExclusions))
 	if len(comparison.Problems) > 0 {
+		t.Logf("Gart output:\n%s", dartText)
 		t.Error(fmt.Sprintf("upstream parity failed:\n%s", strings.Join(comparison.Problems, "\n")))
 	}
 }
