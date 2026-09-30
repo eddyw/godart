@@ -97,12 +97,12 @@ GoString $listenDeadline(int handle, int nanos) => _noNet;
 (int, int, GoString, int) $listenUDP(GoString host, int port) =>
     (0, 0, _noNet, 0);
 
-(int, GoString, int, GoString) $dialUDP(
+(int, GoString, int, GoString, int, GoString) $dialUDP(
   GoString host,
   int port,
   GoString localHost,
   int localPort,
-) => (0, GoString.empty, 0, _noNet);
+) => (0, GoString.empty, 0, _noNet, 0, GoString.empty);
 
 (int, int, GoString) $listenMulticastUDP(GoString host, int port) =>
     (0, 0, _noNet);

@@ -1504,61 +1504,74 @@ Future<_Packet> _bindShared(String host, int port) async {
 ///
 /// The socket drops a datagram of another source, exactly as a connected
 /// socket of the system does.
-(int, GoString, int, GoString) $dialUDP(
+(int, GoString, int, GoString, int, GoString) $dialUDP(
   GoString host,
   int port,
   GoString localHost,
   int localPort,
 ) {
   $await(
-    _connectUDP(
-      host.toDartString(),
-      port,
-      localHost.toDartString(),
-      localPort,
-    ).then(
-      (_Packet s) => (
-        _packetSlot(s),
-        GoString.fromString(s.localHost),
-        s.socket.port,
-        _empty,
-      ),
-    ),
-    (Object cause) => (-1, _empty, 0, _cause(cause)),
+    _connectUDP(host.toDartString(), port, localHost.toDartString(), localPort),
+    (Object cause) => throw cause,
   );
-  return (-1, _empty, 0, _empty);
+  return (-1, _empty, 0, _empty, 0, _empty);
 }
 
-Future<_Packet> _connectUDP(
+Future<(int, GoString, int, GoString, int, GoString)> _connectUDP(
   String host,
   int port,
   String localHost,
   int localPort,
 ) async {
-  final InternetAddress target = await _address(host);
-  final RawDatagramSocket socket = await RawDatagramSocket.bind(
-    localHost.isNotEmpty
+  RawDatagramSocket? socket;
+  var call = 'bind';
+  try {
+    final InternetAddress target = await _address(host);
+    final localAddress = localHost.isNotEmpty
         ? await _address(localHost)
         : target.type == InternetAddressType.IPv6
         ? InternetAddress.anyIPv6
-        : InternetAddress.anyIPv4,
-    localPort,
-    reuseAddress: false,
-  );
-  final _Packet s = _Packet(socket);
-  if (Platform.isLinux || Platform.isMacOS) {
-    try {
+        : InternetAddress.anyIPv4;
+    if (localPort < 0 || localPort > 65535) {
+      throw const OSError('invalid argument', 22);
+    }
+    socket = await RawDatagramSocket.bind(
+      localAddress,
+      localPort,
+      reuseAddress: false,
+    );
+    call = 'connect';
+    // Go binds the local address before it validates the remote port.
+    if (port < 0 || port > 65535) {
+      throw const OSError('invalid argument', 22);
+    }
+    final _Packet s = _Packet(socket);
+    if (Platform.isLinux || Platform.isMacOS) {
       final local = connectDatagram(socket, target, port);
       s.nativeFD = local.$1;
       s.localHost = local.$2;
-    } catch (_) {
-      socket.close();
-      rethrow;
     }
+    s.remoteHost = target.address;
+    s.remotePort = port;
+    return (
+      _packetSlot(s),
+      GoString.fromString(s.localHost),
+      socket.port,
+      _empty,
+      0,
+      _empty,
+    );
+  } catch (cause) {
+    socket?.close();
+    return (
+      -1,
+      _empty,
+      0,
+      _cause(cause),
+      _socketErrno(cause),
+      GoString.fromString(call),
+    );
   }
-  s.remoteHost = target.address;
-  s.remotePort = port;
-  return s;
 }
 
 /// _fillPacket waits for 1 datagram. It gives 0 for a datagram and 1 for the

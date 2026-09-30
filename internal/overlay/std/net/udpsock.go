@@ -260,9 +260,9 @@ func DialUDP(network string, laddr, raddr *UDPAddr) (*UDPConn, error) {
 		}
 		localPort = laddr.Port
 	}
-	handle, localIP, local, cause := dart.DialUDP(host, raddr.Port, localHost, localPort)
+	handle, localIP, local, cause, code, call := dart.DialUDP(host, raddr.Port, localHost, localPort)
 	if cause != "" {
-		return nil, errors.New("dial " + network + " " + raddr.String() + ": " + cause)
+		return nil, &OpError{Op: "dial", Net: network, Source: laddr.opAddr(), Addr: raddr, Err: socketSyscallCause(call, cause, code)}
 	}
 	return newDialedUDPConn(
 		&packet{handle: handle, network: network, local: udpAddrOf(localIP, local)},
