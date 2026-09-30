@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"internal/godebug"
 	"io"
 	"io/fs"
 	"os"
@@ -625,12 +626,18 @@ func dedupEnvCase(caseInsensitive, nulOK bool, env []string) ([]string, error) {
 	return out, err
 }
 
+var execerrdot = godebug.New("execerrdot")
+
 // LookPath searches PATH for an executable file. A name with a separator
 // skips the search.
 //
 // A member of PATH that is relative gives the path and an error that errors.Is
-// reads as ErrDot, exactly as Go does.
+// reads as ErrDot unless GODEBUG=execerrdot=0 permits that lookup.
 func LookPath(file string) (string, error) {
+	switch file {
+	case "", ".", "..":
+		return "", &Error{Name: file, Err: ErrNotFound}
+	}
 	if strings.Contains(file, "/") {
 		if err := findExecutable(file); err != nil {
 			return "", &Error{Name: file, Err: err}
@@ -644,7 +651,10 @@ func LookPath(file string) (string, error) {
 		path := filepath.Join(dir, file)
 		if err := findExecutable(path); err == nil {
 			if !filepath.IsAbs(path) {
-				return path, &Error{Name: file, Err: ErrDot}
+				if execerrdot.Value() != "0" {
+					return path, &Error{Name: file, Err: ErrDot}
+				}
+				execerrdot.IncNonDefault()
 			}
 			return path, nil
 		}
