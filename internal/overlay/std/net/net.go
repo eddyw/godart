@@ -4,12 +4,8 @@
 
 //go:build dart
 
-// Package net gives a TCP client, a TCP server, a UDP socket, and a Unix
-// socket.
-//
-// An address holds a numeric host or a host name that Dart resolves. There is
-// no TLS, no IPv6 form with brackets, and no address type of Go.
-// `docs/parity.md` lists each gap.
+// Package net provides TCP, UDP, and Unix sockets through Dart.
+// The docs/parity.md file describes unsupported behavior.
 package net
 
 import (

@@ -111,7 +111,16 @@ System service resolver selection and some resolver error details still differ.
 On Linux and macOS, `net.DialUDP` supports an explicit local address and port.
 Connected UDP sockets report the local address that the operating system selects.
 The context-based UDP dialer supports `udp`, `udp4`, and `udp6`.
-UDP zones, mapped addresses, and some error details remain incomplete.
+For typed UDP dials, bind and connect errors take precedence over an expired or canceled context.
+Invalid remote addresses retain `AddrError` metadata after a successful explicit local bind.
+Failed remote conversion releases that bound socket.
+Mixed-family destinations, IPv6 zones, and socket controls remain incomplete.
+
+Native UDP error codes remain unreliable across separate Dart FFI calls.
+A Linux VM trace confirms that native `EAGAIN` can become `EINVAL` before Dart reads `errno`.
+Thus, a UDP read can fail with an incorrect error.
+[Dart issue 38832](https://github.com/dart-lang/sdk/issues/38832) describes this missing atomicity.
+
 On Linux and macOS, TCP connection failures and socket-option failures retain available native error codes through `net.OpError` and `os.SyscallError`.
 Closed sockets retain `net.ErrClosed`.
 
