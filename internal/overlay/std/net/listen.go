@@ -56,7 +56,7 @@ func (lc *ListenConfig) Listen(ctx context.Context, network, address string) (Li
 }
 
 // ListenPacket opens a datagram socket on an address. The network is udp,
-// exactly as in ListenPacket of this package.
+// udp4, or udp6.
 func (lc *ListenConfig) ListenPacket(ctx context.Context, network, address string) (PacketConn, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err

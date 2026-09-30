@@ -577,21 +577,20 @@ func Listen(network, address string) (Listener, error) {
 // system for a free port, and LocalAddr then gives the port that the system
 // took.
 func ListenPacket(network, address string) (PacketConn, error) {
-	if network != "udp" {
-		return nil, errors.New("listen " + network + ": the subset holds udp only")
+	switch network {
+	case "udp", "udp4", "udp6":
+	default:
+		return nil, &OpError{Op: "listen", Net: network, Err: UnknownNetworkError(network)}
 	}
-	host, port, err := hostPort(address)
+	addr, err := ResolveUDPAddr(network, address)
+	if err != nil {
+		return nil, &OpError{Op: "listen", Net: network, Err: err}
+	}
+	conn, err := ListenUDP(network, addr)
 	if err != nil {
 		return nil, err
 	}
-	if host == "" {
-		host = "0.0.0.0"
-	}
-	handle, taken, cause := dart.ListenUDP(host, port)
-	if cause != "" {
-		return nil, errors.New("listen udp " + address + ": " + cause)
-	}
-	return newUDPConn(&packet{handle: handle, network: network, local: udpAddrOf(host, taken)}), nil
+	return conn, nil
 }
 
 // A Dialer opens a connection with a timeout, with a deadline, or with a

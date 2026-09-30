@@ -279,17 +279,26 @@ func ListenUDP(network string, laddr *UDPAddr) (*UDPConn, error) {
 		return nil, UnknownNetworkError(network)
 	}
 	host, port := "0.0.0.0", 0
+	if network == "udp6" {
+		host = "::"
+	}
 	if laddr != nil {
 		if len(laddr.IP) != 0 {
 			host = laddr.IP.String()
 		}
 		port = laddr.Port
 	}
+	local := udpAddrOf(host, port)
+	if laddr != nil && laddr.Zone != "" && local.IP.To4() == nil {
+		local.Zone = laddr.Zone
+		host += "%" + laddr.Zone
+	}
 	handle, taken, cause := dart.ListenUDP(host, port)
 	if cause != "" {
-		return nil, errors.New("listen " + network + ": " + cause)
+		return nil, &OpError{Op: "listen", Net: network, Addr: laddr, Err: errors.New(cause)}
 	}
-	return newUDPConn(&packet{handle: handle, network: network, local: udpAddrOf(host, taken)}), nil
+	local.Port = taken
+	return newUDPConn(&packet{handle: handle, network: network, local: local}), nil
 }
 
 // ListenMulticastUDP opens a datagram socket that reads the datagrams of a
