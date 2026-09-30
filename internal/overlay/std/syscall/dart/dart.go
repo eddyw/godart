@@ -1638,7 +1638,7 @@ func ProcWrite(pid int, p []byte) (int, string) {
 }
 
 // ProcCloseStdin closes the standard input of a process. A child that reads
-// until the end of the input then sees that end.
+// until the end of the input then sees that end. Repeated calls succeed.
 //
 // The call blocks the goroutine, thus the caller becomes an async function.
 func ProcCloseStdin(pid int) string {

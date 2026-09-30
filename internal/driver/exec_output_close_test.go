@@ -45,6 +45,7 @@ func main(){
  if err=cmd.Start();err!=nil{panic(err)}
  if _,err=io.ReadAll(output);err!=nil{panic(err)}
  if err=cmd.Wait();err!=nil{panic(err)}
+ cmd.ProcessState=nil
  _,err=output.Read(make([]byte,1));report("read",err)
  report("close",output.Close())
 }

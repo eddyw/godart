@@ -27,6 +27,7 @@ final class _Proc {
   final _Pipe out;
   final _Pipe err;
   bool waited = false;
+  bool stdinClosed = false;
 
   _Proc(this.process)
     : out = _Pipe(process.stdout),
@@ -141,6 +142,8 @@ Future<int> _fill(_Pipe pipe) {
 GoString $procCloseStdin(int pid) {
   final _Proc? proc = _procs[pid];
   if (proc == null) return _unknown(pid);
+  if (proc.stdinClosed) return _empty;
+  proc.stdinClosed = true;
   $await(
     proc.process.stdin.close().then((_) => _empty),
     (Object cause) => _cause(cause),

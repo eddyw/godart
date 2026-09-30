@@ -136,9 +136,10 @@ type Cmd struct {
 
 	startCalled int32
 
-	inPipe  bool
-	outPipe bool
-	errPipe bool
+	inPipe      bool
+	outPipe     bool
+	errPipe     bool
+	pipesClosed bool
 }
 
 // Command builds a command. A name without a separator goes through LookPath,
@@ -333,7 +334,7 @@ func (c *Cmd) watchCtx(result chan<- ctxResult) {
 			err = c.ioErr
 		}
 	default:
-		dart.ProcCloseIO(c.Process.Pid)
+		c.closePipes()
 		<-c.ioDone
 		if err == nil {
 			err = ErrWaitDelay
@@ -370,7 +371,7 @@ func (c *Cmd) awaitCopies(timer *time.Timer) error {
 	case <-c.ioDone:
 		return c.ioErr
 	case <-timer.C:
-		dart.ProcCloseIO(c.Process.Pid)
+		c.closePipes()
 		<-c.ioDone
 		return ErrWaitDelay
 	}
@@ -453,8 +454,14 @@ func (c *Cmd) Wait() error {
 	if copyErr := c.awaitCopies(timer); err == nil {
 		err = copyErr
 	}
-	dart.ProcCloseIO(c.Process.Pid)
+	c.closePipes()
 	return err
+}
+
+func (c *Cmd) closePipes() {
+	c.pipesClosed = true
+	dart.ProcCloseIO(c.Process.Pid)
+	dart.ProcCloseStdin(c.Process.Pid)
 }
 
 func (c *Cmd) Run() error {
@@ -515,9 +522,15 @@ func (c *Cmd) StdinPipe() (io.WriteCloser, error) {
 	return &stdinPipe{c: c}, nil
 }
 
-type stdinPipe struct{ c *Cmd }
+type stdinPipe struct {
+	c      *Cmd
+	closed bool
+}
 
 func (w *stdinPipe) Write(p []byte) (int, error) {
+	if w.closed || w.c.pipesClosed {
+		return 0, &os.PathError{Op: "write", Path: "|1", Err: os.ErrClosed}
+	}
 	if w.c.Process == nil {
 		return 0, errors.New("exec: not started")
 	}
@@ -529,9 +542,13 @@ func (w *stdinPipe) Write(p []byte) (int, error) {
 }
 
 func (w *stdinPipe) Close() error {
+	if w.closed || w.c.pipesClosed {
+		return &os.PathError{Op: "close", Path: "|1", Err: os.ErrClosed}
+	}
 	if w.c.Process == nil {
 		return errors.New("exec: not started")
 	}
+	w.closed = true
 	if cause := dart.ProcCloseStdin(w.c.Process.Pid); cause != "" {
 		return errors.New(cause)
 	}
@@ -570,7 +587,7 @@ type procReader struct {
 }
 
 func (r *procReader) Read(p []byte) (int, error) {
-	if r.closed || r.c.ProcessState != nil {
+	if r.closed || r.c.pipesClosed {
 		return 0, &os.PathError{Op: "read", Path: "|0", Err: os.ErrClosed}
 	}
 	if r.c.Process == nil {
@@ -586,7 +603,7 @@ func (r *procReader) Read(p []byte) (int, error) {
 	if cause != "" {
 		return n, errors.New(cause)
 	}
-	if n == 0 && (r.closed || r.c.ProcessState != nil) {
+	if n == 0 && (r.closed || r.c.pipesClosed) {
 		return 0, &os.PathError{Op: "read", Path: "|0", Err: os.ErrClosed}
 	}
 	if n == 0 && len(p) != 0 {
@@ -596,7 +613,7 @@ func (r *procReader) Read(p []byte) (int, error) {
 }
 
 func (r *procReader) Close() error {
-	if r.closed || r.c.ProcessState != nil {
+	if r.closed || r.c.pipesClosed {
 		return &os.PathError{Op: "close", Path: "|0", Err: os.ErrClosed}
 	}
 	if r.c.Process == nil {
