@@ -761,6 +761,8 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$procWrite(%s, %s)", args[0], args[1]), true
 	case "ProcCloseStdin":
 		return fmt.Sprintf("$procCloseStdin(%s)", args[0]), true
+	case "ProcCloseOutput":
+		return fmt.Sprintf("$procCloseOutput(%s, %s)", args[0], args[1]), true
 	case "ProcCloseIO":
 		return fmt.Sprintf("$procCloseIO(%s)", args[0]), true
 	case "SendSignal":

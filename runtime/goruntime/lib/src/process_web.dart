@@ -30,6 +30,8 @@ GoString $procCloseStdin(int pid) => _noSys;
 
 GoString $procCloseIO(int pid) => _noSys;
 
+GoString $procCloseOutput(int pid, bool errStream) => _noSys;
+
 (int, GoString) $procRead(int pid, Slice<GoInt> p) => (0, _noSys);
 
 (int, GoString) $procReadErr(int pid, Slice<GoInt> p) => (0, _noSys);

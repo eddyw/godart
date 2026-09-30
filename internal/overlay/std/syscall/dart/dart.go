@@ -1652,6 +1652,11 @@ func ProcCloseIO(pid int) string {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// ProcCloseOutput closes stdout, or stderr when errStream is true.
+func ProcCloseOutput(pid int, errStream bool) string {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // ProcRead reads bytes of the standard output of a process. A count of 0 with
 // no cause means the end of the stream.
 //

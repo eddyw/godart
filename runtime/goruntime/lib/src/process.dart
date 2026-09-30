@@ -175,6 +175,13 @@ GoString $procCloseIO(int pid) {
   return _empty;
 }
 
+GoString $procCloseOutput(int pid, bool errStream) {
+  final proc = _procs[pid];
+  if (proc == null) return _unknown(pid);
+  _closePipe(errStream ? proc.err : proc.out);
+  return _empty;
+}
+
 void _closePipe(_Pipe pipe) {
   if (pipe.ended) return;
   pipe.ended = true;

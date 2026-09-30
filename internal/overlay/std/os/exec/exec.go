@@ -1,5 +1,5 @@
 // Copyright 2010 The Go Authors. All rights reserved.
-// Copyright 2011 The Go Authors. All rights reserved.
+// Copyright 2009 The Go Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -132,15 +132,13 @@ type Cmd struct {
 
 	// ioDone closes when the copy of each of the 3 pipes ended.
 	ioDone chan struct{}
+	ioErr  error
 
 	startCalled int32
 
 	inPipe  bool
 	outPipe bool
 	errPipe bool
-	inDone  chan struct{}
-	outDone chan struct{}
-	errDone chan struct{}
 }
 
 // Command builds a command. A name without a separator goes through LookPath,
@@ -231,42 +229,31 @@ func (c *Cmd) Start() error {
 		return &Error{Name: c.Path, Err: errors.New(cause)}
 	}
 	c.Process = &os.Process{Pid: pid}
+	results := make(chan error, 3)
+	copies := 0
 	if !c.inPipe {
 		if c.Stdin == nil {
 			dart.ProcCloseStdin(pid)
 		} else {
-			c.inDone = make(chan struct{})
-			go func() {
-				defer close(c.inDone)
-				feed(pid, c.Stdin)
-			}()
+			copies++
+			go func() { results <- feed(pid, c.Stdin) }()
 		}
 	}
 	if !c.outPipe {
-		c.outDone = make(chan struct{})
-		go func() {
-			defer close(c.outDone)
-			drain(pid, false, c.Stdout)
-		}()
+		copies++
+		go func() { results <- drain(pid, false, c.Stdout) }()
 	}
 	if !c.errPipe {
-		c.errDone = make(chan struct{})
-		go func() {
-			defer close(c.errDone)
-			drain(pid, true, c.Stderr)
-		}()
+		copies++
+		go func() { results <- drain(pid, true, c.Stderr) }()
 	}
 	c.ioDone = make(chan struct{})
 	go func() {
 		defer close(c.ioDone)
-		if c.inDone != nil {
-			<-c.inDone
-		}
-		if c.outDone != nil {
-			<-c.outDone
-		}
-		if c.errDone != nil {
-			<-c.errDone
+		for i := 0; i < copies; i++ {
+			if err := <-results; c.ioErr == nil {
+				c.ioErr = err
+			}
 		}
 	}()
 	if (c.Cancel != nil || c.WaitDelay != 0) && c.ctx != nil && c.ctx.Done() != nil {
@@ -312,12 +299,17 @@ func (c *Cmd) watchCtx(result chan<- ctxResult) {
 		return
 	case <-timer.C:
 	}
-	if killErr := c.Process.Kill(); killErr != nil &&
-		!errors.Is(killErr, os.ErrProcessDone) {
+	killed := false
+	if killErr := c.Process.Kill(); killErr == nil {
+		killed = true
+	} else if !errors.Is(killErr, os.ErrProcessDone) {
 		err = wrappedError{prefix: "exec: killing Cmd", err: killErr}
 	}
 	select {
 	case <-c.ioDone:
+		if err == nil && !killed {
+			err = c.ioErr
+		}
 	default:
 		dart.ProcCloseIO(c.Process.Pid)
 		<-c.ioDone
@@ -325,6 +317,7 @@ func (c *Cmd) watchCtx(result chan<- ctxResult) {
 			err = ErrWaitDelay
 		}
 	}
+	c.ioErr = nil
 	result <- ctxResult{err: err}
 }
 
@@ -342,18 +335,18 @@ func (c *Cmd) awaitCopies(timer *time.Timer) error {
 	if timer == nil {
 		if c.WaitDelay == 0 {
 			<-c.ioDone
-			return nil
+			return c.ioErr
 		}
 		select {
 		case <-c.ioDone:
-			return nil
+			return c.ioErr
 		default:
 		}
 		timer = time.NewTimer(c.WaitDelay)
 	}
 	select {
 	case <-c.ioDone:
-		return nil
+		return c.ioErr
 	case <-timer.C:
 		dart.ProcCloseIO(c.Process.Pid)
 		<-c.ioDone
@@ -364,26 +357,29 @@ func (c *Cmd) awaitCopies(timer *time.Timer) error {
 // feed copies the reader into the standard input of the child, and it closes
 // that input at the end. A write failure also ends the copy, because the
 // child closed its side.
-func feed(pid int, r io.Reader) {
+func feed(pid int, r io.Reader) error {
+	defer dart.ProcCloseStdin(pid)
 	buf := make([]byte, 32*1024)
 	for {
 		n, err := r.Read(buf)
 		if n > 0 {
 			if _, cause := dart.ProcWrite(pid, buf[:n]); cause != "" {
-				break
+				return nil
 			}
 		}
+		if err == io.EOF {
+			return nil
+		}
 		if err != nil {
-			break
+			return err
 		}
 	}
-	dart.ProcCloseStdin(pid)
 }
 
-// drain copies 1 output of the child into the writer until the stream ends.
-// A nil writer drops the bytes, because an unread pipe would stop the child
-// when the pipe fills.
-func drain(pid int, errStream bool, w io.Writer) {
+// drain copies 1 output of the child and closes its pipe when the copy ends.
+// A nil writer discards output to keep the child from a full pipe.
+func drain(pid int, errStream bool, w io.Writer) error {
+	defer dart.ProcCloseOutput(pid, errStream)
 	buf := make([]byte, 32*1024)
 	for {
 		var n int
@@ -394,12 +390,19 @@ func drain(pid int, errStream bool, w io.Writer) {
 			n, cause = dart.ProcRead(pid, buf)
 		}
 		if n > 0 && w != nil {
-			if _, err := w.Write(buf[:n]); err != nil {
-				return
+			written, err := w.Write(buf[:n])
+			if err != nil {
+				return err
+			}
+			if written != n {
+				return io.ErrShortWrite
 			}
 		}
-		if cause != "" || n == 0 {
-			return
+		if cause != "" {
+			return errors.New(cause)
+		}
+		if n == 0 {
+			return nil
 		}
 	}
 }
