@@ -217,25 +217,31 @@ func (r *Root) RemoveAll(name string) error {
 
 // Rename moves a name of the root to another name of the root.
 func (r *Root) Rename(oldname, newname string) error {
-	from, err := r.resolve("rename", oldname)
+	from, err := r.resolveNoFollow("renameat", oldname)
 	if err != nil {
-		return err
+		return &LinkError{Op: "renameat", Old: oldname, New: newname, Err: underlyingError(err)}
 	}
-	to, err := r.resolve("rename", newname)
+	to, err := r.resolveNoFollow("renameat", newname)
 	if err != nil {
-		return err
+		return &LinkError{Op: "renameat", Old: oldname, New: newname, Err: underlyingError(err)}
 	}
-	return Rename(from, to)
+	if err := Rename(from, to); err != nil {
+		return &LinkError{Op: "renameat", Old: oldname, New: newname, Err: underlyingError(err)}
+	}
+	return nil
 }
 
 // Symlink makes a symbolic link of the root. The target reads as Go writes it,
 // and the check of the root runs at each read of the link.
 func (r *Root) Symlink(oldname, newname string) error {
-	full, err := r.resolve("symlink", newname)
+	full, err := r.resolveNoFollow("symlinkat", newname)
 	if err != nil {
-		return err
+		return &LinkError{Op: "symlinkat", Old: oldname, New: newname, Err: underlyingError(err)}
 	}
-	return rename(Symlink(oldname, full), newname)
+	if err := Symlink(oldname, full); err != nil {
+		return &LinkError{Op: "symlinkat", Old: oldname, New: newname, Err: underlyingError(err)}
+	}
+	return nil
 }
 
 // Chmod writes the mode of a name of the root.
