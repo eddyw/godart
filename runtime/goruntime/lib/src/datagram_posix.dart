@@ -1,3 +1,7 @@
+// Copyright 2009 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 import 'dart:convert';
 import 'dart:ffi';
 import 'dart:io';
@@ -44,6 +48,11 @@ final _getsockname = _libc
       Int Function(Int, Pointer<Void>, Pointer<Uint32>),
       int Function(int, Pointer<Void>, Pointer<Uint32>)
     >('getsockname');
+final _getpeername = _libc
+    .lookupFunction<
+      Int Function(Int, Pointer<Void>, Pointer<Uint32>),
+      int Function(int, Pointer<Void>, Pointer<Uint32>)
+    >('getpeername');
 final _errno = _libc
     .lookupFunction<Pointer<Int> Function(), Pointer<Int> Function()>(
       Platform.isMacOS ? '__error' : '__errno_location',
@@ -70,7 +79,7 @@ SocketException datagramError(int code) {
   );
 }
 
-(int, String) connectDatagram(
+(int, String, String) connectDatagram(
   RawDatagramSocket socket,
   InternetAddress remote,
   int port,
@@ -83,20 +92,31 @@ SocketException datagramError(int code) {
   try {
     _writeAddress(memory, remote, port);
     final bytes = memory.cast<Uint8>().asTypedList(length);
-    final data = ByteData.sublistView(bytes);
     if (_connect(fd, memory, length) != 0) throw datagramError(_errno().value);
     final size = (memory.cast<Uint8>() + length).cast<Uint32>()..value = length;
     if (_getsockname(fd, memory, size) != 0) {
       throw datagramError(_errno().value);
     }
-    final local = InternetAddress.fromRawAddress(
-      Uint8List.fromList(bytes.sublist(ipv6 ? 8 : 4, ipv6 ? 24 : 8)),
-    );
-    final scope = ipv6 ? data.getUint32(24, Endian.host) : 0;
-    return (fd, scope == 0 ? local.address : '${local.address}%$scope');
+    final local = _readAddress(bytes, ipv6);
+    size.value = length;
+    // Go retains the requested peer when getpeername fails, including port 0 on Linux.
+    final peer = _getpeername(fd, memory, size) == 0
+        ? _readAddress(bytes, ipv6)
+        : remote.address;
+    return (fd, local, peer);
   } finally {
     _release(memory);
   }
+}
+
+String _readAddress(Uint8List bytes, bool ipv6) {
+  final address = InternetAddress.fromRawAddress(
+    Uint8List.fromList(bytes.sublist(ipv6 ? 8 : 4, ipv6 ? 24 : 8)),
+  );
+  final scope = ipv6
+      ? ByteData.sublistView(bytes).getUint32(24, Endian.host)
+      : 0;
+  return scope == 0 ? address.address : '${address.address}%$scope';
 }
 
 int sendDatagram(int fd, Uint8List bytes) {

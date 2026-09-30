@@ -26,7 +26,7 @@ func TestUDPLocalAddress(t *testing.T) {
 	}
 	writeFile(t, filepath.Join(dir, "LICENSE"), string(license))
 	writeFile(t, filepath.Join(dir, "local_test.go"), `package udplocal
-import (. "net"; "context"; "errors"; "net/netip"; "testing"; "time")
+import (. "net"; "context"; "errors"; "net/netip"; "runtime"; "testing"; "time")
 func testableNetwork(network string) bool {
  c,err:=ListenUDP(network,&UDPAddr{IP:IPv4(127,0,0,1)})
  if err!=nil{return false};c.Close();return true
@@ -157,6 +157,49 @@ func TestCloseRebind(t *testing.T) {
   client.Close();server.Close()
  }
 }
+func TestUDPWildcardPeer(t *testing.T) {
+ for _, tt := range []struct{network string; ip IP; host string; explicit bool}{
+  {"udp", nil, "127.0.0.1", false}, {"udp", IPv4zero, "127.0.0.1", false}, {"udp", IPv6zero, "::1", false},
+  {"udp4", nil, "127.0.0.1", false}, {"udp4", IPv4zero, "127.0.0.1", false},
+  {"udp6", nil, "::1", false}, {"udp6", IPv4zero, "::1", false}, {"udp6", IPv6zero, "::1", false},
+  {"udp", nil, "::1", true}, {"udp", IPv4zero, "::1", true},
+ } {
+  for _, local := range []*UDPAddr{nil, {IP: ParseIP(tt.host)}} {
+   if tt.explicit && local == nil { continue }
+   server, err := ListenUDP("udp", &UDPAddr{IP: ParseIP(tt.host)})
+   if err != nil { t.Fatal(err) }
+   remote := server.LocalAddr().(*UDPAddr)
+   client, err := DialUDP(tt.network, local, &UDPAddr{IP: tt.ip, Port: remote.Port})
+   if err != nil { server.Close(); t.Fatal(err) }
+   if client.RemoteAddr().String() != remote.String() || !client.LocalAddr().(*UDPAddr).IP.Equal(remote.IP) {
+    t.Fatalf("%s %v: local=%v remote=%v, want peer %v", tt.network, tt.ip, client.LocalAddr(), client.RemoteAddr(), remote)
+   }
+   client.SetDeadline(time.Now().Add(time.Second))
+   server.SetDeadline(time.Now().Add(time.Second))
+   if _, err := client.Write([]byte("ping")); err != nil { t.Fatal(err) }
+   var b [4]byte
+   n, from, err := server.ReadFromUDP(b[:])
+   if n != 4 || err != nil || string(b[:]) != "ping" { t.Fatalf("server read: %d %v %q", n, err, b) }
+   if _, err := server.WriteToUDP([]byte("pong"), from); err != nil { t.Fatal(err) }
+   n, err = client.Read(b[:])
+   if n != 4 || err != nil || string(b[:]) != "pong" { t.Fatalf("client read: %d %v %q", n, err, b) }
+   client.Close()
+   server.Close()
+  }
+ }
+}
+
+func TestUDPZeroPortPeer(t *testing.T) {
+ if runtime.GOOS != "linux" { t.Skip("Linux permits a UDP peer with port 0") }
+ for _, host := range []string{"127.0.0.1", "::1"} {
+  remote := &UDPAddr{IP: ParseIP(host)}
+  c, err := DialUDP("udp", nil, remote)
+  if err != nil { t.Fatal(err) }
+  if c.RemoteAddr().String() != remote.String() { t.Fatalf("remote = %v, want %v", c.RemoteAddr(), remote) }
+  if err := c.Close(); err != nil { t.Fatal(err) }
+ }
+}
+
 `)
 	t.Log(run(t, dir, "go", "test", "-short="+strconv.FormatBool(testing.Short()), "-v", "."))
 	stats, err := driver.BuildWithStats(driver.Options{Dir: dir, Patterns: []string{"."}, Out: out, Runtime: runtimeDir(t), Tests: true})
@@ -175,9 +218,9 @@ func TestCloseRebind(t *testing.T) {
 			}
 			compareUpstream(t, "udp-local", "net", "^TestUDPConnLocalAndRemoteNames$", target, filepath.Join(runtime.GOROOT(), "src/net"), result.Text, result.Exit, false)
 			if target == "vm" {
-				t.Log(run(t, dir, "dart", filepath.Join(out, stats.Binaries[0].Entry), "-test.v", "-test.short="+strconv.FormatBool(testing.Short()), "-test.run=^Test(LocalBind|CloseRebind|DialerUDP|DialerUDPCanceled|DialerUDPInvalidLocal)$"))
+				t.Log(run(t, dir, "dart", filepath.Join(out, stats.Binaries[0].Entry), "-test.v", "-test.short="+strconv.FormatBool(testing.Short()), "-test.run=^Test(LocalBind|CloseRebind|DialerUDP|DialerUDPCanceled|DialerUDPInvalidLocal|UDPWildcardPeer|UDPZeroPortPeer)$"))
 			} else {
-				result = runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=^Test(LocalBind|CloseRebind|DialerUDP|DialerUDPCanceled|DialerUDPInvalidLocal)$"})
+				result = runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=^Test(LocalBind|CloseRebind|DialerUDP|DialerUDPCanceled|DialerUDPInvalidLocal|UDPWildcardPeer|UDPZeroPortPeer)$"})
 				t.Log(result.Text)
 				if result.Exit != 0 {
 					t.Fatal(result.Text)

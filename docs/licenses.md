@@ -149,6 +149,8 @@ UDP listener and destination input validation follows Go `src/net/ipsock_posix.g
 and `src/net/udpsock.go` with their BSD notices.
 Socket I/O errors and zero-value socket operations follow Go `src/net/net.go`,
 `tcpsock.go`, `udpsock.go`, `udpsock_posix.go`, and `unixsock.go`.
+UDP peer addresses follow Go `src/net/sock_posix.go`.
+The native datagram adapter preserves its BSD notice.
 Native socket error wrappers follow
 `src/net/fd_posix.go`, `fd_unix.go`, and `fd_windows.go`.
 The overlays retain their BSD notices.

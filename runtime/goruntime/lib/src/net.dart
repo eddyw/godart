@@ -1504,7 +1504,7 @@ Future<_Packet> _bindShared(String host, int port) async {
 ///
 /// The socket drops a datagram of another source, exactly as a connected
 /// socket of the system does.
-(int, GoString, int, GoString, int, GoString) $dialUDP(
+(int, GoString, int, GoString, int, GoString, GoString) $dialUDP(
   GoString host,
   int port,
   GoString localHost,
@@ -1514,10 +1514,10 @@ Future<_Packet> _bindShared(String host, int port) async {
     _connectUDP(host.toDartString(), port, localHost.toDartString(), localPort),
     (Object cause) => throw cause,
   );
-  return (-1, _empty, 0, _empty, 0, _empty);
+  return (-1, _empty, 0, _empty, 0, _empty, _empty);
 }
 
-Future<(int, GoString, int, GoString, int, GoString)> _connectUDP(
+Future<(int, GoString, int, GoString, int, GoString, GoString)> _connectUDP(
   String host,
   int port,
   String localHost,
@@ -1546,12 +1546,13 @@ Future<(int, GoString, int, GoString, int, GoString)> _connectUDP(
       throw const OSError('invalid argument', 22);
     }
     final _Packet s = _Packet(socket);
+    s.remoteHost = target.address;
     if (Platform.isLinux || Platform.isMacOS) {
       final local = connectDatagram(socket, target, port);
       s.nativeFD = local.$1;
       s.localHost = local.$2;
+      s.remoteHost = local.$3;
     }
-    s.remoteHost = target.address;
     s.remotePort = port;
     return (
       _packetSlot(s),
@@ -1560,6 +1561,7 @@ Future<(int, GoString, int, GoString, int, GoString)> _connectUDP(
       _empty,
       0,
       _empty,
+      GoString.fromString(s.remoteHost),
     );
   } catch (cause) {
     socket?.close();
@@ -1570,6 +1572,7 @@ Future<(int, GoString, int, GoString, int, GoString)> _connectUDP(
       _cause(cause),
       _socketErrno(cause),
       GoString.fromString(call),
+      _empty,
     );
   }
 }
