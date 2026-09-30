@@ -988,7 +988,7 @@ func MkdirAll(name string, perm FileMode) error {
 		if info.IsDir() {
 			return nil
 		}
-		return &PathError{Op: "mkdir", Path: name, Err: &sysError{text: "not a directory"}}
+		return &PathError{Op: "mkdir", Path: name, Err: syscall.ENOTDIR}
 	}
 	i := len(name)
 	for i > 0 && IsPathSeparator(name[i-1]) {

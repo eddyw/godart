@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"syscall"
 )
 
 func main() {
@@ -16,6 +17,12 @@ func main() {
 	path := filepath.Join(root, "file")
 	if err := os.WriteFile(path, nil, 0600); err != nil {
 		panic(err)
+	}
+	for _, target := range []string{path, path + "/child", path + "/child/grandchild"} {
+		err := os.MkdirAll(target, 0700)
+		var pe *os.PathError
+		fields := errors.As(err, &pe) && pe.Op == "mkdir" && pe.Path == path
+		fmt.Println("mkdirall file", errors.Is(err, syscall.ENOTDIR), fields)
 	}
 	for _, state := range []string{"nil", "closed-file", "closed-dir", "read-closed-dir", "regular"} {
 		for _, method := range []string{"ReadDir", "Readdir", "Readdirnames"} {
