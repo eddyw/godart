@@ -895,23 +895,39 @@ func (d *Dialer) DialUDP(ctx context.Context, network string, laddr, raddr netip
 		panic("nil context")
 	}
 	dialer := *d
-	switch network {
-	case "udp", "udp4", "udp6":
-	default:
-		return nil, &OpError{Op: "dial", Net: network, Source: UDPAddrFromAddrPort(laddr), Addr: UDPAddrFromAddrPort(raddr), Err: UnknownNetworkError(network)}
+	if dialer.Timeout != 0 {
+		inner, cancel := context.WithTimeout(ctx, dialer.Timeout)
+		defer cancel()
+		ctx = inner
 	}
-	if !raddr.IsValid() {
-		return nil, errors.New("dial " + network + ": the address is missing")
+	if !dialer.Deadline.IsZero() {
+		inner, cancel := context.WithDeadline(ctx, dialer.Deadline)
+		defer cancel()
+		ctx = inner
 	}
-	dialer.LocalAddr = nil
-	if laddr.IsValid() {
-		dialer.LocalAddr = UDPAddrFromAddrPort(laddr)
+	if dialer.Cancel != nil {
+		inner, cancel := context.WithCancel(ctx)
+		defer cancel()
+		go func() {
+			select {
+			case <-dialer.Cancel:
+				cancel()
+			case <-inner.Done():
+			}
+		}()
+		ctx = inner
 	}
-	c, err := dialer.DialContext(ctx, network, UDPAddrFromAddrPort(raddr).String())
+	local, remote := UDPAddrFromAddrPort(laddr), UDPAddrFromAddrPort(raddr)
+	// Native UDP bind and connect errors precede context cancellation.
+	c, err := DialUDP(network, local, remote)
 	if err != nil {
 		return nil, err
 	}
-	return c.(*UDPConn), nil
+	if err := ctx.Err(); err != nil {
+		c.Close()
+		return nil, &OpError{Op: "dial", Net: network, Source: local, Addr: remote, Err: mapErr(err)}
+	}
+	return c, nil
 }
 
 // DialUnix opens a connection of the Unix domain with the context. The

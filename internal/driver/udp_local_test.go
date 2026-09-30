@@ -26,7 +26,7 @@ func TestUDPLocalAddress(t *testing.T) {
 	}
 	writeFile(t, filepath.Join(dir, "LICENSE"), string(license))
 	writeFile(t, filepath.Join(dir, "local_test.go"), `package udplocal
-import (. "net"; "context"; "errors"; "net/netip"; "os"; "runtime"; "testing"; "time")
+import (. "net"; "context"; "errors"; "net/netip"; "os"; "runtime"; "syscall"; "testing"; "time")
 func testableNetwork(network string) bool {
  c,err:=ListenUDP(network,&UDPAddr{IP:IPv4(127,0,0,1)})
  if err!=nil{return false};c.Close();return true
@@ -275,6 +275,67 @@ func TestUDPZeroPortFallback(t *testing.T) {
  }
 }
 
+func TestTypedUDPContext(t *testing.T) {
+ for _, network := range []string{"udp4", "udp6"} {
+  ip := IPv4(127,0,0,1)
+  if network == "udp6" { ip = IPv6loopback }
+  server, err := ListenUDP(network, &UDPAddr{IP: ip})
+  if err != nil { t.Fatal(err) }
+  defer server.Close()
+  peer := server.LocalAddr().(*UDPAddr).AddrPort()
+  for _, mode := range []string{"active", "canceled", "deadline", "timeout"} {
+   for _, occupied := range []bool{false, true} {
+    ctx := context.Background()
+    d := Dialer{LocalAddr: &TCPAddr{IP: IPv6loopback, Port: -1}}
+    var want error
+    switch mode {
+    case "canceled": var cancel context.CancelFunc; ctx, cancel = context.WithCancel(ctx); cancel(); want = context.Canceled
+    case "deadline": d.Deadline = time.Unix(1,0); want = context.DeadlineExceeded
+    case "timeout": d.Timeout = -time.Second; want = context.DeadlineExceeded
+    }
+    local := netip.AddrPort{}
+    if occupied { local = peer; want = syscall.EADDRINUSE }
+    c, err := d.DialUDP(ctx, network, local, peer)
+    if want != nil {
+     if c != nil { c.Close(); t.Fatal("error returned a connection") }
+     var op *OpError
+     if !errors.Is(err, want) || !errors.As(err, &op) || op.Op != "dial" || op.Net != network || op.Source == nil || op.Source.String() != UDPAddrFromAddrPort(local).String() || op.Addr.String() != UDPAddrFromAddrPort(peer).String() { t.Fatalf("%s %s occupied=%v: %T %v, want %v",network,mode,occupied,err,err,want) }
+     continue
+    }
+    if err != nil { t.Fatal(err) }
+    c.SetDeadline(time.Now().Add(time.Second))
+    server.SetDeadline(time.Now().Add(time.Second))
+    if _, err := c.Write([]byte("ok")); err != nil { t.Fatal(err) }
+    var b [2]byte
+    n, from, err := server.ReadFromUDP(b[:])
+    if n != 2 || err != nil || string(b[:]) != "ok" || from.String() != c.LocalAddr().String() { t.Fatalf("read: %d %v %v %q", n, from, err, b) }
+    c.Close()
+   }
+  }
+ }
+}
+func TestTypedUDPZeroAddress(t *testing.T) {
+ for _, network := range []string{"udp", "udp4", "udp6"} {
+  for _, canceled := range []bool{false,true} {
+   ctx, cancel := context.WithCancel(context.Background())
+   if canceled { cancel() }
+   c, err := new(Dialer).DialUDP(ctx, network, netip.AddrPort{}, netip.AddrPort{})
+   cancel()
+   var want error
+   if runtime.GOOS == "darwin" { want = syscall.EADDRNOTAVAIL } else if canceled { want = context.Canceled }
+   if want != nil {
+    if c != nil { c.Close(); t.Fatal("error returned a connection") }
+    var op *OpError
+    if !errors.Is(err,want) || !errors.As(err,&op) || op.Source == nil || op.Source.String() != ":0" || op.Addr.String() != ":0" { t.Fatalf("%s canceled=%v: %v, want %v",network,canceled,err,want) }
+    continue
+   }
+   if err != nil { t.Fatal(err) }
+   if c.RemoteAddr().String() != ":0" { t.Fatalf("remote = %v",c.RemoteAddr()) }
+   c.Close()
+  }
+ }
+}
+
 func TestUDPZeroPortPeer(t *testing.T) {
  if runtime.GOOS != "linux" { t.Skip("Linux permits a UDP peer with port 0") }
  for _, host := range []string{"127.0.0.1", "::1"} {
@@ -304,9 +365,9 @@ func TestUDPZeroPortPeer(t *testing.T) {
 			}
 			compareUpstream(t, "udp-local", "net", "^TestUDPConnLocalAndRemoteNames$", target, filepath.Join(runtime.GOROOT(), "src/net"), result.Text, result.Exit, false)
 			if target == "vm" {
-				t.Log(run(t, dir, "dart", filepath.Join(out, stats.Binaries[0].Entry), "-test.v", "-test.short="+strconv.FormatBool(testing.Short()), "-test.run=^Test(LocalBind|CloseRebind|DialerUDP|DialerUDPCanceled|DialerUDPInvalidLocal|UDPWildcardPeer|UDPZeroPortPeer|UDPIPv4LocalZone|UDPIPv4RemoteZone|UDPZeroPortFallback)$"))
+				t.Log(run(t, dir, "dart", filepath.Join(out, stats.Binaries[0].Entry), "-test.v", "-test.short="+strconv.FormatBool(testing.Short()), "-test.run=^Test(LocalBind|CloseRebind|DialerUDP|DialerUDPCanceled|DialerUDPInvalidLocal|UDPWildcardPeer|UDPZeroPortPeer|UDPIPv4LocalZone|UDPIPv4RemoteZone|UDPZeroPortFallback|TypedUDPContext|TypedUDPZeroAddress)$"))
 			} else {
-				result = runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=^Test(LocalBind|CloseRebind|DialerUDP|DialerUDPCanceled|DialerUDPInvalidLocal|UDPWildcardPeer|UDPZeroPortPeer|UDPIPv4LocalZone|UDPIPv4RemoteZone|UDPZeroPortFallback)$"})
+				result = runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=^Test(LocalBind|CloseRebind|DialerUDP|DialerUDPCanceled|DialerUDPInvalidLocal|UDPWildcardPeer|UDPZeroPortPeer|UDPIPv4LocalZone|UDPIPv4RemoteZone|UDPZeroPortFallback|TypedUDPContext|TypedUDPZeroAddress)$"})
 				t.Log(result.Text)
 				if result.Exit != 0 {
 					t.Fatal(result.Text)
