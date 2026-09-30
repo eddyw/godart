@@ -145,7 +145,7 @@ UDP local-address and datagram tests retain assertions from Go
 `src/net/udpsock_test.go`
 and its BSD notice. The datagram adapter also retains `flaky` and
 `SkipFlaky` from `src/internal/testenv/testenv.go` with its BSD notice.
-UDP listener input validation follows Go `src/net/ipsock_posix.go`
+UDP listener and destination input validation follows Go `src/net/ipsock_posix.go`
 and `src/net/udpsock.go` with their BSD notices.
 Socket I/O errors and zero-value socket operations follow Go `src/net/net.go`,
 `tcpsock.go`, `udpsock.go`, `udpsock_posix.go`, and `unixsock.go`.

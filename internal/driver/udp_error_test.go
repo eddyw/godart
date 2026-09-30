@@ -244,6 +244,49 @@ func TestUDPWritePorts(t *testing.T) {
  }
 }
 
+func TestUDPWriteAddresses(t *testing.T) {
+ for _, network := range []string{"udp4", "udp6"} {
+  local := &net.UDPAddr{IP: net.IPv4(127, 0, 0, 1)}
+  want := "non-IPv4 address"
+  if network == "udp6" { local.IP, want = net.IPv6loopback, "non-IPv6 address" }
+  server, err := net.ListenUDP(network, local)
+  if err != nil { t.Fatal(err) }
+  defer server.Close()
+  ips := []net.IP{{1}, {1, 2, 3}, {1, 2, 3, 4, 5}, make(net.IP, 17)}
+  if network == "udp4" { ips = append(ips, net.IPv6loopback) }
+  for _, state := range []string{"bound", "connected", "closed", "deadline"} {
+   var c *net.UDPConn
+   if state == "connected" { c, err = net.DialUDP(network, nil, server.LocalAddr().(*net.UDPAddr)) } else { c, err = net.ListenUDP(network, local) }
+   if err != nil { t.Fatal(err) }
+   source := c.LocalAddr().String()
+   if state == "closed" { c.Close() }
+   if state == "deadline" { c.SetWriteDeadline(time.Unix(1, 0)) }
+   for _, ip := range ips {
+    for _, port := range []int{9, -1} {
+     addr := &net.UDPAddr{IP: ip, Port: port}
+     for _, api := range []string{"WriteTo", "WriteToUDP"} {
+      var n int
+      if api == "WriteTo" { n, err = c.WriteTo(nil, addr) } else { n, err = c.WriteToUDP(nil, addr) }
+      var op *net.OpError
+      if n != 0 || !errors.As(err, &op) || op.Op != "write" || op.Net != network || op.Addr != addr || op.Source.String() != source {
+       t.Fatalf("%s %s %s: incorrect result: %d %v", network, state, api, n, err)
+      }
+      if state == "connected" {
+       if !errors.Is(err, net.ErrWriteToConnected) { t.Fatalf("incorrect connected error: %v", err) }
+      } else {
+       var cause *net.AddrError
+       if !errors.As(err, &cause) || cause.Err != want || cause.Addr != ip.String() {
+        t.Fatalf("%s %s %s: incorrect address error: %v", network, state, api, err)
+       }
+      }
+     }
+    }
+   }
+   c.Close()
+  }
+ }
+}
+
 `)
 	source := selectedUpstreamSource(t, filepath.Join(runtime.GOROOT(), "src/net/udpsock_test.go"), []string{"TestUDPZeroBytePayload", "TestUDPZeroByteBuffer", "TestUDPReadSizeError", "TestUDPReadTimeout"})
 	source = strings.ReplaceAll(source, `"internal/testenv"`, `"example.com/udperrors/testenv"`)
@@ -283,7 +326,7 @@ func TestUDPWritePorts(t *testing.T) {
 				r = runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, args)
 			}
 			compareUpstream(t, "udp-datagram-errors", "net", filter, target, filepath.Join(runtime.GOROOT(), "src/net"), r.Text, r.Exit, false)
-			args = []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=^(TestUDPErrorCodes|TestUDPReadError|TestUDPQueuedDatagrams|TestUDPConcurrentReads|TestUDPBlockedReads|TestConnectedWriteDestination|TestUDPDestinationErrors|TestUDPWritePorts)$"}
+			args = []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=^(TestUDPErrorCodes|TestUDPReadError|TestUDPQueuedDatagrams|TestUDPConcurrentReads|TestUDPBlockedReads|TestConnectedWriteDestination|TestUDPDestinationErrors|TestUDPWritePorts|TestUDPWriteAddresses)$"}
 			if target == "vm" {
 				r = programOutcome(t, dir, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, args...)...)
 			} else {

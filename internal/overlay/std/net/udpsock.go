@@ -138,6 +138,15 @@ func (c *UDPConn) writeTo(b []byte, addr *UDPAddr) (int, error) {
 	if addr == nil {
 		return 0, errMissingAddress
 	}
+	ip := addr.IP
+	ipv4 := c.p.local.IP.To4() != nil
+	if len(ip) != 0 && (ip.To16() == nil || ipv4 && ip.To4() == nil) {
+		cause := "non-IPv6 address"
+		if ipv4 {
+			cause = "non-IPv4 address"
+		}
+		return 0, &AddrError{Err: cause, Addr: ip.String()}
+	}
 	host := addr.IP.String()
 	if len(addr.IP) == 0 {
 		host = "127.0.0.1"
