@@ -24,8 +24,6 @@ type watch struct {
 
 var (
 	watches = map[int]*watch{}
-	// all holds each channel that Notify took with no signal.
-	all = map[chan<- os.Signal]bool{}
 	// ignored marks a signal that Ignore turned off.
 	ignored = map[int]bool{}
 )
@@ -81,12 +79,6 @@ func forward(w *watch) {
 			default:
 			}
 		}
-		for c := range all {
-			select {
-			case c <- sig:
-			default:
-			}
-		}
 	}
 }
 
@@ -99,9 +91,8 @@ func Notify(c chan<- os.Signal, sig ...os.Signal) {
 		panic("os/signal: Notify using nil channel")
 	}
 	if len(sig) == 0 {
-		all[c] = true
 		for _, s := range catchable {
-			start(int(s))
+			Notify(c, s)
 		}
 		return
 	}
@@ -119,10 +110,9 @@ func Notify(c chan<- os.Signal, sig ...os.Signal) {
 
 // Stop takes the channel out of each watch.
 func Stop(c chan<- os.Signal) {
-	delete(all, c)
 	for n, w := range watches {
 		delete(w.users, c)
-		if len(w.users) == 0 && len(all) == 0 && !ignored[n] {
+		if len(w.users) == 0 && !ignored[n] {
 			reset(n)
 		}
 	}
@@ -138,7 +128,6 @@ func Reset(sig ...os.Signal) {
 		for n := range watches {
 			reset(n)
 		}
-		clear(all)
 		return
 	}
 	for _, s := range sig {
@@ -153,16 +142,20 @@ func reset(n int) {
 	if w == nil {
 		return
 	}
+	clear(w.users)
+	if ignored[n] {
+		return
+	}
 	delete(watches, n)
 	dart.SignalStop(w.id)
 }
 
-// Ignore turns each named signal off. With no signal it ignores each signal
-// that Notify or Ignore named.
+// Ignore removes registrations for each named signal and ignores that signal.
+// With no signal it ignores all signals that the runtime can watch.
 func Ignore(sig ...os.Signal) {
 	if len(sig) == 0 {
-		for n := range watches {
-			ignored[n] = true
+		for _, s := range catchable {
+			Ignore(s)
 		}
 		return
 	}
@@ -172,7 +165,9 @@ func Ignore(sig ...os.Signal) {
 			continue
 		}
 		ignored[n] = true
-		start(n)
+		if w := start(n); w != nil {
+			clear(w.users)
+		}
 	}
 }
 
