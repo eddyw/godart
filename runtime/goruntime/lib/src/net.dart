@@ -1689,6 +1689,11 @@ Future<(int, GoString, int)> _sendTo(
   final int n;
   if (s.nativeFD >= 0) {
     n = sendDatagram(s.nativeFD, bytes);
+  } else if (host.isEmpty) {
+    if (!Platform.isLinux && !Platform.isMacOS) {
+      return (0, GoString.fromString('destination address required'), 0);
+    }
+    n = sendUnconnectedDatagram(s.socket, bytes);
   } else {
     final address = await _address(host);
     if (port < 0 || port > 65535) {

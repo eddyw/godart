@@ -40,6 +40,42 @@ func TestUDPErrorCodes(t *testing.T){
  })}
  })}
 }
+func TestUDPUnconnectedWrite(t *testing.T) {
+ for _, host := range []string{"127.0.0.1", "::1"} {
+  for _, state := range []string{"open", "deadline", "closed"} {
+   c, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.ParseIP(host)})
+   if err != nil { t.Fatal(err) }
+   local := c.LocalAddr()
+   if state == "deadline" { c.SetWriteDeadline(time.Unix(1,0)) }
+   if state == "closed" { c.Close() }
+   for _, payload := range [][]byte{nil, []byte("hello")} {
+    n, err := c.Write(payload)
+    want := error(syscall.EDESTADDRREQ)
+    if state == "deadline" { want = os.ErrDeadlineExceeded }
+    if state == "closed" { want = net.ErrClosed }
+    if n != 0 || !errors.Is(err, want) { t.Fatalf("%s %s length %d: %d %T %v, want %v", host, state, len(payload), n, err, err, want) }
+    var op *net.OpError
+    if !errors.As(err, &op) || op.Op != "write" || op.Net != "udp" || op.Source.String() != local.String() || op.Addr != nil { t.Fatalf("operation error: %#v", op) }
+    var call *os.SyscallError
+    if state == "open" && (!errors.As(err, &call) || call.Syscall != "write") { t.Fatalf("syscall error: %v", err) }
+   }
+   if state != "closed" {
+    c.SetWriteDeadline(time.Now().Add(time.Second))
+    server, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.ParseIP(host)})
+    if err != nil { t.Fatal(err) }
+    server.SetReadDeadline(time.Now().Add(time.Second))
+    n, err := c.WriteToUDP([]byte("ok"), server.LocalAddr().(*net.UDPAddr))
+    if n != 2 || err != nil { t.Fatalf("write after error: %d %v", n, err) }
+    var b [2]byte
+    n, from, err := server.ReadFromUDP(b[:])
+    if n != 2 || err != nil || string(b[:]) != "ok" || from.String() != local.String() { t.Fatalf("read after error: %d %v %v %q", n, from, err, b) }
+    server.Close()
+    c.Close()
+   }
+  }
+ }
+}
+
 func TestUDPReadError(t *testing.T){
  for _,tc:=range []struct{name,call string}{ {"read","read"},{"readfrom","recvfrom"} }{t.Run(tc.name,func(t *testing.T){
   p,e:=net.ListenPacket("udp","127.0.0.1:0");if e!=nil{t.Fatal(e)}
@@ -363,7 +399,7 @@ func TestUDPWildcardDestination(t *testing.T) {
 				r = runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, args)
 			}
 			compareUpstream(t, "udp-datagram-errors", "net", filter, target, filepath.Join(runtime.GOROOT(), "src/net"), r.Text, r.Exit, false)
-			args = []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=^(TestUDPErrorCodes|TestUDPReadError|TestUDPQueuedDatagrams|TestUDPConcurrentReads|TestUDPBlockedReads|TestConnectedWriteDestination|TestUDPDestinationErrors|TestUDPWritePorts|TestUDPWriteAddresses|TestUDPWildcardDestination)$"}
+			args = []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=^(TestUDPErrorCodes|TestUDPReadError|TestUDPQueuedDatagrams|TestUDPConcurrentReads|TestUDPBlockedReads|TestConnectedWriteDestination|TestUDPDestinationErrors|TestUDPWritePorts|TestUDPWriteAddresses|TestUDPWildcardDestination|TestUDPUnconnectedWrite)$"}
 			if target == "vm" {
 				r = programOutcome(t, dir, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, args...)...)
 			} else {

@@ -119,6 +119,10 @@ String _readAddress(Uint8List bytes, bool ipv6) {
   return scope == 0 ? address.address : '${address.address}%$scope';
 }
 
+int sendUnconnectedDatagram(RawDatagramSocket socket, Uint8List bytes) {
+  return sendDatagram(_datagramFD(socket), bytes);
+}
+
 int sendDatagram(int fd, Uint8List bytes) {
   final memory = _allocate(bytes.isEmpty ? 1 : bytes.length);
   if (memory == nullptr) throw datagramError(12);
