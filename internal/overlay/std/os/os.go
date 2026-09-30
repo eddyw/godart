@@ -1163,7 +1163,10 @@ func tempName(dir, pattern string) string {
 			break
 		}
 	}
-	return dir + dart.PathSeparator() + prefix + itoa(dart.NowNanos()) + itoa(int64(tempSeq)) + suffix
+	if len(dir) == 0 || !IsPathSeparator(dir[len(dir)-1]) {
+		dir += dart.PathSeparator()
+	}
+	return dir + prefix + itoa(dart.NowNanos()) + itoa(int64(tempSeq)) + suffix
 }
 
 func itoa(v int64) string {
