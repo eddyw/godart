@@ -50,7 +50,8 @@ func (p *Process) Signal(sig Signal) error {
 	if p.done {
 		return ErrProcessDone
 	}
-	if number == 0 {
+	// Dart cannot express signal 0 or macOS SIGIO.
+	if number == 0 || number == syscall.SIGIO {
 		err := syscall.Kill(p.Pid, number)
 		if err == syscall.ESRCH {
 			return ErrProcessDone

@@ -72,6 +72,9 @@ Other native hosts and browsers do not support `os.File.Fd`.
 returns an explicit error because inherited listener descriptors remain unsupported.
 
 Linux and macOS support `syscall.Kill` and `syscall.Getpid` through native APIs.
+`os.Process.Signal` supports the standard signals that Dart exposes, plus SIGIO and the native signal-0 query.
+SIGSTOP and SIGCONT preserve child stop and resume behavior.
+Other platform-specific signal numbers remain unsupported by `os.Process.Signal`.
 Signal watches support SIGHUP, SIGINT, SIGTERM, SIGUSR1, SIGUSR2, and SIGWINCH.
 Standalone native programs ignore SIGUSR1 and SIGUSR2 before registration, as Go does.
 Dart-hosted libraries do not install these default handlers.
@@ -79,6 +82,7 @@ Dart-hosted libraries do not install these default handlers.
 Concurrent `Stop` and signal delivery can lose a pending signal.
 Shell children can inherit Dart's ignored SIGPIPE disposition on Linux and macOS.
 The same child terminates on SIGPIPE under native Go.
+A child can also inherit a blocked SIGTTOU mask from Dart on these hosts.
 Process-state text preserves the actual exit result, but child signal disposition parity remains incomplete.
 Other native signal watches remain unsupported. Browser builds cannot send
 or receive operating system signals.

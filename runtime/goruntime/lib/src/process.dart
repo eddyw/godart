@@ -214,8 +214,7 @@ void _closePipe(_Pipe pipe) {
 
 /// Sends a signal to a process by its id.
 GoString $killPid(int pid, int number) {
-  final ProcessSignal? sig =
-      _signalOf(number) ?? (number == 9 ? ProcessSignal.sigkill : null);
+  final ProcessSignal? sig = _signalOf(number);
   if (sig == null) {
     return GoString.fromString('signal $number cannot be sent');
   }
@@ -276,13 +275,39 @@ ProcessSignal? _signalOf(int number) => switch (number) {
   1 => ProcessSignal.sighup,
   2 => ProcessSignal.sigint,
   3 => ProcessSignal.sigquit,
+  4 => ProcessSignal.sigill,
+  5 => ProcessSignal.sigtrap,
   6 => ProcessSignal.sigabrt,
+  7 when Platform.isLinux || Platform.isAndroid => ProcessSignal.sigbus,
+  8 => ProcessSignal.sigfpe,
+  9 => ProcessSignal.sigkill,
+  10 when Platform.isLinux || Platform.isAndroid => ProcessSignal.sigusr1,
+  10 when Platform.isMacOS || Platform.isIOS => ProcessSignal.sigbus,
+  11 => ProcessSignal.sigsegv,
+  12 when Platform.isLinux || Platform.isAndroid => ProcessSignal.sigusr2,
+  12 when Platform.isMacOS || Platform.isIOS => ProcessSignal.sigsys,
+  13 => ProcessSignal.sigpipe,
   14 => ProcessSignal.sigalrm,
   15 => ProcessSignal.sigterm,
+  16 when Platform.isMacOS || Platform.isIOS => ProcessSignal.sigurg,
+  17 when Platform.isLinux || Platform.isAndroid => ProcessSignal.sigchld,
+  17 when Platform.isMacOS || Platform.isIOS => ProcessSignal.sigstop,
+  18 when Platform.isLinux || Platform.isAndroid => ProcessSignal.sigcont,
+  18 when Platform.isMacOS || Platform.isIOS => ProcessSignal.sigtstp,
+  19 when Platform.isLinux || Platform.isAndroid => ProcessSignal.sigstop,
+  19 when Platform.isMacOS || Platform.isIOS => ProcessSignal.sigcont,
+  20 when Platform.isLinux || Platform.isAndroid => ProcessSignal.sigtstp,
+  20 when Platform.isMacOS || Platform.isIOS => ProcessSignal.sigchld,
+  21 => ProcessSignal.sigttin,
+  22 => ProcessSignal.sigttou,
+  23 when Platform.isLinux || Platform.isAndroid => ProcessSignal.sigurg,
+  24 => ProcessSignal.sigxcpu,
+  25 => ProcessSignal.sigxfsz,
+  26 => ProcessSignal.sigvtalrm,
+  27 => ProcessSignal.sigprof,
   28 => ProcessSignal.sigwinch,
-  10 when Platform.isLinux || Platform.isAndroid => ProcessSignal.sigusr1,
-  12 when Platform.isLinux || Platform.isAndroid => ProcessSignal.sigusr2,
   30 when Platform.isMacOS || Platform.isIOS => ProcessSignal.sigusr1,
+  31 when Platform.isLinux || Platform.isAndroid => ProcessSignal.sigsys,
   31 when Platform.isMacOS || Platform.isIOS => ProcessSignal.sigusr2,
   _ => null,
 };
