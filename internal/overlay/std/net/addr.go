@@ -511,9 +511,10 @@ func tcpSocketAddrOf(host string, port int) *TCPAddr {
 
 // udpAddrOf builds a UDPAddr from a host text and a port.
 func udpAddrOf(host string, port int) *UDPAddr {
+	host, zone := splitHostZone(host)
 	ip := ParseIP(host)
 	if !strings.Contains(host, ":") {
 		ip = ip.To4()
 	}
-	return &UDPAddr{IP: ip, Port: port}
+	return &UDPAddr{IP: ip, Port: port, Zone: zone}
 }
