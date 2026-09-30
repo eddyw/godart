@@ -9,6 +9,7 @@ package net
 import (
 	"errors"
 	"net/netip"
+	"os"
 	"syscall"
 	"syscall/dart"
 	"time"
@@ -276,26 +277,44 @@ func ListenUDP(network string, laddr *UDPAddr) (*UDPConn, error) {
 	switch network {
 	case "udp", "udp4", "udp6":
 	default:
-		return nil, UnknownNetworkError(network)
+		var addr Addr
+		if laddr != nil {
+			addr = laddr
+		}
+		return nil, &OpError{Op: "listen", Net: network, Addr: addr, Err: UnknownNetworkError(network)}
 	}
-	host, port := "0.0.0.0", 0
+	if laddr == nil {
+		laddr = &UDPAddr{}
+	}
+	fail := func(err error) (*UDPConn, error) {
+		return nil, &OpError{Op: "listen", Net: network, Addr: laddr, Err: err}
+	}
+	ip := laddr.IP
+	if len(ip) != 0 && (ip.To16() == nil || network == "udp4" && ip.To4() == nil) {
+		cause := "non-IPv4 address"
+		if network == "udp6" || network == "udp" && len(ip) > IPv4len {
+			cause = "non-IPv6 address"
+		}
+		return fail(&AddrError{Err: cause, Addr: ip.String()})
+	}
+	if laddr.Port < 0 || laddr.Port > 65535 {
+		return fail(&os.SyscallError{Syscall: "bind", Err: syscall.EINVAL})
+	}
+	host := "0.0.0.0"
 	if network == "udp6" {
 		host = "::"
 	}
-	if laddr != nil {
-		if len(laddr.IP) != 0 {
-			host = laddr.IP.String()
-		}
-		port = laddr.Port
+	if len(ip) != 0 {
+		host = ip.String()
 	}
-	local := udpAddrOf(host, port)
-	if laddr != nil && laddr.Zone != "" && local.IP.To4() == nil {
+	local := udpAddrOf(host, laddr.Port)
+	if laddr.Zone != "" && local.IP.To4() == nil {
 		local.Zone = laddr.Zone
 		host += "%" + laddr.Zone
 	}
-	handle, taken, cause := dart.ListenUDP(host, port)
+	handle, taken, cause, code := dart.ListenUDP(host, laddr.Port)
 	if cause != "" {
-		return nil, &OpError{Op: "listen", Net: network, Addr: laddr, Err: errors.New(cause)}
+		return fail(socketSyscallCause("bind", cause, code))
 	}
 	local.Port = taken
 	return newUDPConn(&packet{handle: handle, network: network, local: local}), nil

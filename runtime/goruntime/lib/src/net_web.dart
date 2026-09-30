@@ -94,7 +94,8 @@ GoString $listenClose(int handle) => _noNet;
 
 GoString $listenDeadline(int handle, int nanos) => _noNet;
 
-(int, int, GoString) $listenUDP(GoString host, int port) => (0, 0, _noNet);
+(int, int, GoString, int) $listenUDP(GoString host, int port) =>
+    (0, 0, _noNet, 0);
 
 (int, GoString, int, GoString) $dialUDP(
   GoString host,

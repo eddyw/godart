@@ -1417,15 +1417,15 @@ GoString $listenClose(int handle) {
 
 /// Opens a datagram socket on a host and a port, and gives its handle and the
 /// port that the system took.
-(int, int, GoString) $listenUDP(GoString host, int port) {
+(int, int, GoString, int) $listenUDP(GoString host, int port) {
   $await(
     _bindUDP(
       host.toDartString(),
       port,
-    ).then((_Packet s) => (_packetSlot(s), s.socket.port, _empty)),
-    (Object cause) => (-1, 0, _cause(cause)),
+    ).then((_Packet s) => (_packetSlot(s), s.socket.port, _empty, 0)),
+    (Object cause) => (-1, 0, _cause(cause), _socketErrno(cause)),
   );
-  return (-1, 0, _empty);
+  return (-1, 0, _empty, 0);
 }
 
 /// Joins a multicast group on a datagram socket. An empty interface name reads

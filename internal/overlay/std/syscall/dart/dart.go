@@ -1402,10 +1402,10 @@ func ConnDeadline(handle int, read, write int64) string {
 }
 
 // ListenUDP opens a datagram socket on a host and a port. The results are the
-// handle, the port that the system took, and the cause of a failure.
+// handle, the port that the system took, the cause of a failure, and its errno.
 //
 // The call blocks the goroutine, thus the caller becomes an async function.
-func ListenUDP(host string, port int) (int, int, string) {
+func ListenUDP(host string, port int) (int, int, string, int) {
 	panic("syscall/dart needs the gart compiler")
 }
 

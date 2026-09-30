@@ -33,7 +33,9 @@ import (
 	"context"
 	"errors"
 	. "net"
+	"os"
 	"strconv"
+	"syscall"
 	"testing"
 	"time"
 )
@@ -79,6 +81,18 @@ func TestPortOwnership(t *testing.T) {
 				}
 				if err := checkSecondListener(tt.network, tt.address, err); err != nil {
 					t.Fatal(err)
+				}
+				var op *OpError
+				var call *os.SyscallError
+				if second != nil || !errors.As(err, &op) || op.Op != "listen" || op.Net != tt.network || op.Source != nil {
+					t.Fatalf("incorrect bind result: %v %#v", second, op)
+				}
+				addr, ok := op.Addr.(*UDPAddr)
+				if !ok || addr.Port != taken.Port || !(addr.IP.Equal(taken.IP) || addr.IP.IsUnspecified() && taken.IP.IsUnspecified()) {
+					t.Fatalf("incorrect bind address: %v, want %v", op.Addr, taken)
+				}
+				if !errors.As(err, &call) || call.Syscall != "bind" || !errors.Is(err, syscall.EADDRINUSE) {
+					t.Fatalf("incorrect bind error: %v", err)
 				}
 				peer := taken.IP.String()
 				if taken.IP.IsUnspecified() {
@@ -148,6 +162,58 @@ func TestPacketAddressErrors(t *testing.T) {
 		}
 	}
 }
+func TestTypedListenerErrors(t *testing.T) {
+	for _, network := range []string{"udp", "udp4", "udp6"} {
+		for _, ip := range []IP{{1}, {1, 2, 3}, {1, 2, 3, 4, 5}, make(IP, 17), IPv6loopback, IPv4(127, 0, 0, 1)} {
+			for _, port := range []int{0, -1, 65536} {
+				invalidIP := ip.To16() == nil || network == "udp4" && ip.To4() == nil
+				if !invalidIP && (port == 0 || network == "udp6" && ip.To4() != nil) {
+					continue
+				}
+				addr := &UDPAddr{IP: ip, Port: port}
+				c, err := ListenUDP(network, addr)
+				if c != nil {
+					c.Close()
+					t.Fatalf("accepted %s %v", network, addr)
+				}
+				var op *OpError
+				if !errors.As(err, &op) || op.Op != "listen" || op.Net != network || op.Source != nil || op.Addr != addr {
+					t.Fatalf("incorrect operation for %s %v: %#v", network, addr, op)
+				}
+				if invalidIP {
+					var bad *AddrError
+					want := "non-IPv4 address"
+					if network == "udp6" || network == "udp" && len(ip) > IPv4len {
+						want = "non-IPv6 address"
+					}
+					if !errors.As(err, &bad) || bad.Err != want || bad.Addr != ip.String() {
+						t.Fatalf("incorrect address error: %v", err)
+					}
+				} else {
+					var call *os.SyscallError
+					if !errors.As(err, &call) || call.Syscall != "bind" || !errors.Is(err, syscall.EINVAL) {
+						t.Fatalf("incorrect port error: %v", err)
+					}
+				}
+			}
+		}
+	}
+	for _, addr := range []*UDPAddr{nil, {IP: IPv4(127, 0, 0, 1)}} {
+		c, err := ListenUDP("unknown", addr)
+		if c != nil {
+			c.Close()
+			t.Fatal("accepted unknown network")
+		}
+		var op *OpError
+		var unknown UnknownNetworkError
+		if !errors.As(err, &op) || op.Op != "listen" || op.Net != "unknown" || !errors.As(err, &unknown) {
+			t.Fatalf("incorrect unknown network error: %v", err)
+		}
+		if addr == nil && op.Addr != nil || addr != nil && op.Addr != addr {
+			t.Fatalf("incorrect error address: %#v", op.Addr)
+		}
+	}
+}
 `)
 	run(t, dir, "go", "test", "-v", ".")
 	stats, err := driver.BuildWithStats(driver.Options{Dir: dir, Patterns: []string{"."}, Out: out, Runtime: runtimeDir(t), Tests: true})
@@ -155,12 +221,16 @@ func TestPacketAddressErrors(t *testing.T) {
 		t.Fatal(err)
 	}
 	prepareDart(t, out)
-	for _, target := range []string{"vm", "aot"} {
+	for _, target := range []string{"vm", "aot", "js", "wasm"} {
 		t.Run(target, func(t *testing.T) {
 			if target == "vm" {
 				run(t, dir, "dart", filepath.Join(out, stats.Binaries[0].Entry), "-test.v")
 			} else {
-				result := runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, []string{"-test.v"})
+				args := []string{"-test.v"}
+				if target == "js" || target == "wasm" {
+					args = append(args, "-test.run=^(TestPacketAddressErrors|TestTypedListenerErrors)$")
+				}
+				result := runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, args)
 				if result.Exit != 0 {
 					t.Fatal(result.Text)
 				}
