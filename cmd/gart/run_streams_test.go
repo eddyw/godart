@@ -4,14 +4,29 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
+	"strings"
 	"testing"
 	"time"
+
+	"github.com/eddyw/godart/internal/driver"
+	"github.com/eddyw/godart/internal/sdk"
 )
 
 func TestRunStreams(t *testing.T) {
+	info, err := driver.Diagnose(".", "source")
+	if err != nil {
+		t.Fatal(err)
+	}
+	versions, err := sdk.Read()
+	if err != nil {
+		t.Fatal(err)
+	}
+	resident := slices.Contains(versions.Dart.Resident, info.Dart)
 	dir := t.TempDir()
 	for name, text := range map[string]string{
 		"go.mod": "module example.com/runstreams\n\ngo 1.27\n",
@@ -93,6 +108,14 @@ func main() {
 				}
 				args := []string{"run", "-frontend", frontend, "-format=false", "-o", out, ".", "--"}
 				got := capture(t, cli, append(args, program...)...)
+				if !resident {
+					switch frontend {
+					case "auto":
+						want.stderr = fmt.Sprintf("gart: Dart %s has no verified resident frontend; use dart run for this invocation (-frontend=source suppresses this warning)\n", info.Dart) + want.stderr
+					case "resident":
+						want = result{stderr: fmt.Sprintf("gart: resident compilation requires Dart %s, found %s\n", strings.Join(versions.Dart.Resident, " or "), info.Dart), exit: 1}
+					}
+				}
 				if got != want {
 					t.Fatalf("Go: exit=%d stdout=%q stderr=%q\nGart: exit=%d stdout=%q stderr=%q", want.exit, want.stdout, want.stderr, got.exit, got.stdout, got.stderr)
 				}
