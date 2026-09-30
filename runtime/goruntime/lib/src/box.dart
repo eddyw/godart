@@ -11,6 +11,37 @@ abstract interface class $StructView {
 Object? $pointerOwner(Object? value) =>
     value is $StructView ? value.$origin : value;
 
+final Expando<Object> _inlineOwners = Expando<Object>('inline owners');
+
+// The value must represent an inline Go struct or array.
+T $inlineValue<T>(T value, Object owner) {
+  if (value is List && value.isEmpty) return value;
+  _inlineOwners[$pointerOwner(value)!] = $pointerOwner(owner)!;
+  return value;
+}
+
+T $inlinePtr<T>($Ptr<T> pointer) => $inlineValue(
+  pointer.v,
+  pointer is $Ref ? (pointer as $Ref).owner as Object : pointer,
+);
+
+Object $storageOwner(Object value) {
+  while (true) {
+    if (value is $Ref) {
+      value = value.owner as Object;
+    } else if (value is $StructView) {
+      value = value.$origin;
+    } else if (value is $ArrayView) {
+      value = value.array;
+    } else {
+      if (value is String) return value;
+      final parent = _inlineOwners[value];
+      if (parent == null) return value;
+      value = parent;
+    }
+  }
+}
+
 /// A pointer to a value that is not a struct.
 ///
 /// The Dart form of a pointer to a struct is the object of the struct. Another
@@ -132,7 +163,7 @@ T $deref<T>(Object? p) {
 /// object itself at a concrete call site. A nil pointer stays nil.
 T? $ptrTo<T>(Object? p) {
   if (p == null) return null;
-  if (p is $Ptr<T>) return p.v;
+  if (p is $Ptr<T>) return $inlinePtr(p);
   return p as T;
 }
 

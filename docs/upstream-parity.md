@@ -64,7 +64,7 @@ Each group retains the standard command limit and a separate report.
 Full AOT executes the exhaustive certificate matrix.
 VM and short AOT exclude that matrix because it exceeds their command limits.
 Reports retain these target exclusions. They do not count them as passes.
-Separate omissions cover native FIPS subprocesses, linker symbols, forced GC,
+Separate omissions cover native FIPS subprocesses, linker symbols,
 the BoringSSL runner, and external services.
 
 The HTTP client comparisons use real HTTP/1 and TLS HTTP/2 servers on VM and AOT.

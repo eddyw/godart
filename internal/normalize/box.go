@@ -99,11 +99,9 @@ func (b *builder) boxed(obj types.Object) bool {
 	return ok && b.boxes[v]
 }
 
-// captured collects each variable of a machine that a function literal reads.
+// captured collects mutable variables that closures share.
 //
-// A machine writes each local into its frame, and a resume reads them into a
-// new call. A closure holds the variable of the first call, thus the 2 calls
-// must share 1 box.
+// Closures must share each variable that an assignment can change.
 //
 // A struct and an array need no box. An assignment to such a variable copies
 // the fields into the same object, thus the closure reads the new value.
@@ -219,38 +217,12 @@ func (b *builder) litCaptures(lit *ast.FuncLit) []*ir.Var {
 	return out
 }
 
-// machineBoxes adds the box of each captured variable when a function of the
-// declaration can block.
-func (b *builder) machineBoxes(decl *ast.FuncDecl, blocking bool) {
-	body := decl.Body
+// captureBoxes preserves shared variables across isolated closure scopes.
+func (b *builder) captureBoxes(decl *ast.FuncDecl) {
 	assigned := b.assignedVars(decl)
-	if blocking {
-		for v := range b.captured(body, assigned) {
-			b.boxes[v] = true
-		}
+	for v := range b.captured(decl.Body, assigned) {
+		b.boxes[v] = true
 	}
-	ast.Inspect(body, func(n ast.Node) bool {
-		var machineBody ast.Node
-		switch n := n.(type) {
-		case *ast.FuncLit:
-			if b.blocks.Blocks(n) {
-				machineBody = n.Body
-			}
-		case *ast.RangeStmt:
-			// The body of a range loop over a function that blocks is a state
-			// machine of its own.
-			if b.blocks.Blocks(n) {
-				machineBody = n.Body
-			}
-		}
-		if machineBody == nil {
-			return true
-		}
-		for v := range b.captured(machineBody, assigned) {
-			b.boxes[v] = true
-		}
-		return true
-	})
 }
 
 // rangeCaptures gives each boxed variable of an outer scope that the body of a
@@ -369,4 +341,40 @@ func (b *builder) litIndependent(lit *ast.FuncLit) bool {
 		return independent
 	})
 	return independent
+}
+
+func (b *builder) litFreeVars(lit *ast.FuncLit) ([]*ir.Var, bool) {
+	seen := map[*types.Var]bool{}
+	var vars []*ir.Var
+	valid := true
+	ast.Inspect(lit, func(n ast.Node) bool {
+		id, ok := n.(*ast.Ident)
+		if !ok || !valid {
+			return valid
+		}
+		obj := b.info.Uses[id]
+		switch v := obj.(type) {
+		case *types.Var:
+			if v.IsField() {
+				return true
+			}
+		case *types.Const, *types.TypeName:
+		default:
+			return true
+		}
+		if obj.Parent() == nil || obj.Pkg() == nil || obj.Parent() == obj.Pkg().Scope() || obj.Pos() >= lit.Pos() && obj.Pos() <= lit.End() {
+			return true
+		}
+		v, ok := obj.(*types.Var)
+		if !ok || b.names[v] == "" {
+			valid = false
+			return false
+		}
+		if !seen[v] {
+			seen[v] = true
+			vars = append(vars, &ir.Var{Name: b.names[v], Obj: v, Type: v.Type(), Boxed: b.boxes[v]})
+		}
+		return true
+	})
+	return vars, valid
 }

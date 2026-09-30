@@ -622,6 +622,10 @@ type (
 
 		// StaticName identifies a literal that needs no outer local scope.
 		StaticName string
+
+		// FreeVars names the outer variables of an isolated closure.
+		FreeVars    []*Var
+		CaptureName string
 	}
 
 	// SelectList builds the case list of a select statement.

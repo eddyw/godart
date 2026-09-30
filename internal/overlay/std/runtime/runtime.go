@@ -293,8 +293,7 @@ func (c Cleanup) Stop() { dart.StopCleanup(c.handle) }
 // AddCleanup attaches a function that runs after the collector frees the value
 // that the pointer names.
 //
-// Dart gives no way to force a collection, thus the time of the run follows the
-// collector of Dart. GC forces no run. Read docs/parity.md.
+// Cleanup delivery follows the host collector and event loop.
 func AddCleanup[T, S any](ptr *T, cleanup func(S), arg S) Cleanup {
 	if ptr == nil {
 		panic("runtime.AddCleanup: ptr is nil")
@@ -309,12 +308,8 @@ func cleanupCallback[S any](cleanup func(S), arg S) func() {
 	return func() { cleanup(arg) }
 }
 
-// GC provokes a collection and gives up control, thus each cleanup of a value
-// that no code reaches runs.
-//
-// Dart holds no call that forces a collection. The runtime library allocates a
-// block of garbage for it. The collector follows no rule of Go, thus a cleanup
-// can stay for a later call. Read docs/parity.md.
+// GC requests collection and yields to cleanup callbacks.
+// A cleanup can remain pending after GC returns.
 func GC() { dart.GC() }
 
 // An Error is a run time error of Go. A recover of a run time panic gives a

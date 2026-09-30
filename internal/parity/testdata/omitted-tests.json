@@ -62,10 +62,6 @@
       "classification": "target-limit",
       "reason": "The assertion uses go build and go tool nm to inspect native Go linker symbols. A pass would assess the native Go compiler, not Gart."
     },
-    "TestWeakCertCache": {
-      "classification": "target-limit",
-      "reason": "The original weak-certificate cache assertion requires forced garbage collection. Dart does not guarantee that collection, and the original assertion times out."
-    },
     "TestBogoSuite": {
       "classification": "test-adapter",
       "reason": "The declaration requires the separate BoringSSL conformance runner and an executable TLS shim. That integration remains unverified."

@@ -1,6 +1,7 @@
 package emit
 
 import (
+	"bytes"
 	"fmt"
 	"go/token"
 	"go/types"
@@ -611,21 +612,6 @@ func (e *emitter) localFunc(s *ir.LocalFunc) {
 		params = append(params, p)
 	}
 	result := e.resultText(lit.Results)
-	e.line("%s %s(%s) {", result, s.Name, strings.Join(params, ", "))
-	inner := &ir.Func{
-		Params:     lit.Params,
-		Results:    lit.Results,
-		Body:       lit.Body,
-		Machine:    m,
-		TypeParams: tps,
-		End:        lit.End,
-	}
-	e.machineBody(inner, s.Name)
-	e.line("}")
-	if e.cfg.Fset != nil && lit.Pos.IsValid() {
-		info := fmt.Sprintf("%s|%s|%d", e.curGoName, e.funcFile, e.funcLine)
-		e.line("$functionValue(%s, %s);", s.Name, e.stringLit(info))
-	}
 	types := make([]string, len(lit.Params))
 	for i, p := range lit.Params {
 		types[i] = e.dartType(p.Type)
@@ -635,6 +621,55 @@ func (e *emitter) localFunc(s *ir.LocalFunc) {
 		strings.Join(types, ", "), frame)
 	if len(types) == 0 {
 		fnType = fmt.Sprintf("%s Function([%s?])", result, frame)
+	}
+	name := s.Name
+	isolate := lit.CaptureName != "" && len(tps) == 0
+	hoist := isolate || lit.StaticName != "" && len(tps) == 0
+	var outerBuf bytes.Buffer
+	if hoist {
+		// Dart closures can retain unrelated locals through a shared context.
+		outerBuf = e.buf
+		e.buf = bytes.Buffer{}
+		if !isolate {
+			name = lit.StaticName
+		}
+		e.line("%s%s|%s|%d", fileMark, e.funcFile, e.curGoName, e.funcLine)
+	}
+	e.line("%s %s(%s) {", result, name, strings.Join(params, ", "))
+	inner := &ir.Func{
+		Params:     lit.Params,
+		Results:    lit.Results,
+		Body:       lit.Body,
+		Machine:    m,
+		TypeParams: tps,
+		End:        lit.End,
+	}
+	e.machineBody(inner, name)
+	e.line("}")
+	if hoist {
+		body := e.buf.String()
+		e.buf = outerBuf
+		value := name
+		if isolate {
+			params := make([]string, len(lit.FreeVars))
+			args := make([]string, len(lit.FreeVars))
+			for i, v := range lit.FreeVars {
+				name := e.identName(&ir.Ident{Name: v.Name})
+				params[i] = e.fieldType(v) + " " + name
+				args[i] = name
+			}
+			body = fnType + " " + lit.CaptureName + "(" + strings.Join(params, ", ") + ") {\n" + body + "return " + name + ";\n}"
+			value = lit.CaptureName + "(" + strings.Join(args, ", ") + ")"
+		}
+		if !e.freeFuncSeen[lit] {
+			e.freeFuncSeen[lit] = true
+			e.freeFuncs = append(e.freeFuncs, body)
+		}
+		e.line("final %s = %s;", s.Name, value)
+	}
+	if e.cfg.Fset != nil && lit.Pos.IsValid() {
+		info := fmt.Sprintf("%s|%s|%d", e.curGoName, e.funcFile, e.funcLine)
+		e.line("$functionValue(%s, %s);", s.Name, e.stringLit(info))
 	}
 	invoke := fmt.Sprintf("$fn(%s)", strings.Join(e.frameArgs(nil, lit.Params), ", "))
 	e.writeFrameClass(m, tps, fnType, invoke, len(lit.Results) > 0,

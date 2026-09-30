@@ -867,6 +867,9 @@ func (e *emitter) adapterReceiver(elem types.Type, sel *types.Selection, pointer
 		parent, holder := recv, current
 		recv += "." + e.fieldDartName(current, field.Name())
 		current = field.Type()
+		if !needsBox(current) {
+			recv = fmt.Sprintf("$inlineValue(%s, %s)", recv, parent)
+		}
 		if n == len(path)-1 {
 			recv = e.fitReceiver(recv, parent, holder, field.Name(), current, sig)
 			break

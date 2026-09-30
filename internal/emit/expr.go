@@ -733,6 +733,19 @@ func (e *emitter) funcLit(x *ir.FuncLit) string {
 			e.freeFuncs = append(e.freeFuncs, e.resultText(x.Results)+" "+name+text)
 		}
 		text = name
+	} else if x.CaptureName != "" && len(e.typeParams) == 0 {
+		params := make([]string, len(x.FreeVars))
+		args := make([]string, len(x.FreeVars))
+		for i, v := range x.FreeVars {
+			name := inner.identName(&ir.Ident{Name: v.Name})
+			params[i] = e.fieldType(v) + " " + name
+			args[i] = name
+		}
+		if !e.freeFuncSeen[x] {
+			e.freeFuncSeen[x] = true
+			e.freeFuncs = append(e.freeFuncs, strings.TrimSuffix(e.dartType(x.Type), "?")+" "+x.CaptureName+"("+strings.Join(params, ", ")+") => "+text+";")
+		}
+		text = x.CaptureName + "(" + strings.Join(args, ", ") + ")"
 	}
 	if e.cfg.Fset == nil || !x.Pos.IsValid() {
 		return text
@@ -972,7 +985,7 @@ func (e *emitter) unary(x *ir.Unary) string {
 		if p, ok := typeset.Core(x.Type).(*types.Pointer); ok && needsBox(p.Elem()) {
 			return e.addressOf(x.X, p.Elem())
 		}
-		return e.expr(x.X)
+		return e.pointerValue(x.X)
 	case token.MUL:
 		return e.deref(x.X)
 	case token.SUB:
@@ -989,6 +1002,16 @@ func (e *emitter) unary(x *ir.Unary) string {
 	}
 	e.fail("the operator %s has no Dart form", x.Op)
 	return "null"
+}
+
+func (e *emitter) pointerValue(x ir.Expr) string {
+	switch x.(type) {
+	case *ir.Field, *ir.Index:
+		if !needsBox(x.GoType()) {
+			return fmt.Sprintf("$inlinePtr<%s>(%s)", e.dartType(x.GoType()), e.addressOf(x, x.GoType()))
+		}
+	}
+	return e.deref(x)
 }
 
 // addressExpr writes the address of a value that needs a cell. A boxed variable
@@ -1027,7 +1050,7 @@ func (e *emitter) addressOf(x ir.Expr, elem types.Type) string {
 			read = "(" + read + " as " + e.dartType(elem) + ")"
 		}
 		return fmt.Sprintf("$Ref<%s, %s>(%s, %d, ($r, $i) => %s, ($r, $i, $v) => $r.%s = $v)",
-			e.dartType(owner), e.dartType(elem), e.deref(x.X), fieldIndex(owner, x.Name),
+			e.dartType(owner), e.dartType(elem), e.pointerValue(x.X), fieldIndex(owner, x.Name),
 			read, field)
 	case *ir.Composite:
 		// A composite literal holds no name, thus its address takes a box of
@@ -1036,15 +1059,15 @@ func (e *emitter) addressOf(x ir.Expr, elem types.Type) string {
 	case *ir.Index:
 		container := x.X.GoType()
 		if typeset.Core(container) == nil && typeset.ArrayOrSlice(container) {
-			return fmt.Sprintf("$sequencePtr<%s>(%s, %s%s)", e.dartType(elem), e.expr(x.X), e.expr(x.Index), e.unsArg(x.Index))
+			return fmt.Sprintf("$sequencePtr<%s>(%s, %s%s)", e.dartType(elem), e.pointerValue(x.X), e.expr(x.Index), e.unsArg(x.Index))
 		}
 		if isPointerType(container) {
-			return fmt.Sprintf("$indexPtr(%s, %s%s)", e.deref(x.X), e.expr(x.Index), e.unsArg(x.Index))
+			return fmt.Sprintf("$indexPtr(%s, %s%s)", e.pointerValue(x.X), e.expr(x.Index), e.unsArg(x.Index))
 		}
 		if isArrayType(container) {
-			return fmt.Sprintf("$indexPtr(%s, %s%s)", e.expr(x.X), e.expr(x.Index), e.unsArg(x.Index))
+			return fmt.Sprintf("$indexPtr(%s, %s%s)", e.pointerValue(x.X), e.expr(x.Index), e.unsArg(x.Index))
 		}
-		return fmt.Sprintf("$elemPtr(%s, %s%s)", e.expr(x.X), e.expr(x.Index), e.unsArg(x.Index))
+		return fmt.Sprintf("$elemPtr(%s, %s%s)", e.pointerValue(x.X), e.expr(x.Index), e.unsArg(x.Index))
 	}
 	if id, ok := x.(*ir.Ident); ok {
 		e.fail("the address of the name %s has no Dart form", id.Name)

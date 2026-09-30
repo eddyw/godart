@@ -158,8 +158,7 @@ func PacketOption(handle int, name string, value int) (string, int) {
 	panic("syscall/dart needs the gart compiler")
 }
 
-// GC provokes a collection and gives up control. Each cleanup of a value that
-// no code reaches then runs.
+// GC requests collection and yields to cleanup callbacks.
 func GC() {
 	panic("syscall/dart needs the gart compiler")
 }

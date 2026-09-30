@@ -3,6 +3,7 @@ import 'dart:collection';
 import 'dart:isolate';
 import 'dart:typed_data';
 
+import 'gc_native.dart' if (dart.library.js_interop) 'gc_web.dart';
 import 'goint.dart';
 import 'iface.dart';
 import 'panic.dart';
@@ -348,22 +349,23 @@ void $sleep(int nanoseconds) {
 
 /// Requests collection after resumed Dart frames release obsolete locals.
 ///
-/// Dart holds no call that forces a collection. The function allocates a block
-/// of garbage after the Dart stack unwinds. A later event-loop turn permits
-/// cleanup callbacks. The Dart collector can still defer collection.
+/// Hosts without the embedder API retain best-effort allocation pressure.
+/// A later event-loop turn permits cleanup callbacks.
 void $gc() {
   final Goroutine g = $current!;
   final EventWait waiting = EventWait();
   $holdEvent();
   // Resumed Dart frames can still hold locals that the Go caller cleared.
-  // Unwind those frames before allocation can trigger collection.
+  // Unwind those frames before collection.
   Timer.run(() {
-    for (var round = 0; round < 2; round++) {
-      final List<Object> garbage = <Object>[];
-      for (var i = 0; i < 20000; i++) {
-        garbage.add(List<int>.filled(64, i));
+    if (!$collectGarbage()) {
+      for (var round = 0; round < 2; round++) {
+        final List<Object> garbage = <Object>[];
+        for (var i = 0; i < 20000; i++) {
+          garbage.add(List<int>.filled(64, i));
+        }
+        garbage.clear();
       }
-      garbage.clear();
     }
     Timer.run(() {
       $freeEvent();

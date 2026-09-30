@@ -439,9 +439,9 @@
   {
     "package": "crypto/tls",
     "status": "runtime-blocked",
-    "diagnostic": "TestWeakCertCache: timed out waiting for expected ref count",
+    "diagnostic": "crypto/fips140: Dart does not support FIPS 140-3 mode",
     "blocker_cause": "runtime-boundary",
-    "blocker_reason": "The suite compiles. runtime.GC cannot reliably force Dart collection, and the original weak-certificate cleanup assertion times out. Complete short and full execution remain unverified."
+    "blocker_reason": "FIPS-only subprocess tests reach the unsupported FIPS mode. Full VM certificate-matrix execution exceeds the command limit. Other declared omissions remain unverified."
   },
   {
     "package": "crypto/tls/internal/fips140tls",

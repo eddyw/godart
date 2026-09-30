@@ -1020,8 +1020,11 @@ func (e *emitter) methodCall(m *ir.Method, args []string, targs string) string {
 // takes the address of a value for a method with a pointer receiver.
 func (e *emitter) topLevelRecv(m *ir.Method) string {
 	t := m.Recv.GoType()
-	if pointerMethod(m.Obj) && !isPointerType(t) && needsBox(t) {
-		return e.addressExpr(m.Recv)
+	if pointerMethod(m.Obj) && !isPointerType(t) {
+		if needsBox(t) {
+			return e.addressExpr(m.Recv)
+		}
+		return e.pointerValue(m.Recv)
 	}
 	if !pointerMethod(m.Obj) && isPointerType(t) {
 		return e.deref(m.Recv)
@@ -1238,8 +1241,12 @@ func (e *emitter) methodExpr(x *ir.MethodExpr) string {
 		// The body stands in a top level function. A value method through a
 		// pointer receiver argument reads the value behind the pointer.
 		arg0 := recv
-		if pointerMethod(x.Obj) && !isPointerType(current) && needsBox(current) {
-			arg0 = e.addressExpr(receiver)
+		if pointerMethod(x.Obj) && !isPointerType(current) {
+			if needsBox(current) {
+				arg0 = e.addressExpr(receiver)
+			} else {
+				arg0 = e.pointerValue(receiver)
+			}
 		}
 		if !pointerMethod(x.Obj) && isPointerType(current) {
 			if p, ok := typeset.Core(current).(*types.Pointer); ok && needsBox(p.Elem()) {

@@ -529,8 +529,7 @@ final Finalizer<(int, void Function())> _cleanups =
 
 /// Attaches a cleanup to a value and gives its handle.
 ///
-/// Dart gives no way to force a collection, thus the time of the run follows the
-/// collector of Dart. Read docs/parity.md.
+/// Cleanup delivery follows the host collector and event loop.
 int $addCleanup(
   Iface target,
   Iface? arg,
@@ -551,9 +550,12 @@ int $addCleanup(
       ),
     );
   }
+  final Object owner = $storageOwner(value);
+  // Global scalar references use a stable symbol as their owner.
+  if (owner is String) return 0;
   final int handle = ++_nextCleanupHandle;
   final Object token = Object();
-  _cleanups.attach(value, (handle, run!), detach: token);
+  _cleanups.attach(owner, (handle, run!), detach: token);
   _cleanupTokens[handle] = token;
   return handle;
 }

@@ -598,6 +598,11 @@ func (b *builder) funcLit(e *ast.FuncLit) ir.Expr {
 	out.Body.List = append(b.returnState(), out.Body.List...)
 	out.Defers = inner.Defers
 	out.Captured = b.litCaptures(e)
+	if vars, valid := b.litFreeVars(e); valid && len(vars) != 0 {
+		out.FreeVars = vars
+		position := b.fset.PositionFor(e.Pos(), false)
+		out.CaptureName = fmt.Sprintf("$capture%x_%d_%d", filepath.Base(position.Filename), position.Line, position.Column)
+	}
 	if b.litIndependent(e) {
 		position := b.fset.PositionFor(e.Pos(), false)
 		out.StaticName = fmt.Sprintf("$literal%x_%d_%d", filepath.Base(position.Filename), position.Line, position.Column)

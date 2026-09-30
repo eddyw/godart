@@ -412,6 +412,7 @@ Iface? $fieldRead(Iface? value, int index) {
   final FieldDesc field = _fieldOf(value, index);
   final TypeDesc type = field.type();
   final Object? out = field.get(value!.value);
+  if (_holdsValue(type)) $inlineValue(out as Object, value.value as Object);
   if (type.kind == 'interface') return out as Iface?;
   return Iface(type, out);
 }
@@ -471,6 +472,9 @@ Iface? $valueIndex(Iface? value, GoInt exactIndex) {
   final Object? out = v is Slice<Object?>
       ? v.$at(exactIndex)
       : _elemAt(v, exactIndex, desc);
+  if (_holdsValue(elem)) {
+    $inlineValue(out as Object, v is Slice<Object?> ? v.array : v as Object);
+  }
   if (elem.kind == 'interface') return out as Iface?;
   return Iface(elem, out);
 }
@@ -2599,7 +2603,10 @@ Iface? $valueAddr(Iface? value, Iface? owner, GoInt exactIndex, int loc) {
     // The Dart form of a pointer to a struct and of a pointer to an array is
     // the value itself.
     if (_isObjectPointer(field)) {
-      return Iface($ptrDesc(field), f.get(owner.value));
+      return Iface(
+        $ptrDesc(field),
+        $inlineValue(f.get(owner.value) as Object, owner.value as Object),
+      );
     }
     // The index of the field keeps 2 addresses of 2 fields apart, because a
     // cell compares the owner and the index.
@@ -2626,7 +2633,13 @@ Iface? $valueAddr(Iface? value, Iface? owner, GoInt exactIndex, int loc) {
     return Iface($ptrDesc(elem), _elemAt(v, exactIndex, ownerDesc));
   }
   if (_isObjectPointer(elem)) {
-    return Iface($ptrDesc(elem), _readElem(v, index));
+    return Iface(
+      $ptrDesc(elem),
+      $inlineValue(
+        _readElem(v, index) as Object,
+        v is Slice<Object?> ? v.array : v as Object,
+      ),
+    );
   }
   return Iface(
     $ptrDesc(elem),
