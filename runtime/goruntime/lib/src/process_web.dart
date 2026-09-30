@@ -36,7 +36,6 @@ GoString $procCloseIO(int pid) => _noSys;
 
 (int, GoString) $procWait(int pid) => (0, _noSys);
 
-GoString $procKill(int pid, int signal) => _noSys;
 
 GoString $killPid(int pid, int number) => _noSys;
 

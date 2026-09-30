@@ -9,23 +9,19 @@ import (
 	"syscall/dart"
 )
 
-// Process is a child process that os/exec started.
+// Process identifies a process by its id.
 type Process struct {
 	Pid int
 }
 
-// FindProcess gives the process of a process id. The runtime names a child by
-// its id, thus the result works only for a child of this program.
+// FindProcess gives a Process for a process id. Wait requires a child process.
 func FindProcess(pid int) (*Process, error) {
 	return &Process{Pid: pid}, nil
 }
 
 // Kill ends the process with SIGKILL.
 func (p *Process) Kill() error {
-	if cause := dart.ProcKill(p.Pid, 9); cause != "" {
-		return processError(cause)
-	}
-	return nil
+	return p.Signal(Kill)
 }
 
 // processError maps the text of the Dart side to an error value. A process that

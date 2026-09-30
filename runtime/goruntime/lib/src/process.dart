@@ -205,31 +205,18 @@ void _closePipe(_Pipe pipe) {
   return (0, _empty);
 }
 
-GoString $procKill(int pid, int signal) {
-  final _Proc? proc = _procs[pid];
-  if (proc == null) return _unknown(pid);
-  final ProcessSignal sig = switch (signal) {
-    2 => ProcessSignal.sigint,
-    9 => ProcessSignal.sigkill,
-    15 => ProcessSignal.sigterm,
-    28 => ProcessSignal.sigwinch,
-    _ => ProcessSignal.sigkill,
-  };
-  if (!proc.process.kill(sig)) {
-    return GoString.fromString('os: process already finished');
-  }
-  return _empty;
-}
-
-/// Sends a signal to any process by its id. $procKill reaches a child only,
-/// and a program that signals itself needs this call.
+/// Sends a signal to a process by its id.
 GoString $killPid(int pid, int number) {
   final ProcessSignal? sig =
       _signalOf(number) ?? (number == 9 ? ProcessSignal.sigkill : null);
   if (sig == null) {
     return GoString.fromString('signal $number cannot be sent');
   }
-  if (!Process.killPid(pid, sig)) {
+  final _Proc? proc = _procs[pid];
+  final bool sent = proc == null
+      ? Process.killPid(pid, sig)
+      : proc.process.kill(sig);
+  if (!sent) {
     return GoString.fromString('os: process already finished');
   }
   return _empty;

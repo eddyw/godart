@@ -1670,14 +1670,7 @@ func ProcWait(pid int) (int, string) {
 	panic("syscall/dart needs the gart compiler")
 }
 
-// ProcKill sends a signal to a process. The signal is the number of the
-// system, for example 9 for SIGKILL and 15 for SIGTERM.
-func ProcKill(pid int, signal int) string {
-	panic("syscall/dart needs the gart compiler")
-}
-
-// KillPid sends a signal to any process by its id. ProcKill reaches a child
-// of this program only.
+// KillPid sends a signal to a process by its id.
 func KillPid(pid int, number int) string {
 	panic("syscall/dart needs the gart compiler")
 }
