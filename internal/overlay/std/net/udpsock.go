@@ -339,10 +339,10 @@ func ListenMulticastUDP(network string, ifi *Interface, gaddr *UDPAddr) (*UDPCon
 	switch network {
 	case "udp", "udp4", "udp6":
 	default:
-		return nil, UnknownNetworkError(network)
+		return nil, &OpError{Op: "listen", Net: network, Addr: gaddr.opAddr(), Err: UnknownNetworkError(network)}
 	}
 	if gaddr == nil || len(gaddr.IP) == 0 {
-		return nil, errors.New("listen " + network + ": missing address")
+		return nil, &OpError{Op: "listen", Net: network, Addr: gaddr.opAddr(), Err: errMissingAddress}
 	}
 	// The socket takes the port of the group and shares it, because each
 	// member of a group reads the same port.

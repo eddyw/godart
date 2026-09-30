@@ -214,6 +214,30 @@ func TestTypedListenerErrors(t *testing.T) {
 		}
 	}
 }
+func TestMulticastArguments(t *testing.T) {
+ for _, network := range []string{"", "tcp", "udp", "udp4", "udp6"} {
+  for _, addr := range []*UDPAddr{nil, {}, {Port: -1}, {IP: IPv4(224, 0, 0, 1)}} {
+   unknown := network == "" || network == "tcp"
+   if !unknown && addr != nil && addr.IP != nil { continue }
+   for _, iface := range []*Interface{nil, {Index: -1, Name: "invalid"}} {
+    c, err := ListenMulticastUDP(network, iface, addr)
+    if c != nil { c.Close(); t.Fatal("invalid multicast arguments succeeded") }
+    var op *OpError
+    if !errors.As(err, &op) || op.Op != "listen" || op.Net != network || op.Source != nil {
+     t.Fatalf("incorrect multicast error: %v", err)
+    }
+    if addr == nil && op.Addr != nil || addr != nil && op.Addr != addr {
+     t.Fatalf("incorrect multicast address: %#v", op.Addr)
+    }
+    if unknown {
+     var cause UnknownNetworkError
+     if !errors.As(err, &cause) || string(cause) != network { t.Fatalf("incorrect network error: %v", err) }
+    } else if op.Err.Error() != "missing address" { t.Fatalf("incorrect address error: %v", err) }
+   }
+  }
+ }
+}
+
 `)
 	run(t, dir, "go", "test", "-v", ".")
 	stats, err := driver.BuildWithStats(driver.Options{Dir: dir, Patterns: []string{"."}, Out: out, Runtime: runtimeDir(t), Tests: true})
@@ -228,7 +252,7 @@ func TestTypedListenerErrors(t *testing.T) {
 			} else {
 				args := []string{"-test.v"}
 				if target == "js" || target == "wasm" {
-					args = append(args, "-test.run=^(TestPacketAddressErrors|TestTypedListenerErrors)$")
+					args = append(args, "-test.run=^(TestPacketAddressErrors|TestTypedListenerErrors|TestMulticastArguments)$")
 				}
 				result := runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, args)
 				if result.Exit != 0 {
