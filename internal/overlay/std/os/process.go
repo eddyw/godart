@@ -68,9 +68,15 @@ func (p *Process) Wait() (*ProcessState, error) {
 	if p.Pid == -1 {
 		return nil, syscall.EINVAL
 	}
-	code, cause := dart.ProcWait(p.Pid)
+	if p.done {
+		return nil, NewSyscallError("wait", syscall.ECHILD)
+	}
+	code, consumed, cause := dart.ProcWait(p.Pid)
 	if cause != "" {
 		return nil, errors.New(cause)
+	}
+	if consumed {
+		return nil, NewSyscallError("wait", syscall.ECHILD)
 	}
 	p.done = true
 	return &ProcessState{pid: p.Pid, code: code}, nil

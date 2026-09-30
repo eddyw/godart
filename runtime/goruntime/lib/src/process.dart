@@ -26,6 +26,7 @@ final class _Proc {
   final Process process;
   final _Pipe out;
   final _Pipe err;
+  bool waited = false;
 
   _Proc(this.process)
     : out = _Pipe(process.stdout),
@@ -195,14 +196,20 @@ void _closePipe(_Pipe pipe) {
 
 /// Waits for the end of a process and gives the exit code. A process that a
 /// signal ended gives the negative number of the signal, as Dart does.
-(int, GoString) $procWait(int pid) {
+/// The second result reports that another wait already consumed the status.
+(int, bool, GoString) $procWait(int pid) {
   final _Proc? proc = _procs[pid];
-  if (proc == null) return (0, _unknown(pid));
+  if (proc == null) return (0, false, _unknown(pid));
+  if (proc.waited) return (0, true, _empty);
   $await(
-    proc.process.exitCode.then((int code) => (code, _empty)),
-    (Object cause) => (0, _cause(cause)),
+    proc.process.exitCode.then((int code) {
+      if (proc.waited) return (0, true, _empty);
+      proc.waited = true;
+      return (code, false, _empty);
+    }),
+    (Object cause) => (0, false, _cause(cause)),
   );
-  return (0, _empty);
+  return (0, false, _empty);
 }
 
 /// Sends a signal to a process by its id.

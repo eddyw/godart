@@ -1664,9 +1664,10 @@ func ProcReadErr(pid int, p []byte) (int, string) {
 
 // ProcWait waits for the end of a process and gives the exit code. A process
 // that a signal ended gives the negative number of the signal.
+// The second result reports that another wait already consumed the status.
 //
 // The call blocks the goroutine, thus the caller becomes an async function.
-func ProcWait(pid int) (int, string) {
+func ProcWait(pid int) (int, bool, string) {
 	panic("syscall/dart needs the gart compiler")
 }
 
