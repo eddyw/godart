@@ -13,8 +13,10 @@ func TestUDPDialErrors(t *testing.T) {
 	writeFile(t, filepath.Join(dir, "dial_test.go"), `package udpdial
 
 import (
+ "context"
  "errors"
  "net"
+ "net/netip"
  "os"
  "syscall"
  "testing"
@@ -123,6 +125,46 @@ func TestDialLocalArguments(t *testing.T) {
  }
 }
 
+func TestDialerArguments(t *testing.T) {
+ addresses := []netip.AddrPort{{}, netip.MustParseAddrPort("127.0.0.1:1"), netip.MustParseAddrPort("[::1%zone]:2")}
+ for _, canceled := range []bool{false, true} {
+  ctx, cancel := context.WithCancel(context.Background())
+  if canceled { cancel() }
+  for _, local := range addresses {
+   for _, remote := range addresses {
+    for _, network := range []string{"", "tcp"} {
+     d := net.Dialer{LocalAddr: &net.TCPAddr{}}
+     c, err := d.DialUDP(ctx, network, local, remote)
+     if c != nil { c.Close(); t.Fatal("unknown dialer network succeeded") }
+     var op *net.OpError
+     var cause net.UnknownNetworkError
+     if !errors.As(err, &op) || op.Op != "dial" || op.Net != network || !errors.As(err, &cause) || string(cause) != network {
+      t.Fatalf("incorrect dialer error: %v", err)
+     }
+     source, sourceOK := op.Source.(*net.UDPAddr)
+     dest, destOK := op.Addr.(*net.UDPAddr)
+     if !sourceOK || !destOK || source.AddrPort() != local || dest.AddrPort() != remote {
+      t.Fatalf("incorrect dialer addresses: %#v", op)
+     }
+    }
+   }
+  }
+  cancel()
+ }
+ for _, network := range []string{"udp", "tcp"} {
+  func() {
+   defer func() { if p := recover(); p != "nil context" { t.Fatalf("nil context panic: %v", p) } }()
+   var d net.Dialer
+   d.DialUDP(nil, network, netip.AddrPort{}, netip.AddrPort{})
+  }()
+  func() {
+   defer func() { if recover() == nil { t.Fatal("nil dialer did not panic") } }()
+   var d *net.Dialer
+   d.DialUDP(context.Background(), network, netip.AddrPort{}, netip.AddrPort{})
+  }()
+ }
+}
+
 `)
 	run(t, dir, "go", "test", "-v", ".")
 	stats, err := driver.BuildWithStats(driver.Options{Dir: dir, Patterns: []string{"."}, Out: out, Runtime: runtimeDir(t), Tests: true})
@@ -137,7 +179,7 @@ func TestDialLocalArguments(t *testing.T) {
 			} else {
 				args := []string{"-test.v"}
 				if target == "js" || target == "wasm" {
-					args = append(args, "-test.run=^(TestDialArguments|TestDialLocalArguments)$")
+					args = append(args, "-test.run=^(TestDialArguments|TestDialLocalArguments|TestDialerArguments)$")
 				}
 				result := runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, args)
 				if result.Exit != 0 {

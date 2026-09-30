@@ -891,15 +891,18 @@ func (d *Dialer) DialTCP(ctx context.Context, network string, laddr, raddr netip
 
 // DialUDP opens a UDP connection with the context and explicit local address.
 func (d *Dialer) DialUDP(ctx context.Context, network string, laddr, raddr netip.AddrPort) (*UDPConn, error) {
+	if ctx == nil {
+		panic("nil context")
+	}
+	dialer := *d
 	switch network {
 	case "udp", "udp4", "udp6":
 	default:
-		return nil, UnknownNetworkError(network)
+		return nil, &OpError{Op: "dial", Net: network, Source: UDPAddrFromAddrPort(laddr), Addr: UDPAddrFromAddrPort(raddr), Err: UnknownNetworkError(network)}
 	}
 	if !raddr.IsValid() {
 		return nil, errors.New("dial " + network + ": the address is missing")
 	}
-	dialer := *d
 	dialer.LocalAddr = nil
 	if laddr.IsValid() {
 		dialer.LocalAddr = UDPAddrFromAddrPort(laddr)
