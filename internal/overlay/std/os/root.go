@@ -24,6 +24,10 @@ var errPathEscapes = errors.New("path escapes from parent")
 // access are separate operations. Concurrent path changes can cause access
 // outside the root.
 type Root struct {
+	*root
+}
+
+type root struct {
 	name string
 	// real anchors operations to the absolute path after symlink resolution.
 	real   string
@@ -43,7 +47,7 @@ func OpenRoot(name string) (*Root, error) {
 	if cause != "" {
 		return nil, &PathError{Op: "open", Path: name, Err: errors.New(cause)}
 	}
-	return &Root{name: name, real: real}, nil
+	return &Root{&root{name: name, real: real}}, nil
 }
 
 // OpenInRoot opens the file name inside the directory dir. It gives an error
