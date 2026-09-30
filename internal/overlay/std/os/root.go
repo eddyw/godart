@@ -29,7 +29,7 @@ type Root struct {
 func OpenRoot(name string) (*Root, error) {
 	info, err := Stat(name)
 	if err != nil {
-		return nil, &PathError{Op: "open", Path: name, Err: err}
+		return nil, &PathError{Op: "open", Path: name, Err: underlyingError(err)}
 	}
 	if !info.IsDir() {
 		return nil, &PathError{Op: "open", Path: name, Err: errors.New("not a directory")}
