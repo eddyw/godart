@@ -409,6 +409,7 @@ func (c *Cmd) Wait() error {
 	if copyErr := c.awaitCopies(timer); err == nil {
 		err = copyErr
 	}
+	dart.ProcCloseIO(c.Process.Pid)
 	return err
 }
 
