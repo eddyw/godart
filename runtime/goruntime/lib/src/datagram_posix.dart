@@ -53,6 +53,7 @@ final _getpeername = _libc
       Int Function(Int, Pointer<Void>, Pointer<Uint32>),
       int Function(int, Pointer<Void>, Pointer<Uint32>)
     >('getpeername');
+// Resolve this binding before a syscall, because its lazy lookup can change errno.
 final _errno = _libc
     .lookupFunction<Pointer<Int> Function(), Pointer<Int> Function()>(
       Platform.isMacOS ? '__error' : '__errno_location',
@@ -92,10 +93,11 @@ SocketException datagramError(int code) {
   try {
     _writeAddress(memory, remote, port);
     final bytes = memory.cast<Uint8>().asTypedList(length);
-    if (_connect(fd, memory, length) != 0) throw datagramError(_errno().value);
+    final errno = _errno();
+    if (_connect(fd, memory, length) != 0) throw datagramError(errno.value);
     final size = (memory.cast<Uint8>() + length).cast<Uint32>()..value = length;
     if (_getsockname(fd, memory, size) != 0) {
-      throw datagramError(_errno().value);
+      throw datagramError(errno.value);
     }
     final local = _readAddress(bytes, ipv6);
     size.value = length;
@@ -128,8 +130,9 @@ int sendDatagram(int fd, Uint8List bytes) {
   if (memory == nullptr) throw datagramError(12);
   try {
     memory.cast<Uint8>().asTypedList(bytes.length).setAll(0, bytes);
+    final errno = _errno();
     final count = _send(fd, memory, bytes.length, 0);
-    if (count < 0) throw datagramError(_errno().value);
+    if (count < 0) throw datagramError(errno.value);
     return count;
   } finally {
     _release(memory);
@@ -207,8 +210,9 @@ int sendDatagramTo(
     _writeAddress(memory, remote, port);
     final payload = memory.cast<Uint8>() + length;
     payload.asTypedList(bytes.length).setAll(0, bytes);
+    final errno = _errno();
     final count = _sendto(fd, payload.cast(), bytes.length, 0, memory, length);
-    if (count < 0) throw datagramError(_errno().value);
+    if (count < 0) throw datagramError(errno.value);
     return count;
   } finally {
     _release(memory);
@@ -222,10 +226,11 @@ Datagram? receiveEmptyDatagram(RawDatagramSocket socket) {
   try {
     final bytes = memory.cast<Uint8>();
     final size = (bytes + 28).cast<Uint32>()..value = 28;
+    final errno = _errno();
     final count = _recvfrom(fd, (bytes + 32).cast(), 1, 2, memory, size);
     if (count > 0) return null;
     if (count < 0) {
-      final code = _errno().value;
+      final code = errno.value;
       if (code == (Platform.isMacOS ? 35 : 11)) return null;
       throw datagramError(code);
     }
