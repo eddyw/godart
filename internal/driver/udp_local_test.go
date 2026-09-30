@@ -219,6 +219,34 @@ func TestUDPIPv4LocalZone(t *testing.T) {
  }
 }
 
+func TestUDPIPv4RemoteZone(t *testing.T) {
+ for _, network := range []string{"udp", "udp4"} {
+  server, err := ListenUDP(network, &UDPAddr{IP: IPv4(127,0,0,1)})
+  if err != nil { t.Fatal(err) }
+  defer server.Close()
+  expected := server.LocalAddr().(*UDPAddr)
+  for _, ip := range []IP{nil, IPv4zero, IPv4(127,0,0,1)} {
+   for _, zone := range []string{"1", "invalid-interface"} {
+    remote := &UDPAddr{IP: ip, Port: expected.Port, Zone: zone}
+    c, err := DialUDP(network, nil, remote)
+    if err != nil { t.Fatalf("%s %v: %v", network, remote, err) }
+    actual := c.RemoteAddr().(*UDPAddr)
+    if actual.Zone != "" || actual.String() != expected.String() { t.Fatalf("peer = %v, want %v", actual, expected) }
+    c.SetDeadline(time.Now().Add(time.Second))
+    server.SetDeadline(time.Now().Add(time.Second))
+    if _, err := c.Write([]byte("ok")); err != nil { t.Fatal(err) }
+    var b [2]byte
+    n, from, err := server.ReadFromUDP(b[:])
+    if n != 2 || err != nil || string(b[:]) != "ok" { t.Fatalf("read: %d %v %q", n, err, b) }
+    if _, err := server.WriteToUDP([]byte("hi"), from); err != nil { t.Fatal(err) }
+    n, err = c.Read(b[:])
+    if n != 2 || err != nil || string(b[:]) != "hi" { t.Fatalf("reply: %d %v %q", n, err, b) }
+    c.Close()
+   }
+  }
+ }
+}
+
 func TestUDPZeroPortPeer(t *testing.T) {
  if runtime.GOOS != "linux" { t.Skip("Linux permits a UDP peer with port 0") }
  for _, host := range []string{"127.0.0.1", "::1"} {
@@ -248,9 +276,9 @@ func TestUDPZeroPortPeer(t *testing.T) {
 			}
 			compareUpstream(t, "udp-local", "net", "^TestUDPConnLocalAndRemoteNames$", target, filepath.Join(runtime.GOROOT(), "src/net"), result.Text, result.Exit, false)
 			if target == "vm" {
-				t.Log(run(t, dir, "dart", filepath.Join(out, stats.Binaries[0].Entry), "-test.v", "-test.short="+strconv.FormatBool(testing.Short()), "-test.run=^Test(LocalBind|CloseRebind|DialerUDP|DialerUDPCanceled|DialerUDPInvalidLocal|UDPWildcardPeer|UDPZeroPortPeer|UDPIPv4LocalZone)$"))
+				t.Log(run(t, dir, "dart", filepath.Join(out, stats.Binaries[0].Entry), "-test.v", "-test.short="+strconv.FormatBool(testing.Short()), "-test.run=^Test(LocalBind|CloseRebind|DialerUDP|DialerUDPCanceled|DialerUDPInvalidLocal|UDPWildcardPeer|UDPZeroPortPeer|UDPIPv4LocalZone|UDPIPv4RemoteZone)$"))
 			} else {
-				result = runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=^Test(LocalBind|CloseRebind|DialerUDP|DialerUDPCanceled|DialerUDPInvalidLocal|UDPWildcardPeer|UDPZeroPortPeer|UDPIPv4LocalZone)$"})
+				result = runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, []string{"-test.v", "-test.short=" + strconv.FormatBool(testing.Short()), "-test.run=^Test(LocalBind|CloseRebind|DialerUDP|DialerUDPCanceled|DialerUDPInvalidLocal|UDPWildcardPeer|UDPZeroPortPeer|UDPIPv4LocalZone|UDPIPv4RemoteZone)$"})
 				t.Log(result.Text)
 				if result.Exit != 0 {
 					t.Fatal(result.Text)
