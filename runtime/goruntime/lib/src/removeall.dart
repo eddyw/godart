@@ -61,8 +61,14 @@ final _errnoLocation = _libc
     );
 final _cwd = Platform.isMacOS ? -2 : -100;
 final _closeOnExec = Platform.isMacOS ? 0x1000000 : 0x80000;
-final _directoryFlags = _closeOnExec | (Platform.isMacOS ? 0x100000 : 0x10000);
-final _noFollow = Platform.isMacOS ? 0x100 : 0x20000;
+final _directoryFlags =
+    _closeOnExec |
+    (Platform.isMacOS
+        ? 0x100000
+        : (Abi.current() == Abi.linuxArm64 ? 0x4000 : 0x10000));
+final _noFollow = Platform.isMacOS
+    ? 0x100
+    : (Abi.current() == Abi.linuxArm64 ? 0x8000 : 0x20000);
 final _removeDirectory = Platform.isMacOS ? 0x80 : 0x200;
 
 final class _RemovalError implements Exception {

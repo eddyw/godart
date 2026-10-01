@@ -39,8 +39,12 @@ final _errno = _libc
     );
 final _cwd = Platform.isMacOS ? -2 : -100;
 final _cloexec = Platform.isMacOS ? 0x1000000 : 0x80000;
-final _nofollow = Platform.isMacOS ? 0x100 : 0x20000;
-final _directory = Platform.isMacOS ? 0x100000 : 0x10000;
+final _nofollow = Platform.isMacOS
+    ? 0x100
+    : (Abi.current() == Abi.linuxArm64 ? 0x8000 : 0x20000);
+final _directory = Platform.isMacOS
+    ? 0x100000
+    : (Abi.current() == Abi.linuxArm64 ? 0x4000 : 0x10000);
 
 (int, int) _open(int parent, GoString path, int flags, int mode) {
   if (path.bytes.contains(0)) return (-1, 22);

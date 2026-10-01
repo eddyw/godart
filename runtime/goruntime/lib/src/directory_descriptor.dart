@@ -126,7 +126,9 @@ List<GoString> readDirectoryNames(GoString path) {
     name.asTypedList(bytes.length + 1)
       ..setRange(0, bytes.length, bytes)
       ..[bytes.length] = 0;
-    final flags = Platform.isMacOS ? 0x1000000 | 0x100000 : 0x80000 | 0x10000;
+    final flags = Platform.isMacOS
+        ? 0x1000000 | 0x100000
+        : 0x80000 | (Abi.current() == Abi.linuxArm64 ? 0x4000 : 0x10000);
     while (true) {
       final fd = _open(name, flags);
       final error = fd < 0 ? _errno().value : 0;
