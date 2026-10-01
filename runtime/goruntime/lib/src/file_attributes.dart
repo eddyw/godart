@@ -354,6 +354,16 @@ final _syscallFutimesat = _libc
       Long Function(Long, VarArgs<(Int, Pointer<Uint8>, Pointer<Int64>)>),
       int Function(int, int, Pointer<Uint8>, Pointer<Int64>)
     >('syscall');
+final _darwinUtimes = _libc
+    .lookupFunction<
+      Int Function(Pointer<Uint8>, Pointer<Int64>),
+      int Function(Pointer<Uint8>, Pointer<Int64>)
+    >('utimes');
+final _darwinFutimes = _libc
+    .lookupFunction<
+      Int Function(Int, Pointer<Int64>),
+      int Function(int, Pointer<Int64>)
+    >('futimes');
 
 int $syscallUtimensat(
   int fd,
@@ -381,6 +391,17 @@ int $syscallUtimes(
   int mtimeSec,
   int mtimeUsec,
 ) {
+  if (Platform.isMacOS) {
+    final utimes = _darwinUtimes;
+    return _withSyscallTimes(
+      path,
+      atimeSec,
+      atimeUsec,
+      mtimeSec,
+      mtimeUsec,
+      utimes,
+    );
+  }
   final utimes = _syscallUtimes;
   return _withSyscallTimes(
     path,
@@ -411,6 +432,23 @@ int $syscallFutimesat(
   );
 }
 
+int $syscallFutimes(
+  int fd,
+  int atimeSec,
+  int atimeUsec,
+  int mtimeSec,
+  int mtimeUsec,
+) {
+  final futimes = _darwinFutimes;
+  return _withTimes(
+    atimeSec,
+    atimeUsec,
+    mtimeSec,
+    mtimeUsec,
+    (times) => futimes(fd, times),
+  );
+}
+
 int _withSyscallTimes(
   GoString path,
   int atimeSec,
@@ -418,21 +456,39 @@ int _withSyscallTimes(
   int mtimeSec,
   int mtimeFraction,
   int Function(Pointer<Uint8>, Pointer<Int64>) apply,
-) => _withSyscallPath(path, (name) {
+) => _withSyscallPath(
+  path,
+  (name) => _withTimes(
+    atimeSec,
+    atimeFraction,
+    mtimeSec,
+    mtimeFraction,
+    (times) => apply(name, times),
+  ),
+);
+
+int _withTimes(
+  int atimeSec,
+  int atimeFraction,
+  int mtimeSec,
+  int mtimeFraction,
+  int Function(Pointer<Int64>) apply,
+) {
   final memory = _malloc(32);
   if (memory == nullptr) return 12;
   try {
     final times = memory.cast<Int64>();
     times[0] = atimeSec;
+    // Darwin timeval reads the low 32 bits of each padded fraction slot.
     times[1] = atimeFraction;
     times[2] = mtimeSec;
     times[3] = mtimeFraction;
     final errorAddress = _errno();
-    return apply(name, times) == 0 ? 0 : errorAddress.value;
+    return apply(times) == 0 ? 0 : errorAddress.value;
   } finally {
     _free(memory);
   }
-});
+}
 
 final _faccessatSyscall = _libc
     .lookupFunction<
