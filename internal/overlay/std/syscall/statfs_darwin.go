@@ -6,32 +6,6 @@
 
 package syscall
 
-import (
-	errorspkg "errors"
-	"syscall/dart"
-)
-
-func Statfs(path string, stat *Statfs_t) error {
-	data, code := dart.SyscallStatfs(path, stat != nil)
-	return storeStatfs(data, code, stat)
-}
-
-func Fstatfs(fd int, stat *Statfs_t) error {
-	data, code := dart.SyscallFstatfs(fd, stat != nil)
-	return storeStatfs(data, code, stat)
-}
-
-func storeStatfs(data []int64, code int, stat *Statfs_t) error {
-	if code == -1 {
-		return errorspkg.ErrUnsupported
-	}
-	if code != 0 {
-		return Errno(code)
-	}
-	*stat = statfsFromData(data)
-	return nil
-}
-
 func statfsFromData(fields []int64) Statfs_t {
 	stat := Statfs_t{
 		Bsize: uint32(fields[0]), Iosize: int32(fields[1]),

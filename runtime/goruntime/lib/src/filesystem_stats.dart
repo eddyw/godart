@@ -3,6 +3,7 @@
 // license that can be found in the LICENSE file.
 
 import 'dart:ffi';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'slice.dart';
@@ -21,7 +22,7 @@ final _free = _libc
     >('free');
 final _errno = _libc
     .lookupFunction<Pointer<Int> Function(), Pointer<Int> Function()>(
-      '__error',
+      Platform.isLinux ? '__errno_location' : '__error',
     );
 final _getfsstat = _libc
     .lookupFunction<
@@ -66,6 +67,19 @@ Slice<int> _statfsData(Pointer<Uint8> buffer, int n) {
   ]);
 }
 
+Slice<int> _linuxStatfsData(Pointer<Uint8> buffer) {
+  // Linux Statfs_t occupies 120 bytes on AMD64 and ARM64.
+  final data = ByteData.sublistView(buffer.asTypedList(120));
+  return Slice.of(<int>[
+    for (var offset = 0; offset < 56; offset += 8)
+      data.getInt64(offset, Endian.host),
+    data.getInt32(56, Endian.host),
+    data.getInt32(60, Endian.host),
+    for (var offset = 64; offset < 120; offset += 8)
+      data.getInt64(offset, Endian.host),
+  ]);
+}
+
 final _statfs = _libc
     .lookupFunction<
       Int Function(Pointer<Uint8>, Pointer<Uint8>),
@@ -81,7 +95,9 @@ final _fstatfs = _libc
   if (path.bytes.contains(0)) return (Slice<int>.nil(), 22);
   final name = _malloc(path.length + 1);
   if (name == nullptr) return (Slice<int>.nil(), 12);
-  final buffer = output ? _malloc(2168) : nullptr.cast<Uint8>();
+  final buffer = output
+      ? _malloc(Platform.isLinux ? 120 : 2168)
+      : nullptr.cast<Uint8>();
   try {
     if (output && buffer == nullptr) return (Slice<int>.nil(), 12);
     name.asTypedList(path.length + 1)
@@ -91,7 +107,10 @@ final _fstatfs = _libc
     final errorAddress = _errno();
     final code = get(name, buffer) == 0 ? 0 : errorAddress.value;
     if (code != 0) return (Slice<int>.nil(), code);
-    return (_statfsData(buffer, 1), 0);
+    return (
+      Platform.isLinux ? _linuxStatfsData(buffer) : _statfsData(buffer, 1),
+      0,
+    );
   } finally {
     _free(buffer);
     _free(name);
@@ -99,14 +118,19 @@ final _fstatfs = _libc
 }
 
 (Slice<int>, int) $syscallFstatfs(int fd, bool output) {
-  final buffer = output ? _malloc(2168) : nullptr.cast<Uint8>();
+  final buffer = output
+      ? _malloc(Platform.isLinux ? 120 : 2168)
+      : nullptr.cast<Uint8>();
   if (output && buffer == nullptr) return (Slice<int>.nil(), 12);
   try {
     final get = _fstatfs;
     final errorAddress = _errno();
     final code = get(fd, buffer) == 0 ? 0 : errorAddress.value;
     if (code != 0) return (Slice<int>.nil(), code);
-    return (_statfsData(buffer, 1), 0);
+    return (
+      Platform.isLinux ? _linuxStatfsData(buffer) : _statfsData(buffer, 1),
+      0,
+    );
   } finally {
     _free(buffer);
   }

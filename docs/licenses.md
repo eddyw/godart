@@ -57,7 +57,7 @@ The Linux descriptor-relative path adapters follow Go syscall wrappers and retai
 The Linux timestamp adapters follow Go `src/syscall/syscall_linux.go` and `syscall_linux_arm64.go` and retain their 2009 and 2015 BSD notices.
 Linux `syscall.Time` retains the original adapter from Go `src/syscall/syscall_linux_arm64.go` and its 2015 BSD notice.
 The macOS Sysctl adapters follow Go syscall_bsd.go and syscall_darwin.go with their 2009 and 2010 BSD notices.
-The macOS Statfs and Fstatfs adapters retain the 2009 Go BSD notice.
+The Linux and macOS Statfs and Fstatfs adapters retain the 2009 Go BSD notice.
 The Mkfifo adapter follows Go `src/syscall/syscall_darwin.go` and `syscall_linux.go` with their 2009,2010 BSD notice.
 The Chflags and Fchflags adapters retain the 2009,2010 BSD notice from Go `src/syscall/syscall_darwin.go`.
 The Pathconf and Fpathconf adapters follow Go `src/syscall/syscall_darwin.go` and its generated wrappers, with the 2009,2010 BSD notice.

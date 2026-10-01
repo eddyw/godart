@@ -169,7 +169,7 @@ macOS `syscall.Chflags` and `syscall.Fchflags` change actual file flags through 
 They preserve native errors and return explicit unsupported errors on web targets.
 macOS `syscall.Pathconf` and `syscall.Fpathconf` query actual filesystem configuration values.
 They preserve native name, path, and descriptor errors, with explicit unsupported errors on web targets.
-macOS supports native `syscall.Statfs` and `syscall.Fstatfs` with actual filesystem statistics.
+Linux and macOS support native `syscall.Statfs` and `syscall.Fstatfs` with actual filesystem statistics.
 Failed queries preserve caller output, and open descriptors retain access after path removal.
 JS and Wasm report both APIs as unsupported.
 

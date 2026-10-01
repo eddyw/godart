@@ -3,6 +3,7 @@ package driver_test
 import (
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/eddyw/godart/internal/driver"
@@ -12,9 +13,21 @@ func TestDarwinStatfs(t *testing.T) {
 	if runtime.GOOS != "darwin" {
 		t.Skip("Statfs requires macOS")
 	}
+	testStatfs(t)
+}
+
+func TestLinuxStatfs(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("Statfs requires Linux")
+	}
+	testStatfs(t)
+}
+
+func testStatfs(t *testing.T) {
+	t.Helper()
 	dir, out := t.TempDir(), t.TempDir()
 	writeFile(t, filepath.Join(dir, "go.mod"), "module example.com/statfs\n\ngo 1.27\n")
-	writeFile(t, filepath.Join(dir, "main.go"), `package main
+	source := `package main
 import("errors";"fmt";"os";"path/filepath";"syscall")
 func must(err error){if err!=nil{panic(err)}}
 func stable(stat syscall.Statfs_t)syscall.Statfs_t{stat.Bfree,stat.Bavail,stat.Files,stat.Ffree=0,0,0,0;return stat}
@@ -52,7 +65,11 @@ func main(){
  fd:=int(file.Fd());must(file.Close());stat=marker
  fmt.Println("closed",syscall.Fstatfs(fd,&stat),stat==marker)
 }
-`)
+`
+	if runtime.GOOS == "linux" {
+		source = strings.Replace(source, "Reserved:[8]uint32{1,2,3}", "Spare:[4]int64{1,2,3}", 1)
+	}
+	writeFile(t, filepath.Join(dir, "main.go"), source)
 	want := programOutcome(t, dir, "go", "run", ".")
 	if want.Exit != 0 {
 		t.Fatalf("native Go failed: %+v", want)

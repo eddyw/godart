@@ -2133,6 +2133,7 @@
   "driver/short/TestLinuxMkfifo": 64.2,
   "driver/short/TestLinuxMulticastInterfaceIndices": 100.27,
   "driver/short/TestLinuxPathMutations": 24.32,
+  "driver/short/TestLinuxStatfs": 63.33,
   "driver/short/TestLinuxSyscallTime": 146.74,
   "driver/short/TestLinuxSyscallTimestamps": 43.87,
   "driver/short/TestLinuxUtime": 22.37,
