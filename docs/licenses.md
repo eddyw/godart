@@ -31,6 +31,9 @@ The sized helpers retain Go `nat_noasm.go` and its 2023 BSD notice in the native
 The internal FIPS cache uses Go `src/crypto/internal/fips140cache/cache.go` and its original test file.
 The active SDK sources retain their 2025 Go BSD notices.
 
+The map-hash adapter selects original Go `hash/maphash/maphash_test.go`
+and `smhasher_test.go` declarations with their 2019 BSD notices.
+
 Go-derived overlays and upstream test excerpts use the notice in
 [`internal/overlay/std/LICENSE`](../internal/overlay/std/LICENSE).
 The anonymous-interface cycle detector and compiler directive validation

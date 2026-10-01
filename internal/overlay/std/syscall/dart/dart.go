@@ -2077,3 +2077,8 @@ func BigmodUintSlice(ptr *uint, n int) []uint {
 // SyscallUname returns the 6 native Utsname arrays and errno.
 // A false output passes a null pointer to the native query.
 func SyscallUname(output bool) ([]int64, int) { return nil, 0 }
+
+// UnhashableError returns a runtime error for a non-nil, unhashable value.
+func UnhashableError(value any) error {
+	panic("syscall/dart needs the gart compiler")
+}

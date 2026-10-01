@@ -365,6 +365,8 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$incGODEBUG(%s)", args[0]), true
 	case "GODEBUGCount":
 		return fmt.Sprintf("$godebugCount(%s)", args[0]), true
+	case "UnhashableError":
+		return fmt.Sprintf("$runtimeError('hash of unhashable type ' + (%s)!.desc.display)", args[0]), true
 	case "TypeInfo":
 		return fmt.Sprintf("$typeInfo(%s)", args[0]), true
 	case "DeepEqual":

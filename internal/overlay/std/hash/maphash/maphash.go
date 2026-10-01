@@ -389,7 +389,14 @@ func writeComparable[T comparable](h *Hash, v T) {
 // identity. A float that is not a number gives a random result, exactly as Go
 // documents.
 func hashValue(state uint64, v any) uint64 {
-	switch dart.Kind(v) {
+	kind := dart.Kind(v)
+	if kind == "array" || kind == "struct" {
+		_, comparable := dart.TypeInfo(v)
+		if !comparable {
+			panic(dart.UnhashableError(v))
+		}
+	}
+	switch kind {
 	case "nil", "invalid":
 		return mix(state ^ 0x9e3779b97f4a7c15)
 	case "bool":
@@ -426,7 +433,7 @@ func hashValue(state uint64, v any) uint64 {
 		}
 		return state
 	}
-	panic("maphash: hash of unhashable type")
+	panic(dart.UnhashableError(v))
 }
 
 // hashFloat mixes 1 float into a state. The value 0 and the value -0 are equal

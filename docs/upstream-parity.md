@@ -373,3 +373,9 @@ this runtime comparison. The adapter does not claim full compiler-suite parity.
 Run `go test ./internal/driver -run '^TestVersionedGoFixtures$'` for this matrix.
 The language CI suite includes it. The same output directory across module
 versions also verifies cache invalidation when only the language version changes.
+
+The map-hash adapter selects 17 original portable roots for seed reuse,
+byte and string writes, hash interfaces, panic errors, and hash distribution.
+The unhashable-value panic carries the runtime error type and actual value type.
+The complete package still includes unsupported unsafe-pointer assertions.
+Native allocation assertions and the other distribution tests remain outside this adapter.

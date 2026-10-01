@@ -74,5 +74,15 @@
       "classification": "unassessed",
       "reason": "The declaration requires a public TLS service. The local acceptance selection does not assess that external service."
     }
+  },
+  "hash/maphash": {
+    "TestComparable": {
+      "classification": "implementation-gap",
+      "reason": "The original assertion requires unsafe.StringData and native stack relocation. The adapter does not supply fabricated pointers or alter those assertions."
+    },
+    "TestWriteComparable": {
+      "classification": "implementation-gap",
+      "reason": "The original assertion requires unsafe.StringData and native stack relocation. The adapter does not supply fabricated pointers or alter those assertions."
+    }
   }
 }

@@ -2143,6 +2143,8 @@
   "driver/short/TestLocalModuleImports": 19.1,
   "driver/short/TestLookupPortUpstream": 333.4,
   "driver/short/TestMachineArrayInitialization": 9.21,
+  "driver/short/TestMaphashPortable": 304.84,
+  "driver/short/TestMaphashValues": 63.08,
   "driver/short/TestMathPortable": 2.67,
   "driver/short/TestModulePackageNames": 38.49,
   "driver/short/TestMonotonicClock": 13.31,
