@@ -2000,7 +2000,7 @@
   "TestUpstreamTargets/unicode/utf16": 64.43,
   "TestWasm/cleanuparg": 12.93,
   "TestWasm/literalnames": 4.61,
-  "driver/full/TestDirectoryCursor": 36.02,
+  "driver/full/TestDirectoryCursor": 46.59,
   "driver/full/TestDirectoryMetadata": 37.47,
   "driver/full/TestHTTPCancellationUpstream": 189.09,
   "driver/full/TestLookupPortUpstream": 319.43,

@@ -1,6 +1,7 @@
 package driver_test
 
 import (
+	"go/build"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -8,11 +9,16 @@ import (
 	"testing"
 
 	"github.com/eddyw/godart/internal/driver"
+	"github.com/eddyw/godart/internal/parity"
 )
 
 func TestDirectoryCursor(t *testing.T) {
 	if runtime.GOOS != "darwin" && runtime.GOOS != "linux" {
 		t.Skip("directory cursor validation requires macOS or Linux")
+	}
+	inventory, err := parity.Discover(build.Default)
+	if err != nil {
+		t.Fatal(err)
 	}
 	dir, out := t.TempDir(), t.TempDir()
 	writeFile(t, filepath.Join(dir, "go.mod"), "module example.com/directorycursor\n\ngo 1.27\n")
@@ -50,7 +56,7 @@ func TestDirectoryCursor(t *testing.T) {
 			} else {
 				result = runUpstreamTarget(t, target, out, stats.Binaries[0].Entry, dir, args)
 			}
-			compareUpstream(t, "os-directory-cursor", "os", filter, target, osDir, result.Text, result.Exit, false)
+			compareUpstreamInventory(t, "os-directory-cursor", "os", filter, target, osDir, result.Text, result.Exit, *inventory, nil, nil, nil, false)
 		})
 	}
 }
