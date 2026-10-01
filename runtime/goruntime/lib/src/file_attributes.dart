@@ -122,6 +122,30 @@ final _chmod = Platform.isMacOS
         Int Function(Pointer<Uint8>, Uint32),
         int Function(Pointer<Uint8>, int)
       >('chmod');
+final _fchmodat = Platform.isMacOS
+    ? _libc.lookupFunction<
+        Int Function(Int, Pointer<Uint8>, Uint16, Int),
+        int Function(int, Pointer<Uint8>, int, int)
+      >('fchmodat')
+    : _libc.lookupFunction<
+        Int Function(Int, Pointer<Uint8>, Uint32, Int),
+        int Function(int, Pointer<Uint8>, int, int)
+      >('fchmodat');
+final _fchownat = _libc
+    .lookupFunction<
+      Int Function(Int, Pointer<Uint8>, Uint32, Uint32, Int),
+      int Function(int, Pointer<Uint8>, int, int, int)
+    >('fchownat');
+final _atNoFollow = Platform.isMacOS ? 0x20 : 0x100;
+
+int $rootChmod(int parent, GoString path, int mode) =>
+    _pathAttribute(path, (name) => _fchmodat(parent, name, mode, _atNoFollow));
+
+int $rootChown(int parent, GoString path, int uid, int gid) => _pathAttribute(
+  path,
+  (name) => _fchownat(parent, name, uid, gid, _atNoFollow),
+);
+
 final _chown = _libc
     .lookupFunction<
       Int Function(Pointer<Uint8>, Uint32, Uint32),
@@ -181,6 +205,33 @@ int $nativeChtimes(
   bool setAtime,
   int mtime,
   bool setMtime,
+) => _chtimes(
+  Platform.isMacOS ? -2 : -100,
+  path,
+  0,
+  atime,
+  setAtime,
+  mtime,
+  setMtime,
+);
+
+int $rootChtimes(
+  int parent,
+  GoString path,
+  int atime,
+  bool setAtime,
+  int mtime,
+  bool setMtime,
+) => _chtimes(parent, path, _atNoFollow, atime, setAtime, mtime, setMtime);
+
+int _chtimes(
+  int parent,
+  GoString path,
+  int flags,
+  int atime,
+  bool setAtime,
+  int mtime,
+  bool setMtime,
 ) {
   final bytes = path.bytes;
   if (bytes.contains(0)) return 22;
@@ -211,9 +262,7 @@ int $nativeChtimes(
     final errno = _errno();
     int error;
     do {
-      error = _utimensat(Platform.isMacOS ? -2 : -100, name, times, 0) == 0
-          ? 0
-          : errno.value;
+      error = _utimensat(parent, name, times, flags) == 0 ? 0 : errno.value;
     } while (error == 4);
     return error;
   } finally {

@@ -24,12 +24,17 @@ final _linkat = _libc
       Int Function(Int, Pointer<Uint8>, Int, Pointer<Uint8>, Int),
       int Function(int, Pointer<Uint8>, int, Pointer<Uint8>, int)
     >('linkat');
-final _atCurrentDirectory = Platform.isMacOS ? -2 : -100;
 final _symlink = _libc
     .lookupFunction<
       Int Function(Pointer<Uint8>, Pointer<Uint8>),
       int Function(Pointer<Uint8>, Pointer<Uint8>)
     >('symlink');
+final _symlinkat = _libc
+    .lookupFunction<
+      Int Function(Pointer<Uint8>, Int, Pointer<Uint8>),
+      int Function(Pointer<Uint8>, int, Pointer<Uint8>)
+    >('symlinkat');
+
 final _errno = _libc
     .lookupFunction<Pointer<Int> Function(), Pointer<Int> Function()>(
       Platform.isMacOS ? '__error' : '__errno_location',
@@ -37,15 +42,21 @@ final _errno = _libc
 
 int $nativeLink(GoString from, GoString to) => _createLink(from, to, _link);
 
-int $nativeLinkNoFollow(GoString from, GoString to) => _createLink(
-  from,
-  to,
-  (oldName, newName) =>
-      _linkat(_atCurrentDirectory, oldName, _atCurrentDirectory, newName, 0),
-);
-
 int $nativeSymlink(GoString from, GoString to) =>
     _createLink(from, to, _symlink);
+
+int $rootLink(int oldParent, GoString from, int newParent, GoString to) =>
+    _createLink(
+      from,
+      to,
+      (oldName, newName) => _linkat(oldParent, oldName, newParent, newName, 0),
+    );
+
+int $rootSymlink(GoString target, int parent, GoString path) => _createLink(
+  target,
+  path,
+  (oldName, newName) => _symlinkat(oldName, parent, newName),
+);
 
 int _createLink(
   GoString from,

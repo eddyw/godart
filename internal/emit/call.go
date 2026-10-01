@@ -656,6 +656,34 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$fileTruncate(%s, %s)", args[0], args[1]), true
 	case "ReadFile":
 		return fmt.Sprintf("$readFile(%s)", args[0]), true
+	case "RootOpen":
+		return fmt.Sprintf("$rootOpen(%s)", args[0]), true
+	case "RootOpenAt":
+		return fmt.Sprintf("$rootOpenAt(%s, %s)", args[0], args[1]), true
+	case "RootOpenDir":
+		return fmt.Sprintf("$rootOpenDir(%s, %s)", args[0], args[1]), true
+	case "RootOpenFile":
+		return fmt.Sprintf("$rootOpenFile(%s, %s, %s, %s)", args[0], args[1], args[2], args[3]), true
+	case "RootMkdir":
+		return fmt.Sprintf("$rootMkdir(%s, %s, %s)", args[0], args[1], args[2]), true
+	case "RootReadlink":
+		return fmt.Sprintf("$rootReadlink(%s, %s)", args[0], args[1]), true
+	case "RootChmod":
+		return fmt.Sprintf("$rootChmod(%s, %s, %s)", args[0], args[1], args[2]), true
+	case "RootChown":
+		return fmt.Sprintf("$rootChown(%s, %s, %s, %s)", args[0], args[1], args[2], args[3]), true
+	case "RootChtimes":
+		return fmt.Sprintf("$rootChtimes(%s, %s, %s, %s, %s, %s)", args[0], args[1], args[2], args[3], args[4], args[5]), true
+	case "RootLink":
+		return fmt.Sprintf("$rootLink(%s, %s, %s, %s)", args[0], args[1], args[2], args[3]), true
+	case "RootRename":
+		return fmt.Sprintf("$rootRename(%s, %s, %s, %s)", args[0], args[1], args[2], args[3]), true
+	case "RootSymlink":
+		return fmt.Sprintf("$rootSymlink(%s, %s, %s)", args[0], args[1], args[2]), true
+	case "RootRemove":
+		return fmt.Sprintf("$rootRemove(%s, %s)", args[0], args[1]), true
+	case "RootRemoveAll":
+		return fmt.Sprintf("$rootRemoveAll(%s, %s)", args[0], args[1]), true
 	case "HasNativeStat":
 		return "$hasNativeStat", true
 	case "NativeStat":
@@ -670,8 +698,6 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$lstat(%s)", args[0]), true
 	case "NativeLink":
 		return fmt.Sprintf("$nativeLink(%s, %s)", args[0], args[1]), true
-	case "NativeLinkNoFollow":
-		return fmt.Sprintf("$nativeLinkNoFollow(%s, %s)", args[0], args[1]), true
 	case "NativeSymlink":
 		return fmt.Sprintf("$nativeSymlink(%s, %s)", args[0], args[1]), true
 	case "Symlink":

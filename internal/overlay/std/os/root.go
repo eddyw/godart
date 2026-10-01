@@ -10,7 +10,6 @@ import (
 	"errors"
 	"io"
 	"io/fs"
-	"runtime"
 	"syscall"
 	"syscall/dart"
 	"time"
@@ -19,40 +18,18 @@ import (
 // errPathEscapes names a path that leaves the root.
 var errPathEscapes = errors.New("path escapes from parent")
 
-// Root provides path operations below a directory. It retains an absolute
-// path, which does not track directory renames. Validation and filesystem
-// access are separate operations. Concurrent path changes can cause access
-// outside the root.
+// Root provides operations relative to an open directory.
 type Root struct {
 	*root
 }
 
-type root struct {
-	name string
-	// real anchors operations to the absolute path after symlink resolution.
-	real   string
-	closed bool
-}
-
 // OpenRoot opens a directory and gives the Root of it.
 func OpenRoot(name string) (*Root, error) {
-	f, err := Open(name)
-	if err != nil {
-		return nil, err
+	fd, code := dart.RootOpen(name)
+	if code != 0 {
+		return nil, &PathError{Op: "open", Path: name, Err: syscall.Errno(code)}
 	}
-	defer f.Close()
-	info, err := f.Stat()
-	if err != nil {
-		return nil, &PathError{Op: "open", Path: name, Err: underlyingError(err)}
-	}
-	if !info.IsDir() {
-		return nil, &PathError{Op: "open", Path: name, Err: errors.New("not a directory")}
-	}
-	real, cause := dart.ResolveSymlinks(name)
-	if cause != "" {
-		return nil, &PathError{Op: "open", Path: name, Err: errors.New(cause)}
-	}
-	return &Root{&root{name: name, real: real}}, nil
+	return newRoot(fd, name)
 }
 
 // OpenInRoot opens the file name inside the directory dir. It gives an error
@@ -69,11 +46,9 @@ func OpenInRoot(dir, name string) (*File, error) {
 // Name gives the name that OpenRoot read.
 func (r *Root) Name() string { return r.name }
 
-// Close releases the root. The surface holds no directory handle, thus the
-// call only marks the root.
+// Close releases the root directory descriptor.
 func (r *Root) Close() error {
-	r.closed = true
-	return nil
+	return r.root.Close()
 }
 
 // Open opens a file of the root for reading.
@@ -86,13 +61,7 @@ func (r *Root) OpenFile(name string, flag int, perm FileMode) (*File, error) {
 	if perm&0o777 != perm {
 		return nil, &PathError{Op: "openat", Path: name, Err: errors.New("unsupported file mode")}
 	}
-	follow := flag&(O_CREATE|O_EXCL) != (O_CREATE | O_EXCL)
-	full, err := r.check("openat", name, follow)
-	if err != nil {
-		return nil, err
-	}
-	f, cause := OpenFile(full, flag, perm)
-	return r.openIn(f, cause, name)
+	return rootOpenFile(r, name, flag, perm)
 }
 
 // Create makes a file of the root, or it truncates the file that stands there.
@@ -102,55 +71,18 @@ func (r *Root) Create(name string) (*File, error) {
 
 // OpenRoot opens a directory of the root and gives the Root of it.
 func (r *Root) OpenRoot(name string) (*Root, error) {
-	full, err := r.resolve("openat", name)
-	if err != nil {
-		return nil, err
-	}
-	f, err := Open(full)
-	if err != nil {
-		return nil, rootError("openat", name, err)
-	}
-	defer f.Close()
-	info, err := f.Stat()
-	if err != nil {
-		return nil, rootError("openat", name, err)
-	}
-	childName := joinPath(r.name, name)
-	if !info.IsDir() {
-		return nil, &PathError{Op: "open", Path: childName, Err: errors.New("not a directory")}
-	}
-	real, cause := dart.ResolveSymlinks(full)
-	if cause != "" {
-		return nil, &PathError{Op: "openat", Path: name, Err: errors.New(cause)}
-	}
-	return &Root{&root{name: childName, real: real}}, nil
+	return openRootInRoot(r, name)
 }
 
 // Stat reads the metadata of a name of the root.
 func (r *Root) Stat(name string) (FileInfo, error) {
-	full, err := r.resolve("statat", name)
-	if err != nil {
-		return nil, err
-	}
-	info, cause := Stat(full)
-	if cause != nil {
-		return nil, rootError("statat", name, cause)
-	}
-	return info, nil
+	return rootStat(r, name, false)
 }
 
 // Lstat reads the metadata of a name of the root, and it follows no symbolic
 // link of the last element.
 func (r *Root) Lstat(name string) (FileInfo, error) {
-	full, err := r.resolveNoFollow("statat", name)
-	if err != nil {
-		return nil, err
-	}
-	info, cause := Lstat(full)
-	if cause != nil {
-		return nil, rootError("statat", name, cause)
-	}
-	return info, nil
+	return rootStat(r, name, true)
 }
 
 // ReadFile reads the whole content of a file of the root.
@@ -181,134 +113,55 @@ func (r *Root) Mkdir(name string, perm FileMode) error {
 	if perm&0o777 != perm {
 		return &PathError{Op: "mkdirat", Path: name, Err: errors.New("unsupported file mode")}
 	}
-	path := name
-	switch runtime.GOOS {
-	case "linux", "windows", "openbsd":
-		// These platforms do not follow a final symlink with a terminal slash.
-		for len(path) > 1 && IsPathSeparator(path[len(path)-1]) {
-			path = path[:len(path)-1]
-		}
-	}
-	if err := checkPathEscapesInternal(r, path, true); err != nil {
-		return &PathError{Op: "mkdirat", Path: name, Err: err}
-	}
-	return rootError("mkdirat", name, Mkdir(joinPath(r.real, name), perm))
+	return rootMkdir(r, name, perm)
 }
 
 // Remove removes 1 name of the root.
 func (r *Root) Remove(name string) error {
-	full, err := r.resolveNoFollow("removeat", name)
-	if err != nil {
-		return err
-	}
-	return rootError("removeat", name, Remove(full))
+	return rootRemove(r, name)
 }
 
 // RemoveAll removes a name of the root and each name under it.
 func (r *Root) RemoveAll(name string) error {
-	for len(name) > 0 && IsPathSeparator(name[len(name)-1]) {
-		name = name[:len(name)-1]
-	}
-	if endsWithDot(name) {
-		return &PathError{Op: "RemoveAll", Path: name, Err: syscall.EINVAL}
-	}
-	full, err := r.resolveNoFollow("RemoveAll", name)
-	if err != nil {
-		return err
-	}
-	return rootError("RemoveAll", name, RemoveAll(full))
+	return rootRemoveAll(r, name)
 }
 
 // Rename moves a name of the root to another name of the root.
 func (r *Root) Rename(oldname, newname string) error {
-	from, err := r.resolveNoFollow("renameat", oldname)
-	if err != nil {
-		return &LinkError{Op: "renameat", Old: oldname, New: newname, Err: underlyingError(err)}
-	}
-	to, err := r.resolveNoFollow("renameat", newname)
-	if err != nil {
-		return &LinkError{Op: "renameat", Old: oldname, New: newname, Err: underlyingError(err)}
-	}
-	if err := Rename(from, to); err != nil {
-		return &LinkError{Op: "renameat", Old: oldname, New: newname, Err: underlyingError(err)}
-	}
-	return nil
+	return rootRename(r, oldname, newname)
 }
 
 // Symlink makes a symbolic link of the root. The target reads as Go writes it,
 // and the check of the root runs at each read of the link.
 func (r *Root) Symlink(oldname, newname string) error {
-	full, err := r.resolveNoFollow("symlinkat", newname)
-	if err != nil {
-		return &LinkError{Op: "symlinkat", Old: oldname, New: newname, Err: underlyingError(err)}
-	}
-	if err := Symlink(oldname, full); err != nil {
-		return &LinkError{Op: "symlinkat", Old: oldname, New: newname, Err: underlyingError(err)}
-	}
-	return nil
+	return rootSymlink(r, oldname, newname)
 }
 
 // Chmod writes the mode of a name of the root.
 func (r *Root) Chmod(name string, mode FileMode) error {
-	full, err := r.resolve("chmodat", name)
-	if err != nil {
-		return err
-	}
-	return rootError("chmodat", name, Chmod(full, mode))
+	return rootChmod(r, name, mode)
 }
 
 // Chown writes the owner and the group of a name of the root.
 func (r *Root) Chown(name string, uid, gid int) error {
-	full, err := r.resolve("chownat", name)
-	if err != nil {
-		return err
-	}
-	return rootError("chownat", name, Chown(full, uid, gid))
+	return rootChown(r, name, uid, gid)
 }
 
 // Lchown writes the owner and the group of a name of the root, and it takes a
 // symbolic link itself.
 func (r *Root) Lchown(name string, uid, gid int) error {
-	full, err := r.resolveNoFollow("lchownat", name)
-	if err != nil {
-		return err
-	}
-	return rootError("lchownat", name, Lchown(full, uid, gid))
+	return rootLchown(r, name, uid, gid)
 }
 
 // Chtimes writes the time of the last read and the time of the last change of
 // a name of the root.
 func (r *Root) Chtimes(name string, atime time.Time, mtime time.Time) error {
-	full, err := r.resolve("chtimesat", name)
-	if err != nil {
-		return err
-	}
-	return rootError("chtimesat", name, Chtimes(full, atime, mtime))
+	return rootChtimes(r, name, atime, mtime)
 }
 
 // Link creates a hard link to oldname. Linux and macOS preserve a final symlink.
 func (r *Root) Link(oldname, newname string) error {
-	from, err := r.resolveNoFollow("linkat", oldname)
-	if err != nil {
-		return &LinkError{Op: "linkat", Old: oldname, New: newname, Err: underlyingError(err)}
-	}
-	to, err := r.resolveNoFollow("linkat", newname)
-	if err != nil {
-		return &LinkError{Op: "linkat", Old: oldname, New: newname, Err: underlyingError(err)}
-	}
-	if dart.HasNativeStat() {
-		if code := dart.NativeLinkNoFollow(from, to); code != 0 {
-			return &LinkError{Op: "linkat", Old: oldname, New: newname, Err: syscall.Errno(code)}
-		}
-		return nil
-	}
-	if info, cause := Lstat(from); cause == nil && info.Mode()&ModeSymlink != 0 {
-		return &LinkError{Op: "linkat", Old: oldname, New: newname, Err: errors.New("cannot create a hard link to a symlink")}
-	}
-	if cause := Link(from, to); cause != nil {
-		return &LinkError{Op: "linkat", Old: oldname, New: newname, Err: underlyingError(cause)}
-	}
-	return nil
+	return rootLink(r, oldname, newname)
 }
 
 // rootError writes the name of the caller and the operation of the root into
@@ -322,45 +175,17 @@ func rootError(op, name string, err error) error {
 
 // Readlink gives the target of a symbolic link of the root.
 func (r *Root) Readlink(name string) (string, error) {
-	full, err := r.resolveNoFollow("readlinkat", name)
-	if err != nil {
-		return "", err
-	}
-	target, cause := Readlink(full)
-	if cause != nil {
-		return "", rootError("readlinkat", name, cause)
-	}
-	return target, nil
+	return rootReadlink(r, name)
 }
 
 // FS gives the file system of the root. Each read of it holds the check of the
 // root.
 func (r *Root) FS() fs.FS { return rootFS{r} }
 
-// openIn preserves the caller's names for File.Name and PathError.
-func (r *Root) openIn(f *File, err error, name string) (*File, error) {
-	if err != nil {
-		return nil, rootError("openat", name, err)
+// MkdirAll makes a directory of the root and each parent of it.
+func (r *Root) MkdirAll(name string, perm FileMode) error {
+	if perm&0o777 != perm {
+		return &PathError{Op: "mkdirat", Path: name, Err: errors.New("unsupported file mode")}
 	}
-	f.name = joinPath(r.name, name)
-	return f, nil
-}
-
-// resolve gives the path of a name inside the root, and it rejects a name that
-// leaves the root.
-func (r *Root) resolve(op, name string) (string, error) {
-	return r.check(op, name, true)
-}
-
-// resolveNoFollow does the same, and it leaves the last element of the path
-// alone. A read of a symbolic link needs the link itself.
-func (r *Root) resolveNoFollow(op, name string) (string, error) {
-	return r.check(op, name, false)
-}
-
-func (r *Root) check(op, name string, follow bool) (string, error) {
-	if err := checkPathEscapesInternal(r, name, !follow); err != nil {
-		return "", &PathError{Op: op, Path: name, Err: err}
-	}
-	return joinPath(r.real, name), nil
+	return rootMkdirAll(r, name, perm)
 }

@@ -72,7 +72,8 @@ Other native hosts and browsers do not support `os.File.Fd`.
 returns an explicit error because inherited listener descriptors remain unsupported.
 
 `os.Root.FS` implements `fs.ReadDirFS` and `fs.ReadLinkFS`, with sorted directory entries and link metadata.
-Root paths still do not track directory renames. Concurrent path changes can escape the root.
+On supported Linux and macOS hosts, `os.Root` retains a native directory descriptor.
+Root operations use that descriptor after directory renames. Native errno capture retains the limitation below.
 On Linux and macOS, `Root.Link` preserves the final symbolic link and its inode identity.
 
 `os.UserConfigDir` and `os.UserCacheDir` use the native macOS locations.

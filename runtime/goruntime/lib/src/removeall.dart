@@ -99,15 +99,17 @@ int _unlink(int parent, Uint8List name, int flags) {
 int $syscallUnlink(GoString path, bool directory) =>
     _unlink(_cwd, path.bytes, directory ? _removeDirectory : 0);
 
-int removeDescriptors(GoString path) {
+int removeDescriptors(GoString path) => $rootRemove(_cwd, path);
+
+int $rootRemove(int parent, GoString path) {
   int fileError;
   do {
-    fileError = _unlink(_cwd, path.bytes, 0);
+    fileError = _unlink(parent, path.bytes, 0);
   } while (fileError == 4);
   if (fileError == 0) return 0;
   int directoryError;
   do {
-    directoryError = _unlink(_cwd, path.bytes, _removeDirectory);
+    directoryError = _unlink(parent, path.bytes, _removeDirectory);
   } while (directoryError == 4);
   if (directoryError == 0) return 0;
   // ENOTDIR identifies the file error on both Linux and macOS.
@@ -257,3 +259,6 @@ _RemovalError? _removeFrom(int parent, Uint8List base) {
     error.errno,
   );
 }
+
+int $rootRemoveAll(int parent, GoString path) =>
+    _removeFrom(parent, path.bytes)?.errno ?? 0;

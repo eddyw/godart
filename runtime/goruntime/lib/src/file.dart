@@ -5,6 +5,7 @@ import 'directory_descriptor.dart';
 import 'file_handle.dart';
 import 'file_stat.dart';
 import 'removeall.dart';
+import 'root.dart';
 import 'slice.dart';
 import 'string.dart';
 import 'syscall_directory.dart';
@@ -16,7 +17,8 @@ export 'file_links.dart';
 export 'file_readlink.dart';
 export 'file_rename.dart';
 export 'file_stat.dart';
-export 'removeall.dart' show $syscallUnlink;
+export 'removeall.dart' show $syscallUnlink, $rootRemove, $rootRemoveAll;
+export 'root.dart' show $rootOpen, $rootOpenAt, $rootOpenDir, $rootMkdir;
 export 'syscall_directory.dart';
 export 'working_directory.dart';
 
@@ -658,7 +660,16 @@ void $stderr(GoString text) => stderr.add(text.bytes);
 (int, int, int) $fileOpenFlags(GoString path, int flags, int mode) {
   final (file, code) = NativeFileHandle.open(path, flags, mode);
   if (code != 0) return (-1, -1, code);
-  final opened = file!;
+  return _fileFromNative(file!);
+}
+
+(int, int, int) $rootOpenFile(int parent, GoString path, int flags, int mode) {
+  final (fd, code) = rootOpenFileDescriptor(parent, path, flags, mode);
+  if (code != 0) return (-1, -1, code);
+  return _fileFromNative(NativeFileHandle(fd));
+}
+
+(int, int, int) _fileFromNative(NativeFileHandle opened) {
   final (metadata, statCode) = $nativeFstat(opened.descriptor);
   if (statCode != 0) {
     $syscallClose(opened.descriptor);

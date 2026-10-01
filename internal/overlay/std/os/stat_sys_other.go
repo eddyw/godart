@@ -33,3 +33,9 @@ func nativeFileInfo(name, op string, data []int64, errno int) (FileInfo, error) 
 	}
 	return &fileStat{name: base(name), size: data[0], mode: nativeFileMode(uint32(data[1])), seconds: data[2], nanos: data[3], device: uint64(data[4]), inode: uint64(data[5])}, nil
 }
+
+func lstatatWithName(parent int, original, name string) (FileInfo, error) {
+	data, code := dart.NativeLstatat(parent, name)
+	info, err := nativeFileInfo(original, "statat", data, code)
+	return info, underlyingError(err)
+}

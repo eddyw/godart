@@ -185,7 +185,6 @@ int $nativeChtimes(
 (GoString, int) $nativeReadlink(GoString path) => (GoString.empty, 38);
 
 int $nativeLink(GoString from, GoString to) => 38;
-int $nativeLinkNoFollow(GoString from, GoString to) => 38;
 int $nativeSymlink(GoString from, GoString to) => 38;
 
 (int, int) $syscallOpen(GoString path, int flags, int mode) => (-1, 38);
@@ -205,3 +204,27 @@ int $syscallClose(int fd) => 38;
 int $syscallUnlink(GoString path, bool directory) => 38;
 
 (int, int) $syscallReadlink(GoString path, Slice<GoInt> bytes) => (-1, 38);
+
+(int, int) $rootOpen(GoString path) => (-1, 38);
+(int, int) $rootOpenAt(int parent, GoString path) => (-1, 38);
+(int, int) $rootOpenDir(int parent, GoString path) => (-1, 38);
+(int, int, int) $rootOpenFile(int parent, GoString path, int flags, int mode) =>
+    (-1, -1, 38);
+int $rootMkdir(int parent, GoString path, int mode) => 38;
+(GoString, int) $rootReadlink(int parent, GoString path) =>
+    (GoString.empty, 38);
+int $rootChmod(int parent, GoString path, int mode) => 38;
+int $rootChown(int parent, GoString path, int uid, int gid) => 38;
+int $rootChtimes(
+  int parent,
+  GoString path,
+  int atime,
+  bool setAtime,
+  int mtime,
+  bool setMtime,
+) => 38;
+int $rootLink(int oldParent, GoString from, int newParent, GoString to) => 38;
+int $rootRename(int oldParent, GoString from, int newParent, GoString to) => 38;
+int $rootSymlink(GoString target, int parent, GoString path) => 38;
+int $rootRemove(int parent, GoString path) => 38;
+int $rootRemoveAll(int parent, GoString path) => 38;

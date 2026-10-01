@@ -9,89 +9,9 @@ package os
 import (
 	"errors"
 	"slices"
-	"syscall"
 )
 
 const rootMaxSymlinks = 8
-
-func checkPathEscapesInternal(r *Root, name string, lstat bool) error {
-	if r.closed {
-		return ErrClosed
-	}
-	parts, endsInSlash, err := splitPathInRoot(name, nil, nil)
-	if err != nil {
-		return err
-	}
-
-	i := 0
-	symlinks := 0
-	base := r.real
-	for i < len(parts) {
-		if parts[i] == ".." {
-			// Resolve one or more parent ("..") path components.
-			end := i + 1
-			for end < len(parts) && parts[end] == ".." {
-				end++
-			}
-			count := end - i
-			if count > i {
-				return errPathEscapes
-			}
-			parts = slices.Delete(parts, i-count, end)
-			i -= count
-			base = r.real
-			for j := range i {
-				base = joinPath(base, parts[j])
-			}
-			continue
-		}
-
-		part := parts[i]
-		if i == len(parts)-1 {
-			if lstat && !endsInSlash {
-				break
-			}
-		}
-
-		next := joinPath(base, part)
-		fi, err := Lstat(next)
-		if err != nil {
-			if IsNotExist(err) {
-				// Later parent components can reach existing symlinks before MkdirAll creates this path.
-				base = next
-				i++
-				continue
-			}
-			return underlyingError(err)
-		}
-		if fi.Mode()&ModeSymlink != 0 {
-			link, err := Readlink(next)
-			if err != nil {
-				return errPathEscapes
-			}
-			symlinks++
-			if symlinks > rootMaxSymlinks {
-				return syscall.ELOOP
-			}
-			newparts, newEndsInSlash, err := splitPathInRoot(link, parts[:i], parts[i+1:])
-			if err != nil {
-				return err
-			}
-			if i == len(parts)-1 && newEndsInSlash {
-				endsInSlash = true
-			}
-			parts = newparts
-			continue
-		}
-		if !fi.IsDir() && i < len(parts)-1 {
-			return syscall.ENOTDIR
-		}
-
-		base = next
-		i++
-	}
-	return nil
-}
 
 func splitPathInRoot(s string, prefix, suffix []string) (_ []string, endsInSlash bool, err error) {
 	if len(s) == 0 {

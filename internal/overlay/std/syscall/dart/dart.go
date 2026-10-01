@@ -1053,6 +1053,63 @@ func ReadFile(path string) ([]byte, string) {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// Root operations use native directory descriptors and return errno.
+func RootOpen(path string) (int, int) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+func RootOpenAt(parent int, path string) (int, int) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+func RootOpenDir(parent int, path string) (int, int) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+func RootOpenFile(parent int, path string, flags, mode int) (int, int, int) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+func RootMkdir(parent int, path string, mode int) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
+func RootReadlink(parent int, path string) (string, int) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+func RootChmod(parent int, path string, mode int) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
+func RootChown(parent int, path string, uid, gid int) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
+func RootChtimes(parent int, path string, atime int64, setAtime bool, mtime int64, setMtime bool) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
+func RootLink(oldParent int, oldname string, newParent int, newname string) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
+func RootRename(oldParent int, oldname string, newParent int, newname string) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
+func RootSymlink(target string, parent int, path string) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
+func RootRemove(parent int, path string) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
+func RootRemoveAll(parent int, path string) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
 func HasNativeStat() bool { panic("syscall/dart needs the gart compiler") }
 
 // NativeStat returns metadata and errno. The metadata contains size, mode,
@@ -1823,10 +1880,6 @@ func VerifySystemCertificates(certs []string, name string, date float64, hasDate
 func GrowValue(value any, count int) any { panic("syscall/dart needs the gart compiler") }
 
 func NativeLink(from, to string) int {
-	panic("syscall/dart needs the gart compiler")
-}
-
-func NativeLinkNoFollow(from, to string) int {
 	panic("syscall/dart needs the gart compiler")
 }
 

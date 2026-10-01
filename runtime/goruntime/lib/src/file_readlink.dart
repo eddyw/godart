@@ -24,12 +24,27 @@ final _readlink = _libc
       IntPtr Function(Pointer<Uint8>, Pointer<Uint8>, Size),
       int Function(Pointer<Uint8>, Pointer<Uint8>, int)
     >('readlink');
+final _readlinkat = _libc
+    .lookupFunction<
+      IntPtr Function(Int, Pointer<Uint8>, Pointer<Uint8>, Size),
+      int Function(int, Pointer<Uint8>, Pointer<Uint8>, int)
+    >('readlinkat');
 final _errno = _libc
     .lookupFunction<Pointer<Int> Function(), Pointer<Int> Function()>(
       Platform.isMacOS ? '__error' : '__errno_location',
     );
 
-(GoString, int) $nativeReadlink(GoString path) {
+(GoString, int) $nativeReadlink(GoString path) => _readLink(path, _readlink);
+
+(GoString, int) $rootReadlink(int parent, GoString path) => _readLink(
+  path,
+  (name, buffer, size) => _readlinkat(parent, name, buffer, size),
+);
+
+(GoString, int) _readLink(
+  GoString path,
+  int Function(Pointer<Uint8>, Pointer<Uint8>, int) readlink,
+) {
   if (path.bytes.contains(0)) return (GoString.empty, 22);
   final name = _malloc(path.length + 1);
   if (name == nullptr) return (GoString.empty, 12);
@@ -44,7 +59,7 @@ final _errno = _libc
         int count;
         int error;
         do {
-          count = _readlink(name, buffer, size);
+          count = readlink(name, buffer, size);
           error = count < 0 ? _errno().value : 0;
         } while (error == 4);
         if (error != 0) return (GoString.empty, error);

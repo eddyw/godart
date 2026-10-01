@@ -10,6 +10,7 @@ Their sources retain the Go BSD notices and use the overlay license.
 
 The root filesystem adapter follows Go `src/os/root.go`, `src/os/root_openat.go`,
 and `src/os/root_unix.go` with their 2024 BSD notices.
+The native root tests retain the original rename and race assertions from `src/os/root_test.go`.
 
 The signal context adapter preserves the NotifyContext declarations from
 Go 1.27.1 `src/os/signal/signal.go`. Its source retains the Go BSD header.
