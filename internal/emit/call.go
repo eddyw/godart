@@ -798,6 +798,12 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return "$syscallGetwd()", true
 	case "SyscallGetcwd":
 		return fmt.Sprintf("$syscallGetcwd(%s)", args[0]), true
+	case "SyscallUtimensat":
+		return fmt.Sprintf("$syscallUtimensat(%s)", strings.Join(args, ", ")), true
+	case "SyscallUtimes":
+		return fmt.Sprintf("$syscallUtimes(%s)", strings.Join(args, ", ")), true
+	case "SyscallFutimesat":
+		return fmt.Sprintf("$syscallFutimesat(%s)", strings.Join(args, ", ")), true
 	case "NativeGetwd":
 		return "$nativeGetwd()", true
 	case "NativeChdir":

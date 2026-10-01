@@ -344,6 +344,96 @@ final _umask = Platform.isMacOS
 
 int $syscallUmask(int mask) => _umask(mask);
 
+final _syscallUtimes = _libc
+    .lookupFunction<
+      Long Function(Long, VarArgs<(Pointer<Uint8>, Pointer<Int64>)>),
+      int Function(int, Pointer<Uint8>, Pointer<Int64>)
+    >('syscall');
+final _syscallFutimesat = _libc
+    .lookupFunction<
+      Long Function(Long, VarArgs<(Int, Pointer<Uint8>, Pointer<Int64>)>),
+      int Function(int, int, Pointer<Uint8>, Pointer<Int64>)
+    >('syscall');
+
+int $syscallUtimensat(
+  int fd,
+  GoString path,
+  int atimeSec,
+  int atimeNsec,
+  int mtimeSec,
+  int mtimeNsec,
+) {
+  final utimens = _utimensat;
+  return _withSyscallTimes(
+    path,
+    atimeSec,
+    atimeNsec,
+    mtimeSec,
+    mtimeNsec,
+    (name, times) => utimens(fd, name, times, 0),
+  );
+}
+
+int $syscallUtimes(
+  GoString path,
+  int atimeSec,
+  int atimeUsec,
+  int mtimeSec,
+  int mtimeUsec,
+) {
+  final utimes = _syscallUtimes;
+  return _withSyscallTimes(
+    path,
+    atimeSec,
+    atimeUsec,
+    mtimeSec,
+    mtimeUsec,
+    (name, times) => utimes(235, name, times),
+  );
+}
+
+int $syscallFutimesat(
+  int fd,
+  GoString path,
+  int atimeSec,
+  int atimeUsec,
+  int mtimeSec,
+  int mtimeUsec,
+) {
+  final futimes = _syscallFutimesat;
+  return _withSyscallTimes(
+    path,
+    atimeSec,
+    atimeUsec,
+    mtimeSec,
+    mtimeUsec,
+    (name, times) => futimes(261, fd, name, times),
+  );
+}
+
+int _withSyscallTimes(
+  GoString path,
+  int atimeSec,
+  int atimeFraction,
+  int mtimeSec,
+  int mtimeFraction,
+  int Function(Pointer<Uint8>, Pointer<Int64>) apply,
+) => _withSyscallPath(path, (name) {
+  final memory = _malloc(32);
+  if (memory == nullptr) return 12;
+  try {
+    final times = memory.cast<Int64>();
+    times[0] = atimeSec;
+    times[1] = atimeFraction;
+    times[2] = mtimeSec;
+    times[3] = mtimeFraction;
+    final errorAddress = _errno();
+    return apply(name, times) == 0 ? 0 : errorAddress.value;
+  } finally {
+    _free(memory);
+  }
+});
+
 final _faccessatSyscall = _libc
     .lookupFunction<
       Long Function(Long, VarArgs<(Int, Pointer<Uint8>, Uint32, Int)>),

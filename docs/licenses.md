@@ -47,6 +47,7 @@ The `go:nointerface` adapter follows Go compiler `noder/lex.go`, `types2/decl.go
 Its verifier retains the BSD notice in `internal/load/LICENSE-Go`.
 The Linux `syscall.Fchmodat` and `syscall.Faccessat` adapters follow Go `src/syscall/syscall_linux.go` and retain its BSD notice.
 The Linux descriptor-relative path adapters follow Go syscall wrappers and retain their BSD notice.
+The Linux timestamp adapters follow Go `src/syscall/syscall_linux.go` and `syscall_linux_arm64.go` and retain their 2009 and 2015 BSD notices.
 Interface method symbols adapt Go `src/cmd/compile/internal/types/fmt.go`.
 The emitter source and `internal/emit/LICENSE-Go` preserve its BSD notice.
 The compiler assertion adapter executes unchanged Go

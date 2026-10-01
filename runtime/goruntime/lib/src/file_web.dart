@@ -226,6 +226,32 @@ int $syscallSetrlimit(int resource, bool input, int cur, int max) => 38;
 
 (int, int) $syscallGetcwd(Slice<int> data) => (-1, 38);
 
+int $syscallUtimensat(
+  int fd,
+  GoString path,
+  int atimeSec,
+  int atimeNsec,
+  int mtimeSec,
+  int mtimeNsec,
+) => 38;
+
+int $syscallUtimes(
+  GoString path,
+  int atimeSec,
+  int atimeUsec,
+  int mtimeSec,
+  int mtimeUsec,
+) => 38;
+
+int $syscallFutimesat(
+  int fd,
+  GoString path,
+  int atimeSec,
+  int atimeUsec,
+  int mtimeSec,
+  int mtimeUsec,
+) => 38;
+
 int $syscallUnlink(GoString path, bool directory) => 38;
 
 (int, int) $syscallReadlink(GoString path, Slice<GoInt> bytes) => (-1, 38);

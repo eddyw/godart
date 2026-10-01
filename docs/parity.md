@@ -68,6 +68,7 @@ Linux `syscall.Fchmodat` changes mode bits relative to an actual directory descr
 `syscall.Mkdirat`, `syscall.Fchownat`, `syscall.Unlinkat`, and `syscall.Renameat` mutate paths relative to native directory descriptors on Linux.
 `syscall.Getdents` and `syscall.ReadDirent` preserve native directory records and caller buffer padding on Linux.
 Linux `syscall.Getcwd` returns native path bytes and the final NUL byte through the caller buffer.
+Linux `syscall.UtimesNano`, `Utimes`, `Futimesat`, and `Futimes` use native timestamp operations and preserve Go's architecture-specific timeval conversions.
 Temporary directories request mode `0700`.
 Directory descriptors retain their identity after a rename or removal.
 `File.Chmod` and `File.Chown` use native descriptors on Linux and macOS.

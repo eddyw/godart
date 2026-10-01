@@ -1328,6 +1328,18 @@ func SyscallGetcwd(buf []byte) (int, int) {
 	panic("syscall/dart needs the gart compiler")
 }
 
+func SyscallUtimensat(dirfd int, path string, atimeSec, atimeNsec, mtimeSec, mtimeNsec int64) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
+func SyscallUtimes(path string, atimeSec, atimeUsec, mtimeSec, mtimeUsec int64) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
+func SyscallFutimesat(dirfd int, path string, atimeSec, atimeUsec, mtimeSec, mtimeUsec int64) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
 func NativeGetwd() (string, int) {
 	panic("syscall/dart needs the gart compiler")
 }
