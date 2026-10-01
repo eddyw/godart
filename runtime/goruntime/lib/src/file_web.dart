@@ -199,6 +199,8 @@ int $syscallClose(int fd) => 38;
 
 int $syscallDup2(int oldfd, int newfd) => 38;
 
+int $syscallDup3(int oldfd, int newfd, int flags) => 38;
+
 (int, int) $syscallFcntl(int fd, int cmd, int arg) => (-1, 38);
 (int, int) $syscallReadDirent(int fd, Slice<GoInt> data) => (0, 38);
 

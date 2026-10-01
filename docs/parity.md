@@ -50,6 +50,7 @@ It preserves descriptor identity, the caller name, append mode, and ownership.
 Native poll integration and nonblocking readiness remain unsupported.
 `syscall.Dup` and `Dup2` duplicate actual descriptors and preserve shared file offsets.
 Each duplicate owns its descriptor. `Dup2` replaces the target descriptor through the native syscall.
+Linux also supports `syscall.Dup3`, with atomic target replacement and close-on-exec flags.
 `syscall.CloseOnExec` and `SetNonblock` update actual native descriptor flags.
 Automatic file closure through Go finalizers remains unsupported.
 Gart does not raise the inherited open-file limit at startup.

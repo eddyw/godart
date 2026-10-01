@@ -30,6 +30,10 @@ final _close = _libc.lookupFunction<Int Function(Int), int Function(int)>(
 final _dup = _libc.lookupFunction<Int Function(Int), int Function(int)>('dup');
 final _dup2 = _libc
     .lookupFunction<Int Function(Int, Int), int Function(int, int)>('dup2');
+final _dup3 = _libc
+    .lookupFunction<Int Function(Int, Int, Int), int Function(int, int, int)>(
+      'dup3',
+    );
 final _fcntl = _libc
     .lookupFunction<
       Int Function(Int, Int, VarArgs<(Int,)>),
@@ -71,6 +75,12 @@ int $syscallDup2(int oldfd, int newfd) {
   final dup2 = _dup2;
   final errorAddress = _errno();
   return dup2(oldfd, newfd) < 0 ? errorAddress.value : 0;
+}
+
+int $syscallDup3(int oldfd, int newfd, int flags) {
+  final dup3 = _dup3;
+  final errorAddress = _errno();
+  return dup3(oldfd, newfd, flags) < 0 ? errorAddress.value : 0;
 }
 
 (int, int) $syscallFcntl(int fd, int cmd, int arg) {

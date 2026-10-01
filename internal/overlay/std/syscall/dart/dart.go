@@ -1911,6 +1911,10 @@ func SyscallDup2(oldfd, newfd int) int {
 	panic("syscall/dart needs the gart compiler")
 }
 
+func SyscallDup3(oldfd, newfd, flags int) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // SyscallFcntl accepts the integer commands F_GETFD, F_SETFD, F_GETFL, and F_SETFL.
 func SyscallFcntl(fd, cmd, arg int) (int, int) {
 	panic("syscall/dart needs the gart compiler")
