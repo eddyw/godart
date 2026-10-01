@@ -70,6 +70,8 @@ Linux `syscall.Fchmodat` changes mode bits relative to an actual directory descr
 Linux `syscall.Getcwd` returns native path bytes and the final NUL byte through the caller buffer.
 Linux `syscall.UtimesNano`, `Utimes`, `Futimesat`, and `Futimes` use native timestamp operations and preserve Go's architecture-specific timeval conversions.
 macOS also supports `syscall.UtimesNano`, `Utimes`, and descriptor-based `Futimes` through native timestamp operations.
+`syscall.Utime` preserves native Go behavior for each Linux architecture.
+A nil timestamp buffer updates timestamps on AMD64 and returns `EINVAL` on ARM64.
 Temporary directories request mode `0700`.
 Directory descriptors retain their identity after a rename or removal.
 `File.Chmod` and `File.Chown` use native descriptors on Linux and macOS.

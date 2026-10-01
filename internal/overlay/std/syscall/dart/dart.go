@@ -1344,6 +1344,10 @@ func SyscallFutimes(fd int, atimeSec, atimeUsec, mtimeSec, mtimeUsec int64) int 
 	panic("syscall/dart needs the gart compiler")
 }
 
+func SyscallUtime(path string, hasTimes bool, atime, mtime int64) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
 func NativeGetwd() (string, int) {
 	panic("syscall/dart needs the gart compiler")
 }

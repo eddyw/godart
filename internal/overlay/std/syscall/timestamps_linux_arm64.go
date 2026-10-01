@@ -6,6 +6,17 @@
 
 package syscall
 
+func Utime(path string, buf *Utimbuf) error {
+	if buf == nil {
+		return Utimes(path, nil)
+	}
+	tv := []Timeval{
+		{Sec: buf.Actime},
+		{Sec: buf.Modtime},
+	}
+	return Utimes(path, tv)
+}
+
 func utimes(path string, tv []Timeval) error {
 	return futimesat(-100, path, tv)
 }

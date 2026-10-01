@@ -344,6 +344,31 @@ final _umask = Platform.isMacOS
 
 int $syscallUmask(int mask) => _umask(mask);
 
+final _syscallUtime = _libc
+    .lookupFunction<
+      Long Function(Long, VarArgs<(Pointer<Uint8>, Pointer<Int64>)>),
+      int Function(int, Pointer<Uint8>, Pointer<Int64>)
+    >('syscall');
+
+int $syscallUtime(GoString path, bool hasTimes, int atime, int mtime) {
+  final utime = _syscallUtime;
+  return _withSyscallPath(path, (name) {
+    final memory = hasTimes ? _malloc(16) : nullptr.cast<Uint8>();
+    if (hasTimes && memory == nullptr) return 12;
+    try {
+      final times = memory.cast<Int64>();
+      if (hasTimes) {
+        times[0] = atime;
+        times[1] = mtime;
+      }
+      final errorAddress = _errno();
+      return utime(132, name, times) == 0 ? 0 : errorAddress.value;
+    } finally {
+      _free(memory);
+    }
+  });
+}
+
 final _syscallUtimes = _libc
     .lookupFunction<
       Long Function(Long, VarArgs<(Pointer<Uint8>, Pointer<Int64>)>),
