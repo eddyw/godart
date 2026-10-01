@@ -441,8 +441,8 @@ GoString $chtimes(
   }
 }
 
-GoString $remove(GoString path) {
-  if (hasDescriptorRemoval) return removeDescriptors(path);
+(int, GoString) $remove(GoString path) {
+  if (hasDescriptorRemoval) return (removeDescriptors(path), _empty);
   final String name = path.toDartString();
   try {
     final FileSystemEntityType t = FileSystemEntity.typeSync(
@@ -450,20 +450,20 @@ GoString $remove(GoString path) {
       followLinks: false,
     );
     if (t == FileSystemEntityType.notFound) {
-      return GoString.fromString('$name: no such file or directory');
+      return (0, GoString.fromString('$name: no such file or directory'));
     }
     if (t == FileSystemEntityType.link) {
       Link(name).deleteSync();
-      return _empty;
+      return (0, _empty);
     }
     if (t == FileSystemEntityType.directory) {
       Directory(name).deleteSync();
-      return _empty;
+      return (0, _empty);
     }
     File(name).deleteSync();
-    return _empty;
+    return (0, _empty);
   } catch (e) {
-    return _cause(e);
+    return (0, _cause(e));
   }
 }
 

@@ -118,7 +118,7 @@ GoString $chtimes(
 (GoString, GoString) $resolveSymlinks(GoString path) =>
     (GoString.empty, _noSys);
 
-GoString $remove(GoString path) => _noSys;
+(int, GoString) $remove(GoString path) => (0, _noSys);
 
 (GoString, GoString, GoString) $removeAll(GoString path) =>
     (GoString.fromString('removeall'), path, _noSys);

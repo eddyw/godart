@@ -105,22 +105,22 @@ int $syscallUnlink(GoString path, bool directory) {
   }
 }
 
-GoString removeDescriptors(GoString path) {
+int removeDescriptors(GoString path) {
   try {
     int fileError;
     do {
       fileError = _unlink(_cwd, path.bytes, 0);
     } while (fileError == 4);
-    if (fileError == 0) return GoString.empty;
+    if (fileError == 0) return 0;
     int directoryError;
     do {
       directoryError = _unlink(_cwd, path.bytes, _removeDirectory);
     } while (directoryError == 4);
-    if (directoryError == 0) return GoString.empty;
+    if (directoryError == 0) return 0;
     // ENOTDIR identifies the file error on both Linux and macOS.
-    return _errorMessage(directoryError == 20 ? fileError : directoryError);
+    return directoryError == 20 ? fileError : directoryError;
   } on _RemovalError catch (error) {
-    return _errorMessage(error.errno);
+    return error.errno;
   }
 }
 

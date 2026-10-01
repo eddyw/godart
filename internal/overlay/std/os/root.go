@@ -201,11 +201,11 @@ func (r *Root) MkdirAll(name string, perm FileMode) error {
 
 // Remove removes 1 name of the root.
 func (r *Root) Remove(name string) error {
-	full, err := r.resolveNoFollow("remove", name)
+	full, err := r.resolveNoFollow("removeat", name)
 	if err != nil {
 		return err
 	}
-	return rename(Remove(full), name)
+	return rootError("removeat", name, Remove(full))
 }
 
 // RemoveAll removes a name of the root and each name under it.
@@ -216,11 +216,11 @@ func (r *Root) RemoveAll(name string) error {
 	if endsWithDot(name) {
 		return &PathError{Op: "RemoveAll", Path: name, Err: syscall.EINVAL}
 	}
-	full, err := r.resolveNoFollow("removeall", name)
+	full, err := r.resolveNoFollow("RemoveAll", name)
 	if err != nil {
 		return err
 	}
-	return rename(RemoveAll(full), name)
+	return rootError("RemoveAll", name, RemoveAll(full))
 }
 
 // Rename moves a name of the root to another name of the root.

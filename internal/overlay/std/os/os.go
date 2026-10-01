@@ -932,7 +932,11 @@ func Remove(name string) error {
 	if contains(name, "\x00") {
 		return &PathError{Op: "remove", Path: name, Err: syscall.EINVAL}
 	}
-	return pathError("remove", name, dart.Remove(name))
+	errno, cause := dart.Remove(name)
+	if errno != 0 {
+		return &PathError{Op: "remove", Path: name, Err: syscall.Errno(errno)}
+	}
+	return pathError("remove", name, cause)
 }
 
 // RemoveAll removes a path and each path inside it. It gives no error when the

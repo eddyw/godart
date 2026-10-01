@@ -48,25 +48,22 @@ void main() {
     final path = GoString.fromBytes(raw);
     final decoy = File('${root.path}/raw-\uFFFD')..writeAsStringSync('keep');
     File.fromRawPath(raw).writeAsStringSync('remove');
-    expect($remove(path).length, 0);
+    expect($remove(path).$1, 0);
     expect(File.fromRawPath(raw).existsSync(), isFalse);
     expect(decoy.readAsStringSync(), 'keep');
     Directory.fromRawPath(raw).createSync();
-    expect($remove(path).length, 0);
+    expect($remove(path).$1, 0);
     expect(Directory.fromRawPath(raw).existsSync(), isFalse);
     Link.fromRawPath(raw).createSync(decoy.path);
-    expect($remove(path).length, 0);
+    expect($remove(path).$1, 0);
     expect(Link.fromRawPath(raw).existsSync(), isFalse);
     expect(decoy.readAsStringSync(), 'keep');
     Directory.fromRawPath(raw).createSync();
     File.fromRawPath(Uint8List.fromList([...raw, 47, 120]))
         .writeAsStringSync('keep');
-    expect($remove(path).length, greaterThan(0));
+    expect($remove(path).$1, 39);
     expect(Directory.fromRawPath(raw).existsSync(), isTrue);
-    expect(
-      $remove(GoString.fromString('${decoy.path}\x00suffix')).length,
-      greaterThan(0),
-    );
+    expect($remove(GoString.fromString('${decoy.path}\x00suffix')).$1, 22);
     expect(decoy.readAsStringSync(), 'keep');
   }, skip: !Platform.isLinux);
 

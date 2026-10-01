@@ -1176,7 +1176,7 @@ func ResolveSymlinks(path string) (string, string) {
 	panic("syscall/dart needs the gart compiler")
 }
 
-func Remove(path string) string {
+func Remove(path string) (int, string) {
 	panic("syscall/dart needs the gart compiler")
 }
 
