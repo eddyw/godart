@@ -257,3 +257,10 @@ int $rootRemoveAll(int parent, GoString path) => 38;
 
 int $syscallUmask(int mask) =>
     throw UnsupportedError('native process file creation mask');
+
+int $syscallFaccessat(int fd, GoString path, int mode, int flags) => 38;
+
+(int, int, int, int) $syscallFaccessatStat(int fd, GoString path, int flags) =>
+    (0, 0, 0, 38);
+
+bool $syscallCapDacOverride() => false;

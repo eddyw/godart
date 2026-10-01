@@ -626,6 +626,12 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$syscallClose(%s)", args[0]), true
 	case "SyscallAccess":
 		return fmt.Sprintf("$syscallAccess(%s, %s)", args[0], args[1]), true
+	case "SyscallFaccessat":
+		return fmt.Sprintf("$syscallFaccessat(%s, %s, %s, %s)", args[0], args[1], args[2], args[3]), true
+	case "SyscallFaccessatStat":
+		return fmt.Sprintf("$syscallFaccessatStat(%s, %s, %s)", args[0], args[1], args[2]), true
+	case "SyscallCapDacOverride":
+		return "$syscallCapDacOverride()", true
 	case "SyscallFchmodat":
 		return fmt.Sprintf("$syscallFchmodat(%s, %s, %s, %s)", args[0], args[1], args[2], args[3]), true
 	case "SyscallDup":

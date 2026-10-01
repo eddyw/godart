@@ -343,3 +343,51 @@ final _umask = Platform.isMacOS
     : _libc.lookupFunction<Uint32 Function(Uint32), int Function(int)>('umask');
 
 int $syscallUmask(int mask) => _umask(mask);
+
+final _faccessatSyscall = _libc
+    .lookupFunction<
+      Long Function(Long, VarArgs<(Int, Pointer<Uint8>, Uint32, Int)>),
+      int Function(int, int, Pointer<Uint8>, int, int)
+    >('syscall');
+
+int $syscallFaccessat(int fd, GoString path, int mode, int flags) {
+  final access = _faccessatSyscall;
+  final number = flags == 0
+      ? (Abi.current() == Abi.linuxArm64 ? 48 : 269)
+      : 439;
+  final bytes = path.bytes;
+  if (bytes.contains(0)) return 22;
+  final name = _malloc(bytes.length + 1);
+  if (name == nullptr) return 12;
+  try {
+    name.asTypedList(bytes.length + 1)
+      ..setRange(0, bytes.length, bytes)
+      ..[bytes.length] = 0;
+    final errorAddress = _errno();
+    return access(number, fd, name, mode, flags) == 0 ? 0 : errorAddress.value;
+  } finally {
+    _free(name);
+  }
+}
+
+final _capgetSyscall = _libc
+    .lookupFunction<
+      Long Function(Long, VarArgs<(Pointer<Uint32>, Pointer<Uint32>)>),
+      int Function(int, Pointer<Uint32>, Pointer<Uint32>)
+    >('syscall');
+
+bool $syscallCapDacOverride() {
+  final memory = _malloc(32);
+  if (memory == nullptr) return false;
+  try {
+    memory.asTypedList(32).fillRange(0, 32, 0);
+    final header = memory.cast<Uint32>();
+    header.value = 0x20080522;
+    final data = (memory + 8).cast<Uint32>();
+    final capget = _capgetSyscall;
+    final number = Abi.current() == Abi.linuxArm64 ? 90 : 125;
+    return capget(number, header, data) == 0 && data.value & 2 != 0;
+  } finally {
+    _free(memory);
+  }
+}

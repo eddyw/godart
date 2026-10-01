@@ -155,3 +155,36 @@ final _fstatat = _libc
     _free(name);
   }
 }
+
+(int, int, int, int) $syscallFaccessatStat(int fd, GoString path, int flags) {
+  final bytes = path.bytes;
+  if (bytes.contains(0)) return (0, 0, 0, 22);
+  final name = _malloc(bytes.length + 1);
+  if (name == nullptr) return (0, 0, 0, 12);
+  try {
+    name.asTypedList(bytes.length + 1)
+      ..setRange(0, bytes.length, bytes)
+      ..[bytes.length] = 0;
+    final buffer = _malloc(144);
+    if (buffer == nullptr) return (0, 0, 0, 12);
+    try {
+      final stat = _fstatat;
+      final errorAddress = _errno();
+      if (stat(fd, name, buffer, flags) != 0) {
+        return (0, 0, 0, errorAddress.value);
+      }
+      final data = ByteData.sublistView(buffer.asTypedList(144));
+      final x64 = Abi.current() == Abi.linuxX64;
+      return (
+        data.getUint32(x64 ? 24 : 16, Endian.host),
+        data.getUint32(x64 ? 28 : 24, Endian.host),
+        data.getUint32(x64 ? 32 : 28, Endian.host),
+        0,
+      );
+    } finally {
+      _free(buffer);
+    }
+  } finally {
+    _free(name);
+  }
+}

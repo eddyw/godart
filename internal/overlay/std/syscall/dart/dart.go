@@ -1964,3 +1964,15 @@ func SyscallGetrusage(who int, output bool) ([]int64, int) {
 
 // SyscallUmask sets the process file creation mask and returns its previous value.
 func SyscallUmask(mask int) int { panic("syscall/dart needs the gart compiler") }
+
+func SyscallFaccessat(dirfd int, path string, mode uint32, flags int) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
+func SyscallFaccessatStat(dirfd int, path string, flags int) (uint32, uint32, uint32, int) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+func SyscallCapDacOverride() bool {
+	panic("syscall/dart needs the gart compiler")
+}
