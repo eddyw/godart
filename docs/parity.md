@@ -67,6 +67,7 @@ Filesystem timestamp limits still apply.
 `FileInfo.Sys` returns the native SDK `*syscall.Stat_t` on these targets.
 Other native hosts retain approximate metadata and a nil `FileInfo.Sys`.
 Other native hosts and browsers do not support `os.File.Fd`.
+Unreachable `os.File` state releases its file handle or directory descriptor through runtime cleanup.
 
 `net/http/fcgi` supports supplied listeners. `Serve` with a nil listener
 returns an explicit error because inherited listener descriptors remain unsupported.

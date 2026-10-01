@@ -170,6 +170,7 @@ type File struct {
 }
 
 type file struct {
+	cleanup    runtime.Cleanup
 	appendMode bool
 	handle     int
 	name       string
@@ -212,7 +213,9 @@ func Pipe() (*File, *File, error) {
 func (f *File) Name() string { return f.name }
 
 // Fd returns the native descriptor. The caller must not close it.
+// Use runtime.KeepAlive after the last operation on the descriptor.
 func (f *File) Fd() uintptr {
+	defer runtime.KeepAlive(f)
 	if f == nil || f.closed {
 		return ^uintptr(0)
 	}
@@ -237,6 +240,7 @@ func (f *File) checkValid(op string) error {
 
 // Write writes the bytes and gives the count.
 func (f *File) Write(p []byte) (int, error) {
+	defer runtime.KeepAlive(f)
 	if err := f.checkValid("write"); err != nil {
 		return 0, err
 	}
@@ -270,6 +274,7 @@ func (f *File) WriteString(s string) (int, error) { return f.Write([]byte(s)) }
 // Read reads bytes into the slice and gives the count. It gives io.EOF at the
 // end of the file, and the caller compares the error with that value.
 func (f *File) Read(p []byte) (int, error) {
+	defer runtime.KeepAlive(f)
 	if err := f.checkValid("read"); err != nil {
 		return 0, err
 	}
@@ -304,6 +309,7 @@ func (f *File) Read(p []byte) (int, error) {
 
 // ReadAt reads at the offset without a change to the file position.
 func (f *File) ReadAt(p []byte, off int64) (int, error) {
+	defer runtime.KeepAlive(f)
 	if f == nil {
 		return 0, ErrInvalid
 	}
@@ -366,6 +372,7 @@ var errWriteAtInAppendMode = errors.New("os: invalid use of WriteAt on file open
 
 // WriteAt writes at the offset without a change to the file position.
 func (f *File) WriteAt(p []byte, off int64) (int, error) {
+	defer runtime.KeepAlive(f)
 	if f == nil {
 		return 0, ErrInvalid
 	}
@@ -481,6 +488,7 @@ var EOF = io.EOF
 
 // Seek moves the read position and gives the new offset from the start.
 func (f *File) Seek(offset int64, whence int) (int64, error) {
+	defer runtime.KeepAlive(f)
 	if err := f.checkValid("seek"); err != nil {
 		return 0, err
 	}
@@ -514,6 +522,7 @@ func (f *File) Close() error {
 	if f.closed {
 		return &PathError{Op: "close", Path: f.name, Err: ErrClosed}
 	}
+	f.cleanup.Stop()
 	f.closed = true
 	f.dirBuf = nil
 	if f.dir {
@@ -527,6 +536,7 @@ func (f *File) Close() error {
 
 // Sync writes each held byte to the storage.
 func (f *File) Sync() error {
+	defer runtime.KeepAlive(f)
 	if err := f.checkValid("sync"); err != nil {
 		return err
 	}
@@ -544,6 +554,7 @@ func (f *File) Sync() error {
 
 // Stat reads the metadata of the file.
 func (f *File) Stat() (FileInfo, error) {
+	defer runtime.KeepAlive(f)
 	if err := f.checkValid("stat"); err != nil {
 		return nil, err
 	}
@@ -583,7 +594,7 @@ func OpenFile(name string, flag int, perm FileMode) (*File, error) {
 		if code != 0 {
 			return nil, &PathError{Op: "open", Path: name, Err: syscall.Errno(code)}
 		}
-		return &File{&file{handle: handle, name: name, dir: dirFD >= 0, dirFD: dirFD, appendMode: flag&O_APPEND != 0}}, nil
+		return fileWithCleanup(&file{handle: handle, name: name, dir: dirFD >= 0, dirFD: dirFD, appendMode: flag&O_APPEND != 0}), nil
 	}
 
 	if contains(name, "\x00") {
@@ -647,14 +658,14 @@ func openMode(name string, mode int, op string) (*File, error) {
 			if errno != 0 {
 				return nil, &PathError{Op: op, Path: name, Err: syscall.Errno(errno)}
 			}
-			return &File{&file{handle: -1, name: name, dir: true, dirFD: fd}}, nil
+			return fileWithCleanup(&file{handle: -1, name: name, dir: true, dirFD: fd}), nil
 		}
 	}
 	handle, cause := dart.FileOpen(name, mode)
 	if cause != "" {
 		return nil, pathError(op, name, cause)
 	}
-	return &File{&file{handle: handle, name: name}}, nil
+	return fileWithCleanup(&file{handle: handle, name: name}), nil
 }
 
 // ReadFile reads a whole file.

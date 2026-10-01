@@ -8,6 +8,7 @@ package os
 
 import (
 	"errors"
+	"runtime"
 	"syscall"
 	"syscall/dart"
 	"time"
@@ -82,6 +83,7 @@ func Chmod(name string, mode FileMode) error {
 
 // Chmod writes the mode of the file.
 func (f *File) Chmod(mode FileMode) error {
+	defer runtime.KeepAlive(f)
 	if system := dart.OS(); system == "linux" || system == "darwin" {
 		if err := f.checkValid("chmod"); err != nil {
 			return err
@@ -129,6 +131,7 @@ func Lchown(name string, uid, gid int) error {
 
 // Chown writes the owner and the group of the file.
 func (f *File) Chown(uid, gid int) error {
+	defer runtime.KeepAlive(f)
 	if system := dart.OS(); system == "linux" || system == "darwin" {
 		if err := f.checkValid("chown"); err != nil {
 			return err
@@ -187,6 +190,7 @@ func Truncate(name string, size int64) error {
 
 // Truncate writes the size of the file. It does not move the read position.
 func (f *File) Truncate(size int64) error {
+	defer runtime.KeepAlive(f)
 	if system := dart.OS(); system == "linux" || system == "darwin" {
 		if err := f.checkValid("truncate"); err != nil {
 			return err
@@ -205,6 +209,7 @@ func (f *File) Truncate(size int64) error {
 // Chdir writes the working directory of the program to the file, and the file
 // must be a directory.
 func (f *File) Chdir() error {
+	defer runtime.KeepAlive(f)
 	if err := f.checkValid("chdir"); err != nil {
 		return err
 	}

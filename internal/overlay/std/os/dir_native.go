@@ -11,6 +11,7 @@ import (
 	"errors"
 	"internal/byteorder"
 	"io"
+	"runtime"
 	"syscall"
 	"syscall/dart"
 	"unsafe"
@@ -19,6 +20,7 @@ import (
 var errDirectoryClosed = errors.New("use of closed file")
 
 func (f *File) readDirNames(n int) ([]string, []FileMode, error) {
+	defer runtime.KeepAlive(f)
 	names := make([]string, 0)
 	types := make([]FileMode, 0)
 	if f.closed {
@@ -102,6 +104,7 @@ func directoryEntryType(kind byte) FileMode {
 }
 
 func (f *File) directoryInfo(name string) (FileInfo, error) {
+	defer runtime.KeepAlive(f)
 	data, code := dart.NativeLstatat(f.dirFD, name)
 	if code != 0 {
 		return nil, &PathError{Op: "fstatat", Path: f.name + "/" + name, Err: syscall.Errno(code)}
