@@ -330,6 +330,7 @@ func (a *analyzer) solve() {
 		for _, key := range keys {
 			for _, member := range a.byMethod[name+keySep+key] {
 				if it == nil || generic || reachesIface(member, it) {
+					a.interfaceReceiver(member.(*types.Func))
 					a.addTarget(c, member)
 				}
 			}

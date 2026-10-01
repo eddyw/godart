@@ -33,6 +33,7 @@ func (a *analyzer) methodSource(x ast.Expr, recv types.Type, fn *types.Func) (so
 			}
 			method, _, _ := types.LookupFieldOrMethod(candidate, false, fn.Pkg(), fn.Name())
 			if method, ok := method.(*types.Func); ok && !abstractMethod(method) {
+				a.interfaceReceiver(method)
 				keys = append(keys, method.Origin())
 			} else {
 				complete = false
@@ -59,6 +60,14 @@ func (a *analyzer) methodSource(x ast.Expr, recv types.Type, fn *types.Func) (so
 	}
 	a.methodCells[c] = it
 	return source{cells: []cell{c}}, true
+}
+
+// An interface hides the callback stored in a named function receiver.
+func (a *analyzer) interfaceReceiver(fn *types.Func) {
+	recv := fn.Origin().Signature().Recv()
+	if sig := funcSig(recv.Type()); sig != nil {
+		a.addEdge(sigCell{signatureKey(sig)}, funcCell(recv))
+	}
 }
 
 // narrowed gives the interface of a value that a type assertion produced. Such

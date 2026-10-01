@@ -67,6 +67,10 @@ Reports retain these target exclusions. They do not count them as passes.
 Separate omissions cover native FIPS subprocesses, linker symbols,
 the BoringSSL runner, and external services.
 
+The flag callback adapter retains original `ExampleFunc` and `ExampleBoolFunc` assertions on all 4 targets.
+A separate native-oracle fixture forces channel suspension through named function receivers and flag callbacks.
+Interface dispatch retains the callback flow into the method receiver.
+
 The modular arithmetic adapter retains original `crypto/internal/fips140/bigmod` assertions.
 VM and AOT also execute the original inverse data fixture.
 JS and Wasm execute the 19 cases that need no native file access.
