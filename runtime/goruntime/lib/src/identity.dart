@@ -58,6 +58,45 @@ final _getsid = _libc.lookupFunction<Int Function(Int), int Function(int)>(
   return (session, session < 0 ? _errno().value : 0);
 }
 
+final _linuxGetpriority = _libc
+    .lookupFunction<
+      Long Function(Long, VarArgs<(Int, UnsignedInt)>),
+      int Function(int, int, int)
+    >('syscall');
+final _darwinGetpriority = _libc
+    .lookupFunction<Int Function(Int, UnsignedInt), int Function(int, int)>(
+      'getpriority',
+    );
+
+(int, int) $getpriority(int which, int who) {
+  if (!_posix) return (-1, -1);
+  if (Platform.isLinux) {
+    final get = _linuxGetpriority;
+    final errno = _errno();
+    final value = get(Abi.current() == Abi.linuxArm64 ? 141 : 140, which, who);
+    return (value, value == -1 ? errno.value : 0);
+  }
+  final get = _darwinGetpriority;
+  final errno = _errno();
+  // A native priority of -1 is valid when errno remains zero.
+  errno.value = 0;
+  final value = get(which, who);
+  return (value, value == -1 ? errno.value : 0);
+}
+
+final _setpriority = _libc
+    .lookupFunction<
+      Int Function(Int, UnsignedInt, Int),
+      int Function(int, int, int)
+    >('setpriority');
+
+int $setpriority(int which, int who, int priority) {
+  if (!_posix) return -1;
+  final set = _setpriority;
+  final errno = _errno();
+  return set(which, who, priority) == 0 ? 0 : errno.value;
+}
+
 final _getpagesize = _libc.lookupFunction<Int Function(), int Function()>(
   'getpagesize',
 );

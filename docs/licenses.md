@@ -78,6 +78,8 @@ The panic traceback adapter preserves `src/runtime/crash_test.go` and
 `src/runtime/testdata/testprog/deadlock.go` with their Go BSD notices.
 The process identity adapter adapts group-count validation from Go
 `src/syscall/syscall_bsd.go` and `src/syscall/syscall_linux.go`.
+The process priority adapter follows the Go generated Linux and macOS syscall wrappers.
+It preserves their native value and error contracts under the Go BSD terms.
 The runtime license includes their BSD terms.
 The time value representation and its clock helpers adapt Go `src/time/time.go`.
 Directory creation, sticky-bit behavior, and user directories follow Go `src/os/file.go` with its BSD notice.

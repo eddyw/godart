@@ -3,6 +3,7 @@ package driver_test
 import (
 	"encoding/json"
 	"fmt"
+	"go/build"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -10,12 +11,18 @@ import (
 	"testing"
 
 	"github.com/eddyw/godart/internal/driver"
+	"github.com/eddyw/godart/internal/parity"
 )
 
 func TestProcessIdentity(t *testing.T) {
 	if runtime.GOOS != "linux" && runtime.GOOS != "darwin" {
 		t.Skip("POSIX host identity")
 	}
+	inventory, err := parity.Discover(build.Default)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	dir := t.TempDir()
 	program := `package main
 import ("errors"; "encoding/json"; "os"; "slices"; "syscall")
@@ -117,7 +124,7 @@ func main() {
 			} else {
 				result = runUpstreamTarget(t, target, testOut, stats.Binaries[0].Entry, dir, args)
 			}
-			compareUpstream(t, "syscall-process-group", "syscall", "^TestZeroSysProcAttr$", target, dir, result.Text, result.Exit, false)
+			compareUpstreamInventory(t, "syscall-process-group", "syscall", "^TestZeroSysProcAttr$", target, dir, result.Text, result.Exit, *inventory, nil, nil, nil, false)
 		})
 	}
 }
