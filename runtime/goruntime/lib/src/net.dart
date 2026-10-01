@@ -1454,6 +1454,28 @@ GoString $listenClose(int handle) {
 }
 
 Future<void> _joinGroup(_Packet p, String group, int? index) async {
+  final groupAddress = await _address(group);
+  if (Platform.isLinux && groupAddress.type == InternetAddressType.IPv4) {
+    final request = Uint8List(12);
+    ByteData.sublistView(request)
+        .setInt32(8, (index ?? 0).toSigned(32), Endian.host);
+    if (index != null) {
+      p.socket.setRawOption(
+        RawSocketOption(
+          RawSocketOption.levelIPv4,
+          RawSocketOption.IPv4MulticastInterface,
+          request,
+        ),
+      );
+    }
+    p.socket.multicastLoopback = false;
+    request.setRange(0, 4, groupAddress.rawAddress);
+    // Linux IP_ADD_MEMBERSHIP (35) consumes an IPMreqn.
+    p.socket.setRawOption(
+      RawSocketOption(RawSocketOption.levelIPv4, 35, request),
+    );
+    return;
+  }
   NetworkInterface? found;
   if (index != null && (index != 0 || Platform.isMacOS)) {
     for (final NetworkInterface n in await NetworkInterface.list(
@@ -1471,28 +1493,20 @@ Future<void> _joinGroup(_Packet p, String group, int? index) async {
       throw 'the interface $index is not present';
     }
   }
-  final groupAddress = await _address(group);
   if (found != null && groupAddress.type == InternetAddressType.IPv4) {
-    final Uint8List optionValue;
-    if (Platform.isLinux) {
-      optionValue = Uint8List(12);
-      ByteData.sublistView(optionValue).setInt32(8, found.index, Endian.host);
-    } else {
-      InternetAddress? ipv4;
-      for (final address in found.addresses) {
-        if (address.type == InternetAddressType.IPv4) {
-          ipv4 = address;
-          break;
-        }
+    InternetAddress? ipv4;
+    for (final address in found.addresses) {
+      if (address.type == InternetAddressType.IPv4) {
+        ipv4 = address;
+        break;
       }
-      if (ipv4 == null) throw 'no such network interface';
-      optionValue = ipv4.rawAddress;
     }
+    if (ipv4 == null) throw 'no such network interface';
     p.socket.setRawOption(
       RawSocketOption(
         RawSocketOption.levelIPv4,
         RawSocketOption.IPv4MulticastInterface,
-        optionValue,
+        ipv4.rawAddress,
       ),
     );
   }

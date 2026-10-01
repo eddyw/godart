@@ -174,7 +174,8 @@ For valid interface indexes, selection uses `Interface.Index` and ignores `Inter
 An explicit index `0` selects the first IPv4 interface address on macOS and the system default on Linux.
 A nil interface retains system selection on both hosts.
 IPv4 multicast errors retain `OpError` address metadata and available native syscall error codes.
-Invalid-index error metadata remains incomplete.
+Linux IPv4 multicast preserves the Go `int32` conversion of interface indexes and kernel error codes.
+Invalid-index error metadata remains incomplete on macOS.
 Mixed-family destinations, IPv6 zones, and socket controls remain incomplete.
 
 Native UDP error codes remain unreliable across separate Dart FFI calls.

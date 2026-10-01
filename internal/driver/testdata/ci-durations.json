@@ -2119,6 +2119,7 @@
   "driver/short/TestLinuxFchmodatUpstream": 173.0,
   "driver/short/TestLinuxGetcwd": 121.42,
   "driver/short/TestLinuxGetdents": 64.26,
+  "driver/short/TestLinuxMulticastInterfaceIndices": 100.27,
   "driver/short/TestLinuxPathMutations": 24.32,
   "driver/short/TestLinuxSyscallTimestamps": 43.87,
   "driver/short/TestLinuxUtime": 22.37,
