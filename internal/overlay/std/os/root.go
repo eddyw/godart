@@ -10,6 +10,7 @@ import (
 	"errors"
 	"io"
 	"io/fs"
+	"runtime"
 	"strings"
 	"syscall"
 	"syscall/dart"
@@ -163,11 +164,18 @@ func (r *Root) Mkdir(name string, perm FileMode) error {
 	if perm&0o777 != perm {
 		return &PathError{Op: "mkdirat", Path: name, Err: errors.New("unsupported file mode")}
 	}
-	full, err := r.resolve("mkdir", name)
-	if err != nil {
-		return err
+	path := name
+	switch runtime.GOOS {
+	case "linux", "windows", "openbsd":
+		// These platforms do not follow a final symlink with a terminal slash.
+		for len(path) > 1 && IsPathSeparator(path[len(path)-1]) {
+			path = path[:len(path)-1]
+		}
 	}
-	return rename(Mkdir(full, perm), name)
+	if err := checkPathEscapesInternal(r, path, true); err != nil {
+		return &PathError{Op: "mkdirat", Path: name, Err: err}
+	}
+	return rootError("mkdirat", name, Mkdir(joinPath(r.real, name), perm))
 }
 
 // MkdirAll makes a directory of the root and each parent of it.
