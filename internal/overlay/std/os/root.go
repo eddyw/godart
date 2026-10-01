@@ -97,16 +97,23 @@ func (r *Root) Create(name string) (*File, error) {
 
 // OpenRoot opens a directory of the root and gives the Root of it.
 func (r *Root) OpenRoot(name string) (*Root, error) {
-	full, err := r.resolve("openroot", name)
+	full, err := r.resolve("openat", name)
 	if err != nil {
 		return nil, err
 	}
-	out, cause := OpenRoot(full)
-	if cause != nil {
-		return nil, rename(cause, name)
+	info, err := Stat(full)
+	if err != nil {
+		return nil, rootError("openat", name, err)
 	}
-	out.name = joinPath(r.name, name)
-	return out, nil
+	childName := joinPath(r.name, name)
+	if !info.IsDir() {
+		return nil, &PathError{Op: "open", Path: childName, Err: errors.New("not a directory")}
+	}
+	real, cause := dart.ResolveSymlinks(full)
+	if cause != "" {
+		return nil, &PathError{Op: "openat", Path: name, Err: errors.New(cause)}
+	}
+	return &Root{&root{name: childName, real: real}}, nil
 }
 
 // Stat reads the metadata of a name of the root.
