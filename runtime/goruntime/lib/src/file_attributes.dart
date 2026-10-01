@@ -284,3 +284,9 @@ int _chtimes(
     _free(buffer);
   }
 }
+
+final _umask = Platform.isMacOS
+    ? _libc.lookupFunction<Uint16 Function(Uint16), int Function(int)>('umask')
+    : _libc.lookupFunction<Uint32 Function(Uint32), int Function(int)>('umask');
+
+int $syscallUmask(int mask) => _umask(mask);

@@ -60,6 +60,7 @@ Explicit `syscall.Getrlimit` and `Setrlimit` calls use actual kernel resource li
 `syscall.Getrusage` returns actual kernel resource counters on these hosts.
 Counter values and units follow the host ABI.
 Directory creation on Linux and macOS applies permission bits and the process umask at creation.
+`syscall.Umask` changes the actual process mask and returns its previous value.
 Temporary directories request mode `0700`.
 Directory descriptors retain their identity after a rename or removal.
 `File.Chmod` and `File.Chown` use native descriptors on Linux and macOS.

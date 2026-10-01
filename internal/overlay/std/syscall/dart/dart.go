@@ -1953,3 +1953,6 @@ func SyscallReadlink(path string, buf []byte) (int, int) {
 func SyscallGetrusage(who int, output bool) ([]int64, int) {
 	panic("syscall/dart needs the gart compiler")
 }
+
+// SyscallUmask sets the process file creation mask and returns its previous value.
+func SyscallUmask(mask int) int { panic("syscall/dart needs the gart compiler") }

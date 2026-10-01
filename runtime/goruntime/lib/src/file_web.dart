@@ -250,3 +250,6 @@ int $rootRemoveAll(int parent, GoString path) => 38;
 
 (Slice<int>, int) $syscallGetrusage(int who, bool output) =>
     (Slice<int>.nil(), 38);
+
+int $syscallUmask(int mask) =>
+    throw UnsupportedError('native process file creation mask');
