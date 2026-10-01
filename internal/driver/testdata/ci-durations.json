@@ -2048,6 +2048,7 @@
   "driver/short/TestDarwinMulticastInterfaceErrors": 50.89,
   "driver/short/TestDarwinStatfs": 183.56,
   "driver/short/TestDarwinSyscallTimestamps": 25.53,
+  "driver/short/TestDarwinSysctl": 38.59,
   "driver/short/TestDescriptorDuplication": 53.61,
   "driver/short/TestDescriptorFlags": 53.08,
   "driver/short/TestDescriptorVariable": 8.76,

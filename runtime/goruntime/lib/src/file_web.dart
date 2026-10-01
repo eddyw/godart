@@ -209,6 +209,10 @@ int $syscallFchmodat(int fd, GoString path, int mode, int flags) => 38;
 
 int $syscallFdatasync(int fd) => 38;
 
+(GoString, int) $syscallSysctl(GoString name) => (GoString.empty, -1);
+
+(int, int) $syscallSysctlUint32(GoString name) => (0, -1);
+
 (Slice<int>, int) $syscallStatfs(GoString path, bool output) =>
     (Slice<int>.nil(), -1);
 

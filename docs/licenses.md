@@ -49,6 +49,7 @@ The Linux `syscall.Fchmodat` and `syscall.Faccessat` adapters follow Go `src/sys
 The Linux descriptor-relative path adapters follow Go syscall wrappers and retain their BSD notice.
 The Linux timestamp adapters follow Go `src/syscall/syscall_linux.go` and `syscall_linux_arm64.go` and retain their 2009 and 2015 BSD notices.
 Linux `syscall.Time` retains the original adapter from Go `src/syscall/syscall_linux_arm64.go` and its 2015 BSD notice.
+The macOS Sysctl adapters follow Go syscall_bsd.go and syscall_darwin.go with their 2009 and 2010 BSD notices.
 The macOS Statfs and Fstatfs adapters retain the 2009 Go BSD notice.
 The macOS Getfsstat adapter follows the Go syscall contract with its 2009 BSD notice.
 Its original upstream test retains the 2014 Go BSD notice and assertions.

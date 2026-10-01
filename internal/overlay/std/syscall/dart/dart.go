@@ -1961,6 +1961,14 @@ func SyscallFdatasync(fd int) int {
 	panic("syscall/dart needs the gart compiler")
 }
 
+func SyscallSysctl(name string) (string, int) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+func SyscallSysctlUint32(name string) (uint32, int) {
+	panic("syscall/dart needs the gart compiler")
+}
+
 func SyscallStatfs(path string, output bool) ([]int64, int) {
 	panic("syscall/dart needs the gart compiler")
 }

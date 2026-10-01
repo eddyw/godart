@@ -656,6 +656,10 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$syscallUmask(%s)", args[0]), true
 	case "SyscallGetrusage":
 		return fmt.Sprintf("$syscallGetrusage(%s, %s)", args[0], args[1]), true
+	case "SyscallSysctl":
+		return fmt.Sprintf("$syscallSysctl(%s)", args[0]), true
+	case "SyscallSysctlUint32":
+		return fmt.Sprintf("$syscallSysctlUint32(%s)", args[0]), true
 	case "SyscallStatfs":
 		return fmt.Sprintf("$syscallStatfs(%s, %s)", args[0], args[1]), true
 	case "SyscallFstatfs":
