@@ -226,6 +226,9 @@ Thus, a UDP read can fail with an incorrect error.
 On Linux and macOS, TCP connection failures and socket-option failures retain available native error codes through `net.OpError` and `os.SyscallError`.
 Closed sockets retain `net.ErrClosed`.
 
+Linux `syscall.Uname` queries the native kernel identity and preserves all 6 raw fields.
+Nil output retains the native error. JS and Wasm return `errors.ErrUnsupported`.
+
 Browser builds use browser APIs. HTTP clients use fetch. Browser restrictions
 on headers, credentials, network access, and cross-origin requests still apply.
 Native filesystem operations, raw sockets, and HTTP servers do not become

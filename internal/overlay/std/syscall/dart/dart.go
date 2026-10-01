@@ -2073,3 +2073,7 @@ func SyscallRenameat(olddirfd int, oldpath string, newdirfd int, newpath string)
 func BigmodUintSlice(ptr *uint, n int) []uint {
 	panic("syscall/dart needs the gart compiler")
 }
+
+// SyscallUname returns the 6 native Utsname arrays and errno.
+// A false output passes a null pointer to the native query.
+func SyscallUname(output bool) ([]int64, int) { return nil, 0 }

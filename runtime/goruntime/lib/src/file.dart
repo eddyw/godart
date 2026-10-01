@@ -27,6 +27,7 @@ export 'sysctl_darwin.dart';
 export 'pathconf_darwin.dart';
 export 'chflags_darwin.dart';
 export 'mkfifo_native.dart';
+export 'uname_linux.dart';
 export 'working_directory.dart';
 
 /// The name of the operating system, in the words of the Go constant GOOS.

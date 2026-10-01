@@ -2136,6 +2136,7 @@
   "driver/short/TestLinuxStatfs": 63.33,
   "driver/short/TestLinuxSyscallTime": 146.74,
   "driver/short/TestLinuxSyscallTimestamps": 43.87,
+  "driver/short/TestLinuxUname": 62.64,
   "driver/short/TestLinuxUtime": 22.37,
   "driver/short/TestListenerDeadlineUpstream": 45.49,
   "driver/short/TestLiteralResolveSource": 0,
