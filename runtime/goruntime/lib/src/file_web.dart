@@ -198,6 +198,8 @@ int $syscallClose(int fd) => 38;
 (int, int) $syscallDup(int fd) => (-1, 38);
 
 int $syscallDup2(int oldfd, int newfd) => 38;
+
+(int, int) $syscallFcntl(int fd, int cmd, int arg) => (-1, 38);
 (int, int) $syscallReadDirent(int fd, Slice<GoInt> data) => (0, 38);
 
 (int, int, int) $fileOpenFlags(GoString path, int flags, int mode) =>

@@ -102,6 +102,7 @@ Native file metadata adapts Go `src/os/stat_linux.go`, `stat_darwin.go`,
 The native adapter uses `src/syscall/ztypes_{linux,darwin}_{amd64,arm64}.go` layouts.
 Public stat adapters preserve the contracts of Go `src/syscall` stat wrappers and their BSD notices.
 Descriptor duplication follows Go `src/syscall/zsyscall_{linux,darwin}_{amd64,arm64}.go` with its BSD notice.
+Descriptor flag controls adapt Go `src/syscall/exec_unix.go` with its BSD notice.
 The ownership adapter preserves original `src/os/os_unix_test.go` assertions
 and the `internal/testenv` unsupported-syscall predicates with their BSD notices.
 Unix `PWD` validation follows Go `src/os/getwd.go` with its BSD notice.
