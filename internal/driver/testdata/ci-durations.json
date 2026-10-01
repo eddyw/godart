@@ -2044,6 +2044,7 @@
   "driver/short/TestDartDeclarationRejectsTwoResults": 1.38,
   "driver/short/TestDartErrorSurvivesDeferredWait": 7.93,
   "driver/short/TestDartSDK": 0.01,
+  "driver/short/TestDarwinChflags": 37.93,
   "driver/short/TestDarwinGetdirentries": 39.08,
   "driver/short/TestDarwinGetfsstat": 235.93,
   "driver/short/TestDarwinMulticastInterfaceErrors": 50.89,

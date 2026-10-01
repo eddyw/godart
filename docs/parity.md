@@ -162,6 +162,8 @@ Integer queries retain native size errors and name validation.
 JS and Wasm report both APIs as unsupported.
 The documented native errno capture limitation also applies to these queries.
 
+macOS `syscall.Chflags` and `syscall.Fchflags` change actual file flags through paths and native descriptors.
+They preserve native errors and return explicit unsupported errors on web targets.
 macOS `syscall.Pathconf` and `syscall.Fpathconf` query actual filesystem configuration values.
 They preserve native name, path, and descriptor errors, with explicit unsupported errors on web targets.
 macOS supports native `syscall.Statfs` and `syscall.Fstatfs` with actual filesystem statistics.
