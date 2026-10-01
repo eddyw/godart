@@ -2075,6 +2075,7 @@
   "driver/short/TestExecutableAccess": 71.3,
   "driver/short/TestExecutableLookPathUpstream": 78.67,
   "driver/short/TestExecutableLookupMissing": 111.51,
+  "driver/short/TestFIPSCache": 115.18,
   "driver/short/TestFailFastUpstream": 102.55,
   "driver/short/TestFileCreationMask": 42.01,
   "driver/short/TestFileErrorsAOT": 15.02,

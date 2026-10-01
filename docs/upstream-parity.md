@@ -83,6 +83,11 @@ The Linux fallback-root adapter replaces namespace mounts with private directori
 Both compilers receive the same fixture patch. The original assertions and separate child processes remain unchanged.
 Reports retain the original source hash, patch, adapted source, and adapted source hash.
 
+The internal FIPS cache uses the original Go implementation and its complete `TestCache` assertions.
+The comparison covers replacement, errors, concurrent access, weak identity, and cleanup eviction on all 4 targets.
+The Node adapter requests actual garbage collection for JavaScript and Wasm.
+This cache comparison does not establish native FIPS module parity.
+
 ## Assertion integrity
 
 The native baseline runs the installed Go source without Gart implementation overlays or assertion patches.

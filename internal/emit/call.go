@@ -1424,7 +1424,18 @@ func (e *emitter) methodFuncValue(m *ir.Method, obj *types.TypeName) string {
 	}
 	mtargs, mdicts := e.typeArguments(m.TypeArgs)
 	dicts, typeArgs := e.recvTypeArgs(m.Recv.GoType())
-	args = append(append(append([]string{args[0]}, dicts...), mdicts...), args[1:]...)
+	captures := append(append([]string{}, dicts...), mdicts...)
+	captureTypes := append([]string{}, typeArgs...)
+	for _, arg := range m.TypeArgs {
+		captureTypes = append(captureTypes, e.dartType(arg))
+	}
+	captureParams := make([]string, len(captures))
+	captureNames := make([]string, len(captures))
+	for i := range captures {
+		captureNames[i] = fmt.Sprintf("$dict%d", i)
+		captureParams[i] = "Dict<" + captureTypes[i] + "> " + captureNames[i]
+	}
+	args = append(append([]string{args[0]}, captureNames...), args[1:]...)
 	call := e.qualify(obj, methodFuncName(obj.Name(), m.Obj.Name())) +
 		joinTypeArgs(typeArgs, mtargs) + "(" + strings.Join(args, ", ") + ")"
 	// The receiver takes the form of the top level function: a pointer method
@@ -1437,8 +1448,12 @@ func (e *emitter) methodFuncValue(m *ir.Method, obj *types.TypeName) string {
 			rt = p.Elem()
 		}
 	}
-	return fmt.Sprintf("((%s $recv) => (%s) => %s)(%s)",
-		e.dartType(rt), strings.Join(params, ", "), call, e.topLevelRecv(m))
+	// Separate dictionary captures from the caller context, which can retain
+	// unrelated objects through other closures in that context.
+	boundParams := append([]string{e.dartType(rt) + " $recv"}, captureParams...)
+	boundArgs := append([]string{e.topLevelRecv(m)}, captures...)
+	return fmt.Sprintf("((%s) => (%s) => %s)(%s)",
+		strings.Join(boundParams, ", "), strings.Join(params, ", "), call, strings.Join(boundArgs, ", "))
 }
 
 // interfaceMethodValue reads a method of an interface value without a call. The

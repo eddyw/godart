@@ -297,10 +297,7 @@
   },
   {
     "package": "crypto/internal/fips140cache",
-    "status": "compile-blocked",
-    "diagnostic": "c.m undefined (type *Cache[key, value] has no field or method m)",
-    "blocker_cause": "private-test-dependency",
-    "blocker_reason": "The suite inspects a private cache field that the overlay does not retain."
+    "status": "vm-suite"
   },
   {
     "package": "crypto/internal/fips140deps/byteorder",

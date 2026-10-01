@@ -739,5 +739,9 @@
   {
     "package": "crypto/internal/fips140/bigmod",
     "run": ""
+  },
+  {
+    "package": "crypto/internal/fips140cache",
+    "run": ""
   }
 ]

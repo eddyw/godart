@@ -22,6 +22,7 @@ var native = []string{
 	"crypto/internal/fips140/tls12",
 	"crypto/internal/fips140/tls13",
 	"crypto/tls/internal/fips140tls",
+	"crypto/internal/fips140cache",
 	"net/http",
 	"net/http/httptest",
 	"net/http/internal/http2",
