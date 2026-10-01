@@ -363,7 +363,37 @@
     {
       "suite": "upstream-priority",
       "shard": 0,
-      "shards": 1,
+      "shards": 4,
+      "timeout": 21,
+      "job_timeout": 26,
+      "runner": "macos-15",
+      "full_timeout": 64,
+      "full_job_timeout": 69
+    },
+    {
+      "suite": "upstream-priority",
+      "shard": 1,
+      "shards": 4,
+      "timeout": 21,
+      "job_timeout": 26,
+      "runner": "macos-15",
+      "full_timeout": 64,
+      "full_job_timeout": 69
+    },
+    {
+      "suite": "upstream-priority",
+      "shard": 2,
+      "shards": 4,
+      "timeout": 21,
+      "job_timeout": 26,
+      "runner": "macos-15",
+      "full_timeout": 64,
+      "full_job_timeout": 69
+    },
+    {
+      "suite": "upstream-priority",
+      "shard": 3,
+      "shards": 4,
       "timeout": 21,
       "job_timeout": 26,
       "runner": "macos-15",
