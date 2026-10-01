@@ -71,7 +71,7 @@ func checkPathEscapesInternal(r *Root, name string, lstat bool) error {
 			}
 			symlinks++
 			if symlinks > rootMaxSymlinks {
-				return errors.New("too many symlinks")
+				return syscall.ELOOP
 			}
 			newparts, newEndsInSlash, err := splitPathInRoot(link, parts[:i], parts[i+1:])
 			if err != nil {
