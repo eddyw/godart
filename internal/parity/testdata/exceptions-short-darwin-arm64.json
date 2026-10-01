@@ -13747,6 +13747,12 @@
       "native": "skip",
       "reason": "The original upstream test skips this case in short mode.",
       "test": "TestRemoveAllWithMoreErrorThanReqSize"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original Go root consistency fixture skips the known RemoveAll final-symlink inconsistency.",
+      "test": "TestRootConsistencyRemoveAll/symlink_slash"
     }
   ],
   "log/syslog": [

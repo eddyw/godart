@@ -226,7 +226,7 @@ func TestSelectedUpstream(t *testing.T) {
 			{Name: "tempfile_test.go", Declarations: []string{"TestCreateTemp", "TestCreateTempPattern", "TestMkdirTemp", "TestMkdirTempBadDir"}},
 			{Name: "removeall_test.go", Declarations: []string{"testRequiresPermissions", "TestRemoveAll", "TestRemoveAllLarge", "TestRemoveAllLongPath", "TestRemoveAllDot", "TestRemoveAllDotDot", "TestRemoveReadOnlyDir", "TestRemoveAllButReadOnlyAndPathError", "TestRemoveUnreadableDir", "TestRemoveAllWithMoreErrorThanReqSize", "TestRemoveAllTrailingSlash", "TestRemoveAllSymlinkRemovalFailure"}},
 			{Name: "path_test.go", Declarations: []string{"TestMkdirAll", "TestMkdirAllAbsPath", "TestMkdirAllWithSymlink"}},
-			{Name: "root_test.go", Declarations: []string{"testMaybeRooted", "makefs", "hasLink", "rootTest", "rootTest.run", "rootTestCases", "errEndsTest", "TestRootMkdirAll", "TestRootMkdir", "TestRootOpen_File", "TestRootOpen_Directory", "TestRootCreate", "TestRootOpenRoot", "TestRootStat", "TestRootLstat", "TestRootReadlink", "TestRootRemoveFile", "TestRootRemoveDirectory", "TestRootNonPermissionMode", "TestRootUseAfterClose", "TestRootSymlinkToRoot", "TestOpenInRoot", "TestRootRemoveDot", "TestRootWriteReadFile", "TestRootName", "TestRootConcurrentClose"}},
+			{Name: "root_test.go", Declarations: []string{"testMaybeRooted", "makefs", "hasLink", "rootTest", "rootTest.run", "rootTestCases", "errEndsTest", "TestRootMkdirAll", "TestRootMkdir", "TestRootOpen_File", "TestRootOpen_Directory", "TestRootCreate", "TestRootOpenRoot", "TestRootStat", "TestRootLstat", "TestRootReadlink", "TestRootRemoveFile", "TestRootRemoveDirectory", "TestRootNonPermissionMode", "TestRootUseAfterClose", "TestRootSymlinkToRoot", "TestOpenInRoot", "TestRootRemoveDot", "TestRootWriteReadFile", "TestRootName", "TestRootConcurrentClose", "TestRootChmod", "TestRootRemoveAll", "TestRootOpenFileAsRoot", "TestRootRenameFrom", "TestRootLinkFrom", "testRootMoveFrom", "TestRootRenameTo", "TestRootLinkTo", "testRootMoveTo", "TestRootSymlink", "rootConsistencyTest", "rootConsistencyTestCases", "tempDirWithUnixSocket", "TestRootConsistencyOpen", "TestRootConsistencyCreate", "TestRootConsistencyChmod", "TestRootConsistencyMkdir", "TestRootConsistencyMkdirAll", "TestRootConsistencyRemove", "TestRootConsistencyRemoveAll", "TestRootConsistencyStat", "TestRootConsistencyLstat", "TestRootConsistencyReadlink", "TestRootConsistencyRename", "TestRootConsistencyLink", "testRootConsistencyMove", "TestRootConsistencySymlink"}},
 		},
 		"net":      {{Name: "net_test.go", Declarations: []string{"withTCPConnPair", "TestReadTimeoutUnblocksRead", "TestCloseUnblocksRead", "TestCloseUnblocksReadUDP"}}, {Name: "interface_test.go", Declarations: []string{"TestInterfaces"}}, {Name: "ip_test.go"}, {Name: "mac_test.go"}, {Name: "pipe_test.go"}, {Name: "tcpsock_test.go", Declarations: []string{"TestTCPConcurrentAccept", "resolveTCPAddrTest", "resolveTCPAddrTests", "TestResolveTCPAddr"}}, {Name: "udpsock_test.go", Declarations: []string{"resolveUDPAddrTest", "resolveUDPAddrTests", "TestResolveUDPAddr"}}, {Name: "iprawsock_test.go", Declarations: []string{"resolveIPAddrTest", "resolveIPAddrTests", "TestResolveIPAddr"}}, {Name: "net.go", Declarations: []string{"errNoSuitableAddress"}}},
 		"net/http": {{Name: "header_test.go", Declarations: []string{"headerWriteTests", "TestHeaderWrite", "parseTimeTests", "TestParseTime", "TestNilHeaderClone"}}, {Name: "sniff_test.go", Declarations: []string{"sniffTests", "TestDetectContentType"}}},
@@ -241,7 +241,12 @@ func TestSelectedUpstream(t *testing.T) {
 			continue
 		}
 		t.Run(pkg, func(t *testing.T) {
-			t.Parallel()
+			if pkg == "os" && runtime.GOOS == "darwin" {
+				// The default macOS temporary path exceeds the Unix socket path limit.
+				t.Setenv("TMPDIR", "/tmp")
+			} else {
+				t.Parallel()
+			}
 			dir := filepath.Join(runtime.GOROOT(), "src", filepath.FromSlash(pkg))
 			fixture := t.TempDir()
 			module := "example.com/upstream"

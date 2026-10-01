@@ -13614,5 +13614,13 @@
       "gart": "skip",
       "reason": "The original Go suite excludes this fixture because its source does not start with // run or // compile."
     }
+  ],
+  "os": [
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original Go root consistency fixture skips the known RemoveAll final-symlink inconsistency.",
+      "test": "TestRootConsistencyRemoveAll/symlink_slash"
+    }
   ]
 }
