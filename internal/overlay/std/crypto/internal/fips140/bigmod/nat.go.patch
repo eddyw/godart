@@ -1,13 +1,11 @@
-The file patches the real Go source of crypto/internal/fips140/bigmod/nat.go.
+The portable sized helpers retain Go nat_noasm.go and its 2023 BSD notice.
+They use the original array storage through the internal element-pointer adapter.
+Existing production calls retain their direct slice adapter.
 
-go of the package crypto/internal/fips140/bigmod.
-
-The real file names addMulVVW1024, addMulVVW1536, and addMulVVW2048 in the 3
-cases of the size that RSA uses most. An assembly file holds each 1, and each 1
-takes the address of the first word of a slice. This file names the generic
-addMulVVW with the slice itself. The comment of Go says that the 3 cases
-"follow the exact same algorithm", thus the result stays the result of Go.
-
+@@ -5,1 +5,3 @@
+ package bigmod
++
++import "syscall/dart"
 @@ -862,9 +870,9 @@
  		var c uint
  		for i := 0; i < n; i++ {
@@ -44,6 +42,24 @@ addMulVVW with the slice itself. The comment of Go says that the 3 cases
  			T[n+i], c = bits.Add(c1, c2, c)
  		}
  		copy(x.reset(n).limbs, T[n:])
+@@ -905,1 +907,17 @@
++// Copyright 2023 The Go Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style
++// license that can be found in the LICENSE file.
++
++func addMulVVW1024(z, x *uint, y uint) (c uint) {
++	return addMulVVW(dart.BigmodUintSlice(z, 1024/_W), dart.BigmodUintSlice(x, 1024/_W), y)
++}
++
++func addMulVVW1536(z, x *uint, y uint) (c uint) {
++	return addMulVVW(dart.BigmodUintSlice(z, 1536/_W), dart.BigmodUintSlice(x, 1536/_W), y)
++}
++
++func addMulVVW2048(z, x *uint, y uint) (c uint) {
++	return addMulVVW(dart.BigmodUintSlice(z, 2048/_W), dart.BigmodUintSlice(x, 2048/_W), y)
++}
++
+ // addMulVVW multiplies the multi-word value x by the single-word value y,
 @@ -964,21 +972,21 @@
  		const n = 1024 / _W // compiler hint
  		T := make([]uint, n*2)

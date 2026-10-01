@@ -24,6 +24,10 @@ Generated Pub package names use the reserved-word list from Dart Pub
 `internal/driver/LICENSE-Dart` and `AUTHORS-Dart` preserve its BSD terms and attribution.
 The compiler notice bundle includes these terms.
 
+The modular arithmetic test adapter preserves Go `crypto/internal/fips140/bigmod/nat_test.go` and its 2021 BSD notice.
+It reads the original SDK inverse vectors without a copied dataset.
+The sized helpers retain Go `nat_noasm.go` and its 2023 BSD notice in the native-source patch.
+
 Go-derived overlays and upstream test excerpts use the notice in
 [`internal/overlay/std/LICENSE`](../internal/overlay/std/LICENSE).
 The anonymous-interface cycle detector and compiler directive validation

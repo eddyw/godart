@@ -206,10 +206,7 @@
   },
   {
     "package": "crypto/internal/fips140/bigmod",
-    "status": "compile-blocked",
-    "diagnostic": "undefined: addMulVVW1024",
-    "blocker_cause": "runtime-boundary",
-    "blocker_reason": "The suite calls architecture assembly helpers such as addMulVVW1024. Dart has no native assembly entry points."
+    "status": "vm-suite"
   },
   {
     "package": "crypto/internal/fips140/check",

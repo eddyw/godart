@@ -67,6 +67,13 @@ Reports retain these target exclusions. They do not count them as passes.
 Separate omissions cover native FIPS subprocesses, linker symbols,
 the BoringSSL runner, and external services.
 
+The modular arithmetic adapter retains original `crypto/internal/fips140/bigmod` assertions.
+VM and AOT also execute the original inverse data fixture.
+JS and Wasm execute the 19 cases that need no native file access.
+The 4 original modulus-1 skips remain explicit and do not count as passes.
+The sized helpers use actual array owners and offsets, with shared slice views and the original portable arithmetic.
+The complete package compiles, and the VM suite retains all original test declarations.
+
 The HTTP client comparisons use real HTTP/1 and TLS HTTP/2 servers on VM and AOT.
 Their adapter excludes HTTP/3 and upstream fake-network internals.
 Original assertions and matched skips remain unchanged.

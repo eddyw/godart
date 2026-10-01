@@ -13651,5 +13651,31 @@
       "reason": "The original Go root consistency fixture skips Linux rename behavior for a final symlink with a trailing slash.",
       "test": "TestRootConsistencyRename/to/symlink_slash"
     }
+  ],
+  "crypto/internal/fips140/bigmod": [
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original inverse fixture skips modulus 1 because the modulus must exceed 1.",
+      "test": "TestInverse/line_7"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original inverse fixture skips modulus 1 because the modulus must exceed 1.",
+      "test": "TestInverse/line_11"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original inverse fixture skips modulus 1 because the modulus must exceed 1.",
+      "test": "TestInverse/line_15"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original inverse fixture skips modulus 1 because the modulus must exceed 1.",
+      "test": "TestInverse/line_19"
+    }
   ]
 }

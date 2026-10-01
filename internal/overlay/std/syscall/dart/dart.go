@@ -2068,3 +2068,8 @@ func SyscallUnlinkat(dirfd int, path string) int {
 func SyscallRenameat(olddirfd int, oldpath string, newdirfd int, newpath string) int {
 	panic("syscall/dart needs the gart compiler")
 }
+
+// BigmodUintSlice requires an element pointer with n available uint cells.
+func BigmodUintSlice(ptr *uint, n int) []uint {
+	panic("syscall/dart needs the gart compiler")
+}

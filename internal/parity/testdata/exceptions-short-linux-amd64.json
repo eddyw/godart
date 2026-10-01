@@ -13996,5 +13996,31 @@
       "reason": "The original upstream test skips this case in short mode.",
       "test": "TestResumption/TLSv13"
     }
+  ],
+  "crypto/internal/fips140/bigmod": [
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original inverse fixture skips modulus 1 because the modulus must exceed 1.",
+      "test": "TestInverse/line_7"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original inverse fixture skips modulus 1 because the modulus must exceed 1.",
+      "test": "TestInverse/line_11"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original inverse fixture skips modulus 1 because the modulus must exceed 1.",
+      "test": "TestInverse/line_15"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original inverse fixture skips modulus 1 because the modulus must exceed 1.",
+      "test": "TestInverse/line_19"
+    }
   ]
 }

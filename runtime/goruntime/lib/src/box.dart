@@ -133,6 +133,12 @@ $Ref<List<T>, T> $sequencePtr<T>(Object? value, GoInt i, [bool uns = false]) {
   return $indexPtr<T>(value as List<T>, i, uns);
 }
 
+// Bigmod supplies an element pointer with n available uint cells.
+Slice<GoInt> $bigmodUintSlice($Ptr<GoInt>? pointer, int n) {
+  final ref = pointer as $Ref<List<GoInt>, GoInt>;
+  return Slice<GoInt>(ref.owner, ref.index, n, n);
+}
+
 T _listGet<T>(List<T> owner, int i) => owner[i];
 
 void _listSet<T>(List<T> owner, int i, T value) {

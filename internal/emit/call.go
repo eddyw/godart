@@ -209,6 +209,8 @@ func (e *emitter) intrinsic(x *ir.Call, args []string) (string, bool) {
 // intrinsicRaw lists each interop function whose boundary the mapped text
 // handles itself.
 var intrinsicRaw = map[string]bool{
+	"BigmodUintSlice": true,
+
 	"SelectValue":   true,
 	"SliceSwap":     true,
 	"SliceLen":      true,
@@ -288,6 +290,8 @@ func (e *emitter) goIntResult(text string, rs *types.Tuple) string {
 
 func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 	switch name {
+	case "BigmodUintSlice":
+		return fmt.Sprintf("$bigmodUintSlice(%s, $ix(%s))", args[0], args[1]), true
 	case "Print":
 		return fmt.Sprintf("$stdout(%s)", args[0]), true
 	case "Format":

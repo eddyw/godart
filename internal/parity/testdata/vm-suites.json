@@ -735,5 +735,9 @@
   {
     "package": "internal/runtime/sys",
     "run": ""
+  },
+  {
+    "package": "crypto/internal/fips140/bigmod",
+    "run": ""
   }
 ]
