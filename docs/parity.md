@@ -154,6 +154,7 @@ The documented native errno atomicity limitation also applies to these calls.
 
 Linux and macOS support native `syscall.Gettimeofday`, including nil output pointers.
 The adapter preserves the platform timeval layout, caller padding, and native errors.
+Linux `syscall.Time` uses native `Gettimeofday` and preserves its optional output pointer.
 JS and Wasm report this API as unsupported.
 
 Linux and macOS expose network interface indexes, names, MTU values,

@@ -48,6 +48,7 @@ Its verifier retains the BSD notice in `internal/load/LICENSE-Go`.
 The Linux `syscall.Fchmodat` and `syscall.Faccessat` adapters follow Go `src/syscall/syscall_linux.go` and retain its BSD notice.
 The Linux descriptor-relative path adapters follow Go syscall wrappers and retain their BSD notice.
 The Linux timestamp adapters follow Go `src/syscall/syscall_linux.go` and `syscall_linux_arm64.go` and retain their 2009 and 2015 BSD notices.
+Linux `syscall.Time` retains the original adapter from Go `src/syscall/syscall_linux_arm64.go` and its 2015 BSD notice.
 Native gettimeofday follows Go Linux and macOS syscall contracts with their 2009 and 2015 BSD notices.
 Its upstream test retains the original 2013 Go BSD notice and assertions.
 The macOS timestamp adapters follow Go `src/syscall/syscall_bsd.go` and retain its 2009 BSD notice.

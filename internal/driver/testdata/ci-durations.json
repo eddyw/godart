@@ -2123,6 +2123,7 @@
   "driver/short/TestLinuxGetdents": 64.26,
   "driver/short/TestLinuxMulticastInterfaceIndices": 100.27,
   "driver/short/TestLinuxPathMutations": 24.32,
+  "driver/short/TestLinuxSyscallTime": 146.74,
   "driver/short/TestLinuxSyscallTimestamps": 43.87,
   "driver/short/TestLinuxUtime": 22.37,
   "driver/short/TestListenerDeadlineUpstream": 45.49,

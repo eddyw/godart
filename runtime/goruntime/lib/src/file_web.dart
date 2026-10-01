@@ -226,7 +226,7 @@ int $syscallSetrlimit(int resource, bool input, int cur, int max) => 38;
 
 (GoString, int) $syscallGetwd() => (GoString.empty, 38);
 
-(int, int) $syscallGetcwd(Slice<int> data) => (-1, 38);
+(int, int) $syscallGetcwd(Slice<GoInt> data) => (-1, 38);
 
 int $syscallUtimensat(
   int fd,
