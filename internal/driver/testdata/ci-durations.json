@@ -2047,6 +2047,7 @@
   "driver/short/TestDarwinGetdirentries": 39.08,
   "driver/short/TestDarwinGetfsstat": 235.93,
   "driver/short/TestDarwinMulticastInterfaceErrors": 50.89,
+  "driver/short/TestDarwinPathconf": 36.9,
   "driver/short/TestDarwinStatfs": 183.56,
   "driver/short/TestDarwinSyscallTimestamps": 25.53,
   "driver/short/TestDarwinSysctl": 38.59,

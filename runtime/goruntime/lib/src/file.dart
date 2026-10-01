@@ -24,6 +24,7 @@ export 'filesystem_stats.dart';
 export 'root.dart' show $rootOpen, $rootOpenAt, $rootOpenDir, $rootMkdir;
 export 'syscall_directory.dart';
 export 'sysctl_darwin.dart';
+export 'pathconf_darwin.dart';
 export 'working_directory.dart';
 
 /// The name of the operating system, in the words of the Go constant GOOS.
