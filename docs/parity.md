@@ -67,6 +67,10 @@ Linux `syscall.Faccessat` queries descriptor-relative permissions with native fl
 Linux `syscall.Fchmodat` changes mode bits relative to an actual directory descriptor and preserves native flag errors.
 `syscall.Mkdirat`, `syscall.Fchownat`, `syscall.Unlinkat`, and `syscall.Renameat` mutate paths relative to native directory descriptors on Linux.
 `syscall.Getdents` and `syscall.ReadDirent` preserve native directory records and caller buffer padding on Linux.
+macOS `syscall.Getdirentries` uses the native directory cursor and preserves caller buffer boundaries.
+Like Go on macOS, it uses the descriptor offset and leaves `basep` unchanged.
+JS and Wasm return `errors.ErrUnsupported`.
+The original unsafe Getdirentries fixture remains outside this public API comparison.
 Linux `syscall.Getcwd` returns native path bytes and the final NUL byte through the caller buffer.
 Linux `syscall.UtimesNano`, `Utimes`, `Futimesat`, and `Futimes` use native timestamp operations and preserve Go's architecture-specific timeval conversions.
 macOS also supports `syscall.UtimesNano`, `Utimes`, and descriptor-based `Futimes` through native timestamp operations.

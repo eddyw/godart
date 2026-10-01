@@ -96,6 +96,7 @@ Rooted entry metadata follows `newUnixDirent` in Go `src/os/file_unix.go` with i
 Native directory records use Go `src/syscall/ztypes_*.go` layouts.
 Native directory syscalls adapt Darwin `Getdirentries` cursor behavior from
 `src/syscall/syscall_darwin.go` with its Go BSD notice.
+The public macOS Getdirentries adapter retains that 2009 notice.
 Path removal and rename preserve the error selection from Go `src/os/file_unix.go` with its BSD notice.
 Recursive removal follows Go `src/os/removeall_at.go` with its 2018 BSD notice.
 Symbolic link reads adapt its buffer growth and EINTR retry with the Go BSD notice.
