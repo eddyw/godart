@@ -179,8 +179,9 @@ type file struct {
 	// closed marks a file after Close, thus a later call reports ErrClosed.
 	closed bool
 	// dirFD owns the native descriptor.
-	dir   bool
-	dirFD int
+	dir    bool
+	inRoot bool
+	dirFD  int
 	// dirPos counts the entries that ReadDir gave.
 	dirPos    int
 	dirBuf    []byte
@@ -792,7 +793,7 @@ func Symlink(oldname, newname string) error {
 type dirEntry struct {
 	dir  string
 	name string
-	// Unknown native types retain metadata from the directory read.
+	// Rooted entries and unknown native types retain metadata from the directory read.
 	stat *fileStat
 	typ  FileMode
 }
@@ -850,7 +851,7 @@ func (f *File) ReadDir(n int) ([]DirEntry, error) {
 	entries := make([]DirEntry, 0, len(names))
 	for i, name := range names {
 		entry := &dirEntry{dir: f.name, name: name, typ: types[i]}
-		if entry.typ == ^FileMode(0) {
+		if entry.typ == ^FileMode(0) || f.inRoot {
 			info, statErr := f.directoryInfo(name)
 			if IsNotExist(statErr) {
 				continue

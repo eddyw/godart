@@ -106,7 +106,7 @@ func rootOpenFile(r *Root, name string, flag int, perm FileMode) (*File, error) 
 			}
 			return nil, err
 		}
-		return fileWithCleanup(&file{handle: handle, name: joinPath(r.name, name), dir: dirFD >= 0, dirFD: dirFD, appendMode: flag&O_APPEND != 0}), nil
+		return fileWithCleanup(&file{handle: handle, name: joinPath(r.name, name), dir: dirFD >= 0, inRoot: true, dirFD: dirFD, appendMode: flag&O_APPEND != 0}), nil
 	})
 	if err != nil {
 		return nil, rootError("openat", name, err)

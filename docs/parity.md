@@ -73,6 +73,7 @@ Unreachable `os.File` state releases its file handle or directory descriptor thr
 returns an explicit error because inherited listener descriptors remain unsupported.
 
 `os.Root.FS` implements `fs.ReadDirFS` and `fs.ReadLinkFS`, with sorted directory entries and link metadata.
+Rooted directory entries retain descriptor-derived metadata after file and root closure.
 On supported Linux and macOS hosts, `os.Root` retains a native directory descriptor.
 Root operations use that descriptor after directory renames. Native errno capture retains the limitation below.
 On Linux and macOS, `Root.Link` preserves the final symbolic link and its inode identity.

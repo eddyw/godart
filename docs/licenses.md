@@ -76,6 +76,7 @@ The time value representation and its clock helpers adapt Go `src/time/time.go`.
 Directory creation, sticky-bit behavior, and user directories follow Go `src/os/file.go` with its BSD notice.
 Directory enumeration follows Go `src/os/dir_unix.go` and `dir_darwin.go` with their BSD notices.
 Descriptor-relative directory metadata follows Go `src/os/statat_unix.go` with its BSD notice.
+Rooted entry metadata follows `newUnixDirent` in Go `src/os/file_unix.go` with its BSD notice.
 Native directory records use Go `src/syscall/ztypes_*.go` layouts.
 Native directory syscalls adapt Darwin `Getdirentries` cursor behavior from
 `src/syscall/syscall_darwin.go` with its Go BSD notice.
