@@ -926,8 +926,8 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 	case "ListenMulticastUDP":
 		return fmt.Sprintf("$listenMulticastUDP(%s, %s)", args[0], args[1]), true
 	case "JoinMulticast":
-		return fmt.Sprintf("$joinMulticast(%s, %s, %s)",
-			args[0], args[1], args[2]), true
+		return fmt.Sprintf("$joinMulticast(%s, %s, %s, %s)",
+			args[0], args[1], args[2], args[3]), true
 	case "ConnectUDP":
 		return fmt.Sprintf("$connectUDP(%s, %s, %s)", args[0], args[1], args[2]), true
 	case "PacketRead":

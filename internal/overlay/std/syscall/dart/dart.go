@@ -1509,11 +1509,12 @@ func ListenMulticastUDP(host string, port int) (int, int, string) {
 	panic("syscall/dart needs the gart compiler")
 }
 
-// JoinMulticast joins a multicast group on a datagram socket. Index 0 lets
-// the system select the interface. The result is the cause of a failure.
+// JoinMulticast joins a multicast group on a datagram socket.
+// If hasInterface is false, the system selects the interface.
+// The result is the cause of a failure.
 //
 // The call blocks the goroutine, thus the caller becomes an async function.
-func JoinMulticast(handle int, group string, index int) string {
+func JoinMulticast(handle int, group string, index int, hasInterface bool) string {
 	panic("syscall/dart needs the gart compiler")
 }
 

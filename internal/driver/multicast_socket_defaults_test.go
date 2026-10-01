@@ -21,7 +21,7 @@ func main(){
  var loopback *net.Interface
  for _,iface:=range interfaces{if iface.Flags&net.FlagLoopback!=0{loopback=&iface;break}}
  if loopback==nil{panic("no loopback interface")}
- for _,iface:=range []*net.Interface{nil,loopback}{
+ for _,iface:=range []*net.Interface{nil,{},loopback}{
   conn,err:=net.ListenMulticastUDP("udp4",iface,&net.UDPAddr{IP:net.IPv4(239,255,42,1)});must(err)
   raw,err:=conn.SyscallConn();must(err)
   must(raw.Control(func(fd uintptr){
@@ -58,7 +58,7 @@ func main(){
 Future<void> main(List<String> args) async {
   final interfaces = await NetworkInterface.list(includeLoopback: true, type: InternetAddressType.IPv4);
   final loopback = interfaces.firstWhere((n) => n.addresses.any((a) => a.isLoopback));
-  for (final index in [0, loopback.index]) {
+  for (final index in [null, 0, loopback.index]) {
     final packet = await _bindShared('0.0.0.0', 0);
     try {
       await _joinGroup(packet, '239.255.42.1', index);

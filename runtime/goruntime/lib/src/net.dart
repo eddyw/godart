@@ -1,3 +1,4 @@
+// Copyright 2009 The Go Authors. All rights reserved.
 // Copyright 2011 The Go Authors. All rights reserved.
 // Copyright 2017 The Go Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
@@ -1429,28 +1430,39 @@ GoString $listenClose(int handle) {
   return (-1, 0, _empty, 0);
 }
 
-/// Joins a multicast group on a datagram socket. Index 0 lets
-/// the system select the interface, as a nil Interface does in Go.
+/// Joins a multicast group on a datagram socket.
+/// If hasInterface is false, the system selects the interface.
 ///
 /// The call blocks the goroutine, thus the caller becomes an async function.
-GoString $joinMulticast(int handle, GoString group, int index) {
+GoString $joinMulticast(
+  int handle,
+  GoString group,
+  int index,
+  bool hasInterface,
+) {
   final _Packet? p = _packetAt(handle);
   if (p == null) return _closed();
   $await(
-    _joinGroup(p, group.toDartString(), index).then((_) => _empty),
+    _joinGroup(
+      p,
+      group.toDartString(),
+      hasInterface ? index : null,
+    ).then((_) => _empty),
     (Object cause) => _cause(cause),
   );
   return _empty;
 }
 
-Future<void> _joinGroup(_Packet p, String group, int index) async {
+Future<void> _joinGroup(_Packet p, String group, int? index) async {
   NetworkInterface? found;
-  if (index != 0) {
+  if (index != null && (index != 0 || Platform.isMacOS)) {
     for (final NetworkInterface n in await NetworkInterface.list(
       includeLoopback: true,
       includeLinkLocal: true,
     )) {
-      if (n.index == index) {
+      if (n.index == index ||
+          index == 0 &&
+              n.addresses.any((a) => a.type == InternetAddressType.IPv4)) {
         found = n;
         break;
       }
