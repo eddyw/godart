@@ -205,6 +205,8 @@ int $syscallFsync(int fd) => 38;
 
 int $syscallAccess(GoString path, int mode) => 38;
 
+int $syscallFchmodat(int fd, GoString path, int mode, int flags) => 38;
+
 int $syscallFdatasync(int fd) => 38;
 
 (int, int, int) $syscallGetrlimit(int resource, bool output) => (0, 0, 38);

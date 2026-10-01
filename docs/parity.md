@@ -63,6 +63,7 @@ Counter values and units follow the host ABI.
 Directory creation on Linux and macOS applies permission bits and the process umask at creation.
 `syscall.Umask` changes the actual process mask and returns its previous value.
 `syscall.Access` queries native permissions with the real user and group IDs on Linux and macOS.
+Linux `syscall.Fchmodat` changes mode bits relative to an actual directory descriptor and preserves native flag errors.
 Temporary directories request mode `0700`.
 Directory descriptors retain their identity after a rename or removal.
 `File.Chmod` and `File.Chown` use native descriptors on Linux and macOS.

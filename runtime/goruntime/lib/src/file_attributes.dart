@@ -151,6 +151,36 @@ final _fchownat = _libc
       Int Function(Int, Pointer<Uint8>, Uint32, Uint32, Int),
       int Function(int, Pointer<Uint8>, int, int, int)
     >('fchownat');
+
+final _fchmodat2 = _libc
+    .lookupFunction<
+      Long Function(Long, VarArgs<(Int, Pointer<Uint8>, Uint32, Int)>),
+      int Function(int, int, Pointer<Uint8>, int, int)
+    >('syscall');
+
+int $syscallFchmodat(int fd, GoString path, int mode, int flags) {
+  final bytes = path.bytes;
+  if (bytes.contains(0)) return 22;
+  final name = _malloc(bytes.length + 1);
+  if (name == nullptr) return 12;
+  try {
+    name.asTypedList(bytes.length + 1)
+      ..setRange(0, bytes.length, bytes)
+      ..[bytes.length] = 0;
+    if (flags == 0) {
+      final chmod = _fchmodat;
+      final errorAddress = _errno();
+      return chmod(fd, name, mode, 0) == 0 ? 0 : errorAddress.value;
+    }
+    final chmod = _fchmodat2;
+    final errorAddress = _errno();
+    // Linux amd64 and arm64 assign syscall 452 to fchmodat2.
+    return chmod(452, fd, name, mode, flags) == 0 ? 0 : errorAddress.value;
+  } finally {
+    _free(name);
+  }
+}
+
 final _atNoFollow = Platform.isMacOS ? 0x20 : 0x100;
 
 int $rootChmod(int parent, GoString path, int mode) =>

@@ -2112,6 +2112,8 @@
   "driver/short/TestLinkedVariableCache": 14.47,
   "driver/short/TestLinkedVariableDiagnostics": 6.14,
   "driver/short/TestLinuxDup3": 49.35,
+  "driver/short/TestLinuxFchmodat": 117.63,
+  "driver/short/TestLinuxFchmodatUpstream": 173.0,
   "driver/short/TestListenerDeadlineUpstream": 45.49,
   "driver/short/TestLiteralResolveSource": 0,
   "driver/short/TestLocalModuleImports": 19.1,

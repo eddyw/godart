@@ -1907,6 +1907,10 @@ func SyscallAccess(path string, mode uint32) int {
 	panic("syscall/dart needs the gart compiler")
 }
 
+func SyscallFchmodat(dirfd int, path string, mode uint32, flags int) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
 func SyscallDup(fd int) (int, int) {
 	panic("syscall/dart needs the gart compiler")
 }
