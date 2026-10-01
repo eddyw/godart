@@ -208,6 +208,29 @@ int $nativeExecutableAccess(GoString path) {
   return _pathAttribute(path, (name) => access(directory, name, 1, effective));
 }
 
+final _access = _libc
+    .lookupFunction<
+      Int Function(Pointer<Uint8>, Uint32),
+      int Function(Pointer<Uint8>, int)
+    >('access');
+
+int $syscallAccess(GoString path, int mode) {
+  final bytes = path.bytes;
+  if (bytes.contains(0)) return 22;
+  final access = _access;
+  final name = _malloc(bytes.length + 1);
+  if (name == nullptr) return 12;
+  try {
+    name.asTypedList(bytes.length + 1)
+      ..setRange(0, bytes.length, bytes)
+      ..[bytes.length] = 0;
+    final errorAddress = _errno();
+    return access(name, mode) == 0 ? 0 : errorAddress.value;
+  } finally {
+    _free(name);
+  }
+}
+
 int $nativeChown(GoString path, int uid, int gid, bool follow) =>
     _pathAttribute(
       path,

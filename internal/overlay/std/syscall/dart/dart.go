@@ -1903,6 +1903,10 @@ func SyscallClose(fd int) int {
 	panic("syscall/dart needs the gart compiler")
 }
 
+func SyscallAccess(path string, mode uint32) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
 func SyscallDup(fd int) (int, int) {
 	panic("syscall/dart needs the gart compiler")
 }
