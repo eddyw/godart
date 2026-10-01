@@ -84,5 +84,19 @@
       "classification": "implementation-gap",
       "reason": "The original assertion requires unsafe.StringData and native stack relocation. The adapter does not supply fabricated pointers or alter those assertions."
     }
+  },
+  "crypto/internal/sysrand": {
+    "TestNoUrandomFallback": {
+      "classification": "implementation-gap",
+      "reason": "The adapter has no equivalent observation of the private Go urandom fallback state. The original native-backend assertion remains unadapted."
+    },
+    "TestReadError": {
+      "classification": "implementation-gap",
+      "reason": "The adapter does not provide the original forced native-read failure hook. Preserve the fatal subprocess assertion without fabricated entropy failures."
+    },
+    "TestNoGetrandom": {
+      "classification": "implementation-gap",
+      "reason": "The Linux assertion disables getrandom through a native thread and seccomp. The adapter does not implement those thread and process contracts."
+    }
   }
 }

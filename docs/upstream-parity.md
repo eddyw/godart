@@ -379,3 +379,12 @@ byte and string writes, hash interfaces, panic errors, and hash distribution.
 The unhashable-value panic carries the runtime error type and actual value type.
 The complete package still includes unsupported unsafe-pointer assertions.
 Native allocation assertions and the other distribution tests remain outside this adapter.
+
+The system-random adapter executes the original `TestRead`, `TestReadByteValues`,
+`TestReadEmpty`, and full-mode `TestConcurrentRead` assertions on VM, AOT, JS, and Wasm.
+It preserves the 40 MiB read, compression assertion, and concurrent request counts.
+The complete package still requires native fallback and failure-injection hooks.
+Those backend tests remain implementation gaps in the parity denominator.
+
+The system-random read fixture gives Node a 4 GiB heap for the original 40 MiB buffer.
+The fixture retains the original data size, assertions, and deadlines.

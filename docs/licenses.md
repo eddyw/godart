@@ -34,6 +34,9 @@ The active SDK sources retain their 2025 Go BSD notices.
 The map-hash adapter selects original Go `hash/maphash/maphash_test.go`
 and `smhasher_test.go` declarations with their 2019 BSD notices.
 
+The system-random fixture selects original assertions from Go
+`src/crypto/internal/sysrand/rand_test.go` and retains its 2010 BSD notice.
+
 Go-derived overlays and upstream test excerpts use the notice in
 [`internal/overlay/std/LICENSE`](../internal/overlay/std/LICENSE).
 The anonymous-interface cycle detector and compiler directive validation
