@@ -2042,6 +2042,7 @@
   "driver/full/TestTimeLayout": 318.83,
   "driver/short/TestBench": 24.7,
   "driver/short/TestBenchFilter": 22.04,
+  "driver/short/TestBigIntPortable": 143.29,
   "driver/short/TestBigmodPortableArithmetic": 287.72,
   "driver/short/TestBodylessWithNoMarkerStaysRejected": 0.91,
   "driver/short/TestBuildRunChildOfGoTest": 18.9,
