@@ -140,14 +140,17 @@ func main() {
  }
  if selected == nil { panic("no multicast interface with an IPv4 address") }
  group := net.IPv4(239, 255, 77, 77)
- conn, err := net.ListenMulticastUDP("udp4", selected, &net.UDPAddr{IP: group})
- if err != nil { panic(err) }
- joined := membership(selected, group)
- if joined == nil { panic("joined multicast group is absent") }
  type record struct { Index int; IP []byte; Zone string }
- result := record{selected.Index, joined.IP, joined.Zone}
- if err := conn.Close(); err != nil { panic(err) }
- if err := json.NewEncoder(os.Stdout).Encode(result); err != nil { panic(err) }
+ results := []record{}
+ for _, iface := range []*net.Interface{selected, {Index: selected.Index}, {Index: selected.Index, Name: "absent-multicast-interface"}} {
+  conn, err := net.ListenMulticastUDP("udp4", iface, &net.UDPAddr{IP: group})
+  if err != nil { panic(err) }
+  joined := membership(selected, group)
+  if joined == nil { panic("joined multicast group is absent") }
+  results = append(results, record{selected.Index, joined.IP, joined.Zone})
+  if err := conn.Close(); err != nil { panic(err) }
+ }
+ if err := json.NewEncoder(os.Stdout).Encode(results); err != nil { panic(err) }
 }
 `)
 	native := filepath.Join(dir, "native")

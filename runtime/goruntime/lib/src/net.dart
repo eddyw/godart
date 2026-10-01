@@ -1429,38 +1429,34 @@ GoString $listenClose(int handle) {
   return (-1, 0, _empty, 0);
 }
 
-/// Joins a multicast group on a datagram socket. An empty interface name lets
+/// Joins a multicast group on a datagram socket. Index 0 lets
 /// the system select the interface, as a nil Interface does in Go.
 ///
 /// The call blocks the goroutine, thus the caller becomes an async function.
-GoString $joinMulticast(int handle, GoString group, GoString iface) {
+GoString $joinMulticast(int handle, GoString group, int index) {
   final _Packet? p = _packetAt(handle);
   if (p == null) return _closed();
   $await(
-    _joinGroup(
-      p,
-      group.toDartString(),
-      iface.toDartString(),
-    ).then((_) => _empty),
+    _joinGroup(p, group.toDartString(), index).then((_) => _empty),
     (Object cause) => _cause(cause),
   );
   return _empty;
 }
 
-Future<void> _joinGroup(_Packet p, String group, String name) async {
+Future<void> _joinGroup(_Packet p, String group, int index) async {
   NetworkInterface? found;
-  if (name.isNotEmpty) {
+  if (index != 0) {
     for (final NetworkInterface n in await NetworkInterface.list(
       includeLoopback: true,
       includeLinkLocal: true,
     )) {
-      if (n.name == name) {
+      if (n.index == index) {
         found = n;
         break;
       }
     }
     if (found == null) {
-      throw 'the interface $name is not present';
+      throw 'the interface $index is not present';
     }
   }
   final groupAddress = await _address(group);

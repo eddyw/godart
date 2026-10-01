@@ -170,6 +170,8 @@ For typed UDP dials, bind and connect errors take precedence over an expired or 
 Invalid remote addresses retain `AddrError` metadata after a successful explicit local bind.
 Failed remote conversion releases that bound socket.
 IPv4 `ListenMulticastUDP` disables multicast loopback and selects the supplied native interface for outgoing packets.
+For valid interface indexes, selection uses `Interface.Index` and ignores `Interface.Name`.
+Explicit zero-index selection on macOS and invalid-index error metadata remain incomplete.
 Mixed-family destinations, IPv6 zones, and socket controls remain incomplete.
 
 Native UDP error codes remain unreliable across separate Dart FFI calls.

@@ -2099,7 +2099,7 @@
   "driver/short/TestImporterLookup": 664.23,
   "driver/short/TestInterfaceAddresses": 50.22,
   "driver/short/TestInterfaceMetadata": 43.7,
-  "driver/short/TestInterfaceMulticastAddresses": 43.39,
+  "driver/short/TestInterfaceMulticastAddresses": 112.72,
   "driver/short/TestInterfaceUpstream": 48.8,
   "driver/short/TestKernelCacheInvalidation": 9.12,
   "driver/short/TestKernelExecutionContract": 3.78,

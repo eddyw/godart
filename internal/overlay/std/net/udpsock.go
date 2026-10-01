@@ -387,11 +387,11 @@ func ListenMulticastUDP(network string, ifi *Interface, gaddr *UDPAddr) (*UDPCon
 	if cause != "" {
 		return nil, errors.New("listen " + network + ": " + cause)
 	}
-	name := ""
+	index := 0
 	if ifi != nil {
-		name = ifi.Name
+		index = ifi.Index
 	}
-	if cause := dart.JoinMulticast(handle, gaddr.IP.String(), name); cause != "" {
+	if cause := dart.JoinMulticast(handle, gaddr.IP.String(), index); cause != "" {
 		dart.PacketClose(handle)
 		return nil, errors.New("listen " + network + ": " + cause)
 	}

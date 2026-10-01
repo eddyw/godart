@@ -58,10 +58,10 @@ func main(){
 Future<void> main(List<String> args) async {
   final interfaces = await NetworkInterface.list(includeLoopback: true, type: InternetAddressType.IPv4);
   final loopback = interfaces.firstWhere((n) => n.addresses.any((a) => a.isLoopback));
-  for (final name in ['', loopback.name]) {
+  for (final index in [0, loopback.index]) {
     final packet = await _bindShared('0.0.0.0', 0);
     try {
-      await _joinGroup(packet, '239.255.42.1', name);
+      await _joinGroup(packet, '239.255.42.1', index);
       print('loopback ${packet.socket.multicastLoopback ? 1 : 0}');
       final option = RawSocketOption(RawSocketOption.levelIPv4, RawSocketOption.IPv4MulticastInterface, Uint8List(4));
       print('interface ${packet.socket.getRawOption(option).join('.')}');
