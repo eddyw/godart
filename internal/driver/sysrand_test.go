@@ -11,8 +11,12 @@ import (
 )
 
 func TestSysrandRead(t *testing.T) {
-	// The original 40 MiB buffer exceeds Node’s 2 GiB heap with boxed JS integers.
-	testSysrand(t, []string{"TestRead", "TestReadByteValues", "TestReadEmpty"}, "--max-old-space-size=4096")
+	heap := "--max-old-space-size=4096"
+	if !testing.Short() {
+		// Full compression of the original 40 MiB buffer exceeds the 4 GiB JS heap.
+		heap = "--max-old-space-size=8192"
+	}
+	testSysrand(t, []string{"TestRead", "TestReadByteValues", "TestReadEmpty"}, heap)
 }
 
 func TestSysrandConcurrentRead(t *testing.T) {

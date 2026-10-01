@@ -2034,6 +2034,7 @@
   "driver/full/TestSignalProcessesUpstream": 49.46,
   "driver/full/TestSocketOptionErrors": 77.74,
   "driver/full/TestSysrandConcurrentRead": 109.87,
+  "driver/full/TestSysrandRead": 294.24,
   "driver/full/TestTCPDialFamilyUpstream": 73.88,
   "driver/full/TestTLSUpstream": 266.59,
   "driver/full/TestTestingTimeoutTargets": 347.1,
