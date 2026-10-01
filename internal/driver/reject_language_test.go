@@ -173,6 +173,9 @@ func TestDiagnostics(t *testing.T) {
 				}
 			})
 			c := result.Fixture
+			if c.Adapter == "fieldtrack-rejection" {
+				result.Native.Environment = map[string]string{"GOEXPERIMENT": os.Getenv("GOEXPERIMENT")}
+			}
 			if !c.NativeEligible || !c.GartEligible {
 				t.Skipf("upstream build constraints: native=%t Gart=%t", c.NativeEligible, c.GartEligible)
 			}
@@ -245,6 +248,9 @@ func TestDiagnostics(t *testing.T) {
 				} else {
 					err = driver.Build(driver.Options{Dir: dir, Patterns: []string{pattern}, Out: t.TempDir(), Runtime: runtimeDir(t), StandardLibrary: result.GartStandardLibrary})
 					result.Gart = languageExecution{Ran: true, Seconds: time.Since(start).Seconds()}
+					if c.Adapter == "fieldtrack-rejection" {
+						result.Gart.Environment = map[string]string{"GOEXPERIMENT": os.Getenv("GOEXPERIMENT")}
+					}
 					if err != nil {
 						result.Gart.Exit = 1
 						result.BuildError = err.Error()

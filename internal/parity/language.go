@@ -151,7 +151,17 @@ func DiscoverLanguage(ctx build.Context) (*LanguageInventory, error) {
 				}
 				c.Files = append(c.Files, SourceFile{Path: companion, SHA256: digest(data)})
 			}
-			if recipe == "run" {
+			if recipe == "run -goexperiment fieldtrack" {
+				c.Adapter = "fieldtrack-file"
+			} else if recipe == "errorcheck -goexperiment fieldtrack" {
+				c.Adapter = "fieldtrack-rejection"
+			} else if recipe == "runindir -goexperiment fieldtrack" {
+				c.Adapter = "fieldtrack-module"
+				c.ModuleGoVersion, err = languageModuleVersion(source)
+				if err != nil {
+					return nil, err
+				}
+			} else if recipe == "run" {
 				c.Adapter = "single-file"
 			} else if flags := languageRunCompilerFlags[recipe]; flags != nil {
 				c.Adapter = "run-recipe"

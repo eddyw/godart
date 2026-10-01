@@ -13,13 +13,14 @@ import (
 )
 
 type goSDK struct {
-	root      string
-	buildRoot string
-	env       []string
+	root       string
+	buildRoot  string
+	fieldTrack bool
+	env        []string
 }
 
 func prepareGoSDK(dir string) (goSDK, error) {
-	cmd := exec.Command("go", "env", "-json", "GOROOT", "GOMODCACHE", "GOVERSION")
+	cmd := exec.Command("go", "env", "-json", "GOROOT", "GOMODCACHE", "GOVERSION", "GOEXPERIMENT")
 	cmd.Dir = dir
 	cmd.Env = os.Environ()
 	var stderr bytes.Buffer
@@ -28,11 +29,20 @@ func prepareGoSDK(dir string) (goSDK, error) {
 	if err != nil {
 		return goSDK{}, fmt.Errorf("locate Go SDK: %w: %s", err, stderr.String())
 	}
-	var selected struct{ GOROOT, GOMODCACHE, GOVERSION string }
+	var selected struct{ GOROOT, GOMODCACHE, GOVERSION, GOEXPERIMENT string }
 	if err := json.Unmarshal(data, &selected); err != nil {
 		return goSDK{}, err
 	}
 	sdk := goSDK{root: selected.GOROOT, buildRoot: selected.GOROOT, env: cmd.Env}
+	for _, experiment := range strings.Split(selected.GOEXPERIMENT, ",") {
+		switch experiment {
+		case "fieldtrack":
+			sdk.fieldTrack = true
+		case "none", "nofieldtrack":
+			sdk.fieldTrack = false
+		}
+	}
+
 	rel, err := filepath.Rel(selected.GOMODCACHE, selected.GOROOT)
 	if err != nil || !filepath.IsLocal(rel) {
 		return sdk, nil

@@ -44,6 +44,7 @@ type Result struct {
 // Config holds what the emitter needs beyond the tree of the package.
 type Config struct {
 	LinkedSymbols map[types.Object]bool
+	NoInterface   map[*types.Func]bool
 	// Base names the library file of the package.
 	Base string
 	// Imports lists the Dart library of each Go dependency.

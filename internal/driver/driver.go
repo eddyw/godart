@@ -136,6 +136,13 @@ func BuildWithStats(opt Options) (*Stats, error) {
 			return nil, err
 		}
 	}
+	var noInterface verify.NoInterface
+	if result.FieldTrack {
+		noInterface, err = verify.CheckNoInterface(pkgs)
+		if err != nil {
+			return nil, err
+		}
+	}
 	opt.trace("verify", phase)
 	phase = time.Now()
 	blocks := analyze.Module(pkgs)
@@ -164,7 +171,7 @@ func BuildWithStats(opt Options) (*Stats, error) {
 			flags += "\x00goroot=" + goroot
 		}
 		defaults := result.DefaultGODEBUG[p.PkgPath]
-		flags += "\x00godebug=" + defaults + "\x00links=" + links.Digest
+		flags += "\x00godebug=" + defaults + "\x00links=" + links.Digest + "\x00nointerface=" + noInterface.Digest
 		if !opt.TrimPath {
 			var paths []string
 			for _, file := range p.Syntax {
@@ -186,7 +193,7 @@ func BuildWithStats(opt Options) (*Stats, error) {
 				continue
 			}
 		}
-		out, err := compile(p, module, dartPkg, blocks, bin, opt.TrimPath, defaults, goroot, links)
+		out, err := compile(p, module, dartPkg, blocks, bin, opt.TrimPath, defaults, goroot, links, noInterface.Methods)
 		if err != nil {
 			return nil, err
 		}
@@ -412,7 +419,7 @@ func outputExists(out string, files []string) bool {
 }
 
 func compile(p *packages.Package, module, dartPkg string, blocks *analyze.Result,
-	bin *load.Binary, trimpath bool, defaults, goroot string, links *linker.Symbols) (*emit.Result, error) {
+	bin *load.Binary, trimpath bool, defaults, goroot string, links *linker.Symbols, noInterface map[*types.Func]bool) (*emit.Result, error) {
 	tree, err := normalize.Package(p.Fset, p.Syntax, p.TypesInfo, p.Types, blocks, links.Targets)
 	if err != nil {
 		return nil, err
@@ -452,6 +459,7 @@ func compile(p *packages.Package, module, dartPkg string, blocks *analyze.Result
 	sort.Slice(imports, func(i, j int) bool { return imports[i].Path < imports[j].Path })
 	return emit.Package(tree, p.Types, emit.Config{
 		LinkedSymbols:  links.Targets,
+		NoInterface:    noInterface,
 		Base:           baseName(p, module),
 		Imports:        imports,
 		DartPackage:    dartPkg,

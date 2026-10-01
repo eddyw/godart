@@ -167,6 +167,9 @@ func (e *emitter) methodTable(elem types.Type, t types.Type) []string {
 	set := types.NewMethodSet(t)
 	entries := make([]string, 0, set.Len())
 	for i := 0; i < set.Len(); i++ {
+		if e.cfg.NoInterface[set.At(i).Obj().(*types.Func).Origin()] {
+			continue
+		}
 		if entry := e.adapter(elem, set.At(i), pointer); entry != "" {
 			entries = append(entries, entry)
 		}
@@ -224,7 +227,7 @@ func (e *emitter) methodTypeTable(t types.Type) string {
 	entries := make([]string, 0, set.Len())
 	for i := 0; i < set.Len(); i++ {
 		fn, ok := set.At(i).Obj().(*types.Func)
-		if !ok {
+		if !ok || e.cfg.NoInterface[fn.Origin()] {
 			continue
 		}
 		if o, ok := fn.Type().(*types.Signature); ok &&
@@ -895,6 +898,9 @@ func (e *emitter) methodForwardTable(t types.Type) string {
 			continue
 		}
 		fn := sel.Obj().(*types.Func)
+		if e.cfg.NoInterface[fn.Origin()] {
+			continue
+		}
 		recv, current := e.adapterReceiver(elem, sel, pointer)
 		if current == nil || !isInterfaceType(current) {
 			continue

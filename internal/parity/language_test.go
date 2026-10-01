@@ -87,6 +87,11 @@ func TestLanguageInventory(t *testing.T) {
 	write("test/rejectcomplete.go", "// errorcheck -complete\npackage p\n")
 	write("test/rejecttimed.go", "// errorcheck -t 10\npackage p\n")
 	write("test/rejecttimedflags.go", "// errorcheck -t 10 -e=0\npackage p\n")
+	write("test/fieldtrack.go", "// run -goexperiment fieldtrack\npackage main\n")
+	write("test/fieldtrackreject.go", "// errorcheck -goexperiment fieldtrack\npackage p\n")
+	write("test/fieldtrackmodule.go", "// runindir -goexperiment fieldtrack\npackage ignored\n")
+	write("test/fieldtrackmodule.dir/main.go", "package main\n")
+	write("test/fieldtrackextra.go", "// run -goexperiment fieldtrack -race\npackage main\n")
 	write("test/build.go", "// build\npackage main\n")
 	write("test/buildinline.go", "// build -gcflags=-l=4\npackage p\n")
 	write("test/buildexperiment.go", "// build -goexperiment regabi,regabiargs\npackage main\n")
@@ -177,8 +182,8 @@ func TestLanguageInventory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(inv.Cases) != 101 {
-		t.Fatalf("got %d cases, want 101", len(inv.Cases))
+	if len(inv.Cases) != 105 {
+		t.Fatalf("got %d cases, want 105", len(inv.Cases))
 	}
 	cases := map[string]LanguageCase{}
 	for _, c := range inv.Cases {
@@ -247,6 +252,14 @@ func TestLanguageInventory(t *testing.T) {
 	}
 	if cases["rejectcomplete"].Adapter != "reject-file" {
 		t.Fatal("complete-package diagnostics need the rejection adapter")
+	}
+	for name, adapter := range map[string]string{"fieldtrack": "fieldtrack-file", "fieldtrackreject": "fieldtrack-rejection", "fieldtrackmodule": "fieldtrack-module", "fieldtrackextra": "missing"} {
+		if cases[name].Adapter != adapter {
+			t.Fatalf("fieldtrack adapter %s = %s, want %s", name, cases[name].Adapter, adapter)
+		}
+	}
+	if cases["fieldtrackmodule"].ModuleGoVersion == "" || len(cases["fieldtrackmodule"].Files) != 2 {
+		t.Fatalf("fieldtrack module lost its source contract: %+v", cases["fieldtrackmodule"])
 	}
 	if cases["rejecttimed"].Adapter != "reject-file" || cases["rejecttimedflags"].Adapter != "missing" {
 		t.Fatal("the timed rejection adapter must preserve extra recipe options")

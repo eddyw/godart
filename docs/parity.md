@@ -17,6 +17,7 @@ SDK versions, modes, and exclusions.
 | Native access | Nil `unsafe.Pointer` values and constant-zero conversions are supported. No cgo, native pointer arithmetic, or pointer reinterpretation. |
 | Pointer output | Process-local identities can represent pointers. They are not native memory addresses. |
 | Map iteration | The runtime can expose insertion order. Programs must not depend on Go's unspecified iteration order. |
+| Experimental methods | With `GOEXPERIMENT=fieldtrack`, `go:nointerface` methods remain callable but cannot satisfy interfaces or appear in reflection method tables. |
 | Reflection | Descriptors cover a substantial subset. Dynamically created function types need an emitted callable factory. |
 | Function metadata | Function values expose synthetic PCs and Go source metadata. Return PCs and their preceding call PCs resolve to the same source position. Reflection method wrappers can have no Go source location. PCs do not identify native instructions. |
 | Garbage collection | Native hosts request collection through the Dart embedder API when available. Other hosts use best-effort collection. Cleanup deadlines can differ. |

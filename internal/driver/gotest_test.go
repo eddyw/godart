@@ -103,7 +103,7 @@ func TestRunDirectoryFilesOfGoTest(t *testing.T) {
 	}
 	var cases []parity.LanguageCase
 	for _, c := range inv.Cases {
-		if c.Adapter == "directory-module" {
+		if c.Adapter == "directory-module" || c.Adapter == "fieldtrack-module" {
 			cases = append(cases, c)
 		}
 	}
@@ -137,7 +137,7 @@ func runLanguageCases(t *testing.T, target string, inv *parity.LanguageInventory
 			contract := "run"
 			if c.Adapter == "generated-file" {
 				contract = "runoutput"
-			} else if c.Adapter == "directory-module" {
+			} else if c.Adapter == "directory-module" || c.Adapter == "fieldtrack-module" {
 				contract = "runindir"
 			}
 			outcomes = append(outcomes, &languageOutcome{Fixture: c, Contract: contract, Status: "unobserved"})
@@ -170,9 +170,16 @@ func runLanguageCases(t *testing.T, target string, inv *parity.LanguageInventory
 			if c.Exclusion != nil {
 				t.Skip(c.Exclusion.Classification + ": " + c.Exclusion.Reason)
 			}
+			if c.Adapter == "fieldtrack-file" {
+				settings := map[string]string{"GOEXPERIMENT": os.Getenv("GOEXPERIMENT")}
+				outcome.Native.Environment, outcome.Gart.Environment = settings, settings
+			}
 			dir := t.TempDir()
-			if c.Adapter == "directory-module" {
+			if c.Adapter == "directory-module" || c.Adapter == "fieldtrack-module" {
 				settings := map[string]string{"GOPATH": dir}
+				if c.Adapter == "fieldtrack-module" {
+					settings["GOEXPERIMENT"] = os.Getenv("GOEXPERIMENT")
+				}
 				outcome.Native.Environment = settings
 				outcome.Gart.Environment = settings
 				dir = filepath.Join(dir, "src", filepath.Base(c.Name)+".dir")
@@ -192,7 +199,7 @@ func runLanguageCases(t *testing.T, target string, inv *parity.LanguageInventory
 				}
 				source = []byte(outcome.GeneratedSource)
 			}
-			if c.Adapter == "directory-module" {
+			if c.Adapter == "directory-module" || c.Adapter == "fieldtrack-module" {
 				prefix := c.Name + ".dir/"
 				for _, entry := range c.Files {
 					if !strings.HasPrefix(entry.Path, prefix) {
@@ -261,7 +268,7 @@ func runLanguageCases(t *testing.T, target string, inv *parity.LanguageInventory
 			if len(c.RunFiles) > 0 {
 				patterns = append([]string{file}, c.RunFiles...)
 			}
-			if len(c.Companions) > 0 || c.Adapter == "directory-module" {
+			if len(c.Companions) > 0 || (c.Adapter == "directory-module" || c.Adapter == "fieldtrack-module") {
 				patterns = []string{file}
 			}
 			options := driver.Options{
@@ -335,7 +342,7 @@ func runLanguageCases(t *testing.T, target string, inv *parity.LanguageInventory
 				args = []string{"run.mjs"}
 			}
 			runDir := out
-			if c.Adapter == "directory-module" {
+			if c.Adapter == "directory-module" || c.Adapter == "fieldtrack-module" {
 				runDir = dir
 				if target == "vm" {
 					args = []string{"--packages=" + filepath.Join(out, ".dart_tool/package_config.json"), filepath.Join(out, "bin/main.dart")}

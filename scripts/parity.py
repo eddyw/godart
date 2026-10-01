@@ -602,6 +602,13 @@ def generator_recipe_valid(case, action="runoutput"):
             and all(re.fullmatch(r"[0-9a-f]{64}", recorded.get(f, "")) for f in [primary] + files))
 
 
+def fieldtrack_valid(case, report, adapter):
+    return (case["fixture"].get("adapter") == adapter
+            and report.get("environment", {}).get("GOEXPERIMENT") == "fieldtrack"
+            and all(case[key].get("environment", {}).get("GOEXPERIMENT") == "fieldtrack"
+                    for key in ("native", "gart")))
+
+
 def run_recipe_valid(case, target):
     fixture = case["fixture"]
     recipe = fixture.get("recipe", "")
@@ -622,7 +629,7 @@ def run_recipe_valid(case, target):
     if len(parts) < 2 or parts[0] != "run":
         return False
     files, arguments = [], []
-    for value in ([] if flags else parts[1:]):
+    for value in ([] if flags or recipe == "run -goexperiment fieldtrack" else parts[1:]):
         if value.startswith("-") or any(c in value for c in "\\\"'"):
             return False
         if not arguments and value.endswith(".go"):
@@ -653,7 +660,7 @@ def run_recipe_valid(case, target):
         wrapper = "import 'bin/main.dart' as program;\nvoid main() { program.main(" + encoded + "); }\n"
         if case.get("wrapper_source") != wrapper or case.get("wrapper_sha256") != hashlib.sha256(wrapper.encode()).hexdigest():
             return False
-    return fixture.get("adapter") == "run-recipe"
+    return fixture.get("adapter") == ("fieldtrack-file" if recipe == "run -goexperiment fieldtrack" else "run-recipe")
 
 
 def timed_rejection_valid(case):
@@ -854,6 +861,14 @@ def language_behavior(paths):
                                               if arg == "-std" or arg.startswith("-std=")] == ["-std"])
                             elif recipe == "errorcheck -t 10":
                                 valid = valid and not successful and timed_rejection_valid(case)
+                            elif recipe == "errorcheck -goexperiment fieldtrack":
+                                command = case["native"].get("command", [])
+                                valid = (valid and not successful and fieldtrack_valid(case, report, "fieldtrack-rejection")
+                                         and len(command) == 11
+                                         and command[:7] == ["go", "tool", "compile", "-p=p", "-d=panic", "-C", "-e"]
+                                         and command[7].startswith("-importcfg=")
+                                         and command[8:10] == ["-o", "native.o"]
+                                         and command[10].endswith("/" + case["fixture"]["file"]))
                             elif recipe in {"errorcheck -complete", "errorcheck -e=0"}:
                                 valid = valid and not successful and compiler_rejection_valid(case)
                             else:
@@ -867,6 +882,8 @@ def language_behavior(paths):
                                                               for k in ("native", "gart"))
                         if case.get("contract") == "run" and case["fixture"].get("recipe", "run") != "run":
                             valid = valid and run_recipe_valid(case, report.get("target"))
+                            if case["fixture"]["recipe"] == "run -goexperiment fieldtrack":
+                                valid = valid and fieldtrack_valid(case, report, "fieldtrack-file")
                         elif case.get("contract") == "runoutput":
                             generator = case.get("generator") or {}
                             source = case.get("generated_source")
@@ -876,14 +893,17 @@ def language_behavior(paths):
                                      and hashlib.sha256(source.encode()).hexdigest() == generator.get("output_sha256"))
                         elif case.get("contract") == "runindir":
                             fixture = case["fixture"]
-                            recipe = re.fullmatch(r'''runindir(?:\s+-gomodversion\s+(?:"([^"]*)"|'([^']*)'|([^\s"']+)))?''', fixture.get("recipe", ""))
+                            fieldtrack = fixture.get("recipe") == "runindir -goexperiment fieldtrack"
+                            module_recipe = "runindir" if fieldtrack else fixture.get("recipe", "")
+                            recipe = re.fullmatch(r'''runindir(?:\s+-gomodversion\s+(?:"([^"]*)"|'([^']*)'|([^\s"']+)))?''', module_recipe)
                             explicit_version = next((v for v in recipe.groups() if v), "") if recipe else ""
                             module = (f'module {Path(fixture["name"]).name}.dir\n'
                                       f'go {fixture.get("module_go_version", "")}\n')
                             prefix = fixture["name"] + ".dir/"
                             valid = (valid and recipe is not None
                                      and (not explicit_version or explicit_version == fixture.get("module_go_version"))
-                                     and fixture.get("adapter") == "directory-module"
+                                     and fixture.get("adapter") == ("fieldtrack-module" if fieldtrack else "directory-module")
+                                     and (not fieldtrack or fieldtrack_valid(case, report, "fieldtrack-module"))
                                      and fixture.get("module_go_version")
                                      and case.get("module_source") == module
                                      and case.get("module_sha256") == hashlib.sha256(module.encode()).hexdigest()

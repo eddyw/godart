@@ -724,6 +724,58 @@ class ParityTest(unittest.TestCase):
         packages[1]["module_path"] = "test/p0"
         self.assertFalse(parity.directory_language_valid(case, "go1.27.1"))
 
+    def test_fieldtrack_recipes_require_actual_environment(self):
+        stamp = parity.hashlib.sha256(b"").hexdigest()
+        for contract, action, adapter in [("run", "run", "fieldtrack-file"),
+                                          ("runindir", "runindir", "fieldtrack-module"),
+                                          ("reject", "errorcheck", "fieldtrack-rejection")]:
+            with self.subTest(contract=contract), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                fixture = dict(name="fixedbugs/p", file="fixedbugs/p.go",
+                               recipe=action + " -goexperiment fieldtrack", adapter=adapter,
+                               files=[dict(path="fixedbugs/p.go", sha256="f" * 64)])
+                execution = dict(ran=True, exit=0, timed_out=False, output_sha256=stamp,
+                                 environment=dict(GOEXPERIMENT="fieldtrack"))
+                case = dict(fixture=fixture, contract=contract, status="passed",
+                            native=dict(execution, command=["go", "run", "-gcflags=all=", "p.go"]),
+                            gart=dict(execution, command=["dart", "main.dart"]), expected_sha256=stamp)
+                if contract == "runindir":
+                    fixture["module_go_version"] = "1.27"
+                    fixture["files"].append(dict(path="fixedbugs/p.dir/main.go", sha256="f" * 64))
+                    module = "module p.dir\ngo 1.27\n"
+                    case.update(module_source=module, module_sha256=parity.hashlib.sha256(module.encode()).hexdigest())
+                    case["native"]["command"][-1] = "."
+                    for key in ("native", "gart"):
+                        case[key]["environment"] = dict(GOPATH="/fixture", GOEXPERIMENT="fieldtrack")
+                elif contract == "reject":
+                    diagnostic = "p.go:3: M method is marked 'nointerface'"
+                    case.update(build_error=diagnostic, native_diagnostics=diagnostic, gart_diagnostics=diagnostic,
+                                wrapper_sha256="original matcher", native_match=dict(ran=True, exit=0, timed_out=False),
+                                gart_match=dict(ran=True, exit=0, timed_out=False))
+                    for key in ("native", "gart"):
+                        case[key].update(exit=1, output_sha256=parity.hashlib.sha256(diagnostic.encode()).hexdigest())
+                    case["native"]["command"] = ["go", "tool", "compile", "-p=p", "-d=panic", "-C", "-e",
+                                                   "-importcfg=/fixture/importcfg", "-o", "native.o", "/sdk/test/fixedbugs/p.go"]
+                report = dict(kind="language", complete=True, target="vm", outcomes=[case], shard=0, shards=1,
+                              environment=dict(GOEXPERIMENT="fieldtrack"))
+
+                def assess(value, status):
+                    parity.save(root / "language.json", value)
+                    self.assertEqual(parity.language_behavior([root])[0]["counts"], {status: 1})
+
+                assess(report, "passed")
+                for mutate in [
+                    lambda r: r.pop("environment"),
+                    lambda r: r["environment"].update(GOEXPERIMENT="fieldtrack,nofieldtrack"),
+                    lambda r: r["outcomes"][0]["native"].pop("environment"),
+                    lambda r: r["outcomes"][0]["gart"].update(environment=dict(GOEXPERIMENT="nofieldtrack")),
+                    lambda r: r["outcomes"][0]["fixture"].update(adapter="missing"),
+                    lambda r: r["outcomes"][0]["fixture"].update(recipe=action + " -goexperiment fieldtrack -race"),
+                ]:
+                    changed = copy.deepcopy(report)
+                    mutate(changed)
+                    assess(changed, "failed")
+
     def test_directory_recipe_requires_original_module_and_sources(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

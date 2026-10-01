@@ -58,6 +58,7 @@ type Result struct {
 	Embeds         map[string]bool
 	DefaultGODEBUG map[string]string
 	GOROOT         string
+	FieldTrack     bool
 }
 
 type PhaseTiming struct {
@@ -236,7 +237,7 @@ func load(dir string, tests, cover bool, filter Filter, patterns []string, cache
 			break
 		}
 	}
-	return &Result{Timings: timings, Packages: pkgs, Sources: files, Binaries: binaries, Embeds: embeds, DefaultGODEBUG: defaults, GOROOT: sdk.buildRoot}, nil
+	return &Result{Timings: timings, Packages: pkgs, Sources: files, Binaries: binaries, Embeds: embeds, DefaultGODEBUG: defaults, GOROOT: sdk.buildRoot, FieldTrack: sdk.fieldTrack}, nil
 }
 
 // overlayFiles maps each file of a standard library package to the file of the
