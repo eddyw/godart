@@ -205,6 +205,10 @@ int $syscallFsync(int fd) => 38;
 
 int $syscallFdatasync(int fd) => 38;
 
+(int, int, int) $syscallGetrlimit(int resource, bool output) => (0, 0, 38);
+
+int $syscallSetrlimit(int resource, bool input, int cur, int max) => 38;
+
 (int, int) $syscallFcntl(int fd, int cmd, int arg) => (-1, 38);
 (int, int) $syscallReadDirent(int fd, Slice<GoInt> data) => (0, 38);
 

@@ -1923,6 +1923,14 @@ func SyscallFdatasync(fd int) int {
 	panic("syscall/dart needs the gart compiler")
 }
 
+func SyscallGetrlimit(resource int, output bool) (uint64, uint64, int) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+func SyscallSetrlimit(resource int, input bool, cur, max uint64) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // SyscallFcntl accepts the integer commands F_GETFD, F_SETFD, F_GETFL, and F_SETFL.
 func SyscallFcntl(fd, cmd, arg int) (int, int) {
 	panic("syscall/dart needs the gart compiler")

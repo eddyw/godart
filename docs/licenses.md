@@ -104,6 +104,8 @@ Public stat adapters preserve the contracts of Go `src/syscall` stat wrappers an
 Descriptor duplication follows Go `src/syscall/zsyscall_{linux,darwin}_{amd64,arm64}.go` with its BSD notice.
 Raw filesystem sync adapters follow the same generated syscall sources with their BSD notice.
 Descriptor flag controls adapt Go `src/syscall/exec_unix.go` with its BSD notice.
+Resource-limit adapters follow Go `src/syscall/syscall_linux.go` and the generated Darwin syscall wrappers with their BSD notice.
+Their native `Rlimit` layout follows the SDK `ztypes` declarations for Linux and Darwin on amd64 and arm64.
 The ownership adapter preserves original `src/os/os_unix_test.go` assertions
 and the `internal/testenv` unsupported-syscall predicates with their BSD notices.
 Unix `PWD` validation follows Go `src/os/getwd.go` with its BSD notice.
