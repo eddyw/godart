@@ -76,6 +76,9 @@ On supported Linux and macOS hosts, `os.Root` retains a native directory descrip
 Root operations use that descriptor after directory renames. Native errno capture retains the limitation below.
 On Linux and macOS, `Root.Link` preserves the final symbolic link and its inode identity.
 
+`os.CreateTemp` and `os.MkdirTemp` use random decimal `uint32` suffixes and exclusive creation.
+They preserve Go's collision retry limit and error metadata.
+
 `os.UserConfigDir` and `os.UserCacheDir` use the native macOS locations.
 Unix targets reject relative XDG directory values and preserve the HOME fallback.
 Windows user-directory behavior remains incomplete.

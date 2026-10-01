@@ -82,7 +82,8 @@ Native directory syscalls adapt Darwin `Getdirentries` cursor behavior from
 Path removal and rename preserve the error selection from Go `src/os/file_unix.go` with its BSD notice.
 Recursive removal follows Go `src/os/removeall_at.go` with its 2018 BSD notice.
 Symbolic link reads adapt its buffer growth and EINTR retry with the Go BSD notice.
-Temporary file creation flags and permissions follow Go `src/os/tempfile.go` with its BSD notice.
+Temporary file and directory creation follow Go `src/os/tempfile.go` with its BSD notice.
+The adapter uses the runtime random-byte source and the shared path join function.
 Temporary directory selection follows Go `src/os/file_unix.go` with its BSD notice.
 The WriteFile overlay preserves Go `src/os/file.go` behavior and its BSD notice.
 Descriptor-based directory and file attribute changes follow Go `src/os/file_posix.go`,
