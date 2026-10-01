@@ -1947,3 +1947,9 @@ func SyscallUnlink(path string, directory bool) int {
 func SyscallReadlink(path string, buf []byte) (int, int) {
 	panic("syscall/dart needs the gart compiler")
 }
+
+// SyscallGetrusage returns native Rusage fields and errno.
+// Fields contain user and system seconds/microseconds, then the SDK counter order.
+func SyscallGetrusage(who int, output bool) ([]int64, int) {
+	panic("syscall/dart needs the gart compiler")
+}

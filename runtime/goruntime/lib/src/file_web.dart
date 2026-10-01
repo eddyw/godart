@@ -247,3 +247,6 @@ int $rootRename(int oldParent, GoString from, int newParent, GoString to) => 38;
 int $rootSymlink(GoString target, int parent, GoString path) => 38;
 int $rootRemove(int parent, GoString path) => 38;
 int $rootRemoveAll(int parent, GoString path) => 38;
+
+(Slice<int>, int) $syscallGetrusage(int who, bool output) =>
+    (Slice<int>.nil(), 38);

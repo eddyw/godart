@@ -634,6 +634,8 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$syscallFsync(%s)", args[0]), true
 	case "SyscallFdatasync":
 		return fmt.Sprintf("$syscallFdatasync(%s)", args[0]), true
+	case "SyscallGetrusage":
+		return fmt.Sprintf("$syscallGetrusage(%s, %s)", args[0], args[1]), true
 	case "SyscallGetrlimit":
 		return fmt.Sprintf("$syscallGetrlimit(%s, %s)", args[0], args[1]), true
 	case "SyscallSetrlimit":

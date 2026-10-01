@@ -106,6 +106,8 @@ Raw filesystem sync adapters follow the same generated syscall sources with thei
 Descriptor flag controls adapt Go `src/syscall/exec_unix.go` with its BSD notice.
 Resource-limit adapters follow Go `src/syscall/syscall_linux.go` and the generated Darwin syscall wrappers with their BSD notice.
 Their native `Rlimit` layout follows the SDK `ztypes` declarations for Linux and Darwin on amd64 and arm64.
+Resource-usage adapters follow the generated `Getrusage` wrappers and `Rusage` layouts in those Go SDK sources.
+They preserve the Go BSD notice and the Darwin `Timeval` field widths.
 The ownership adapter preserves original `src/os/os_unix_test.go` assertions
 and the `internal/testenv` unsupported-syscall predicates with their BSD notices.
 Unix `PWD` validation follows Go `src/os/getwd.go` with its BSD notice.
