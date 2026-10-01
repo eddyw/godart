@@ -20,8 +20,8 @@ import (
 // networks unixgram and unixpacket stay out. `ListenUnixgram` needs a
 // datagram socket of the domain, and Dart opens none.
 //
-// The socket gives no file descriptor, thus `File`, `SyscallConn`,
-// `SetReadBuffer`, and `SetWriteBuffer` stay out. `CloseWrite` and `CloseRead`
+// The socket gives no file descriptor, thus `File` and `SyscallConn` stay out.
+// `CloseWrite` and `CloseRead`
 // each ride `RawSocket.shutdown`, which ends 1 direction of the socket. The
 // socket reads no control message, thus `ReadMsgUnix` and `WriteMsgUnix` stay
 // out.
