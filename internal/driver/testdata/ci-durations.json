@@ -2050,6 +2050,7 @@
   "driver/short/TestBigFloatEncoding": 223.67,
   "driver/short/TestBigFloatRepresentation": 155.0,
   "driver/short/TestBigFloatText": 127.94,
+  "driver/short/TestBigHilbert": 141.48,
   "driver/short/TestBigIntArithmetic": 184.23,
   "driver/short/TestBigIntModular": 177.22,
   "driver/short/TestBigIntPortable": 143.29,
