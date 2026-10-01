@@ -1490,6 +1490,9 @@ Future<void> _joinGroup(_Packet p, String group, int? index) async {
       }
     }
     if (found == null) {
+      if (Platform.isMacOS && groupAddress.type == InternetAddressType.IPv4) {
+        throw 'no such network interface';
+      }
       throw 'the interface $index is not present';
     }
   }

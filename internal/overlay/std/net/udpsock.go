@@ -395,7 +395,13 @@ func ListenMulticastUDP(network string, ifi *Interface, gaddr *UDPAddr) (*UDPCon
 	}
 	if cause, code := dart.JoinMulticast(handle, gaddr.IP.String(), index, ifi != nil); cause != "" {
 		dart.PacketClose(handle)
-		return nil, &OpError{Op: "listen", Net: network, Addr: gaddr, Err: socketSyscallCause("setsockopt", cause, code)}
+		var err error
+		if code == 0 && cause == errNoSuchInterface.Error() {
+			err = errNoSuchInterface
+		} else {
+			err = socketSyscallCause("setsockopt", cause, code)
+		}
+		return nil, &OpError{Op: "listen", Net: network, Addr: gaddr, Err: err}
 	}
 	return newUDPConn(&packet{
 		network: network,
