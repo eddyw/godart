@@ -1434,23 +1434,23 @@ GoString $listenClose(int handle) {
 /// If hasInterface is false, the system selects the interface.
 ///
 /// The call blocks the goroutine, thus the caller becomes an async function.
-GoString $joinMulticast(
+(GoString, int) $joinMulticast(
   int handle,
   GoString group,
   int index,
   bool hasInterface,
 ) {
   final _Packet? p = _packetAt(handle);
-  if (p == null) return _closed();
+  if (p == null) return (_closed(), 0);
   $await(
     _joinGroup(
       p,
       group.toDartString(),
       hasInterface ? index : null,
-    ).then((_) => _empty),
-    (Object cause) => _cause(cause),
+    ).then((_) => (_empty, 0)),
+    (Object cause) => (_cause(cause), _socketErrno(cause)),
   );
-  return _empty;
+  return (_empty, 0);
 }
 
 Future<void> _joinGroup(_Packet p, String group, int? index) async {
@@ -1512,15 +1512,15 @@ Future<_Packet> _bindUDP(String host, int port) async {
 
 /// Opens a datagram socket that shares its port with another socket of the
 /// system. A multicast listen of Go takes such a socket.
-(int, int, GoString) $listenMulticastUDP(GoString host, int port) {
+(int, int, GoString, int) $listenMulticastUDP(GoString host, int port) {
   $await(
     _bindShared(
       host.toDartString(),
       port,
-    ).then((_Packet s) => (_packetSlot(s), s.socket.port, _empty)),
-    (Object cause) => (-1, 0, _cause(cause)),
+    ).then((_Packet s) => (_packetSlot(s), s.socket.port, _empty, 0)),
+    (Object cause) => (-1, 0, _cause(cause), _socketErrno(cause)),
   );
-  return (-1, 0, _empty);
+  return (-1, 0, _empty, 0);
 }
 
 Future<_Packet> _bindShared(String host, int port) async {

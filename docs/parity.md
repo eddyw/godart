@@ -173,6 +173,7 @@ IPv4 `ListenMulticastUDP` disables multicast loopback and selects the supplied n
 For valid interface indexes, selection uses `Interface.Index` and ignores `Interface.Name`.
 An explicit index `0` selects the first IPv4 interface address on macOS and the system default on Linux.
 A nil interface retains system selection on both hosts.
+IPv4 multicast errors retain `OpError` address metadata and available native syscall error codes.
 Invalid-index error metadata remains incomplete.
 Mixed-family destinations, IPv6 zones, and socket controls remain incomplete.
 

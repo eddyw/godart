@@ -7,7 +7,6 @@
 package net
 
 import (
-	"errors"
 	"net/netip"
 	"os"
 	"syscall"
@@ -381,19 +380,22 @@ func ListenMulticastUDP(network string, ifi *Interface, gaddr *UDPAddr) (*UDPCon
 	if gaddr == nil || len(gaddr.IP) == 0 {
 		return nil, &OpError{Op: "listen", Net: network, Addr: gaddr.opAddr(), Err: errMissingAddress}
 	}
+	if gaddr.Port < 0 || gaddr.Port > 65535 {
+		return nil, &OpError{Op: "listen", Net: network, Addr: gaddr, Err: &os.SyscallError{Syscall: "bind", Err: syscall.EINVAL}}
+	}
 	// The socket takes the port of the group and shares it, because each
 	// member of a group reads the same port.
-	handle, taken, cause := dart.ListenMulticastUDP("0.0.0.0", gaddr.Port)
+	handle, taken, cause, code := dart.ListenMulticastUDP("0.0.0.0", gaddr.Port)
 	if cause != "" {
-		return nil, errors.New("listen " + network + ": " + cause)
+		return nil, &OpError{Op: "listen", Net: network, Addr: gaddr, Err: socketSyscallCause("bind", cause, code)}
 	}
 	index := 0
 	if ifi != nil {
 		index = ifi.Index
 	}
-	if cause := dart.JoinMulticast(handle, gaddr.IP.String(), index, ifi != nil); cause != "" {
+	if cause, code := dart.JoinMulticast(handle, gaddr.IP.String(), index, ifi != nil); cause != "" {
 		dart.PacketClose(handle)
-		return nil, errors.New("listen " + network + ": " + cause)
+		return nil, &OpError{Op: "listen", Net: network, Addr: gaddr, Err: socketSyscallCause("setsockopt", cause, code)}
 	}
 	return newUDPConn(&packet{
 		network: network,

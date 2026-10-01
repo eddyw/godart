@@ -103,15 +103,15 @@ GoString $listenDeadline(int handle, int nanos) => _noNet;
   int port,
 ) => (_empty, _empty, _noNet, 0);
 
-(int, int, GoString) $listenMulticastUDP(GoString host, int port) =>
-    (0, 0, _noNet);
+(int, int, GoString, int) $listenMulticastUDP(GoString host, int port) =>
+    (0, 0, _noNet, 0);
 
-GoString $joinMulticast(
+(GoString, int) $joinMulticast(
   int handle,
   GoString group,
   int index,
   bool hasInterface,
-) => _noNet;
+) => (_noNet, 0);
 
 (int, GoString, int, GoString, int) $packetRead(int handle, Slice<GoInt> p) =>
     (0, _empty, 0, _noNet, 0);

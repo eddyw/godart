@@ -2130,6 +2130,7 @@
   "driver/short/TestMathPortable": 2.67,
   "driver/short/TestModulePackageNames": 38.49,
   "driver/short/TestMonotonicClock": 13.31,
+  "driver/short/TestMulticastErrorMetadata": 100.2,
   "driver/short/TestMulticastSocketDefaults": 9.27,
   "driver/short/TestNamedResultsAcrossSuspension": 71.79,
   "driver/short/TestNativeAccess": 40.82,
