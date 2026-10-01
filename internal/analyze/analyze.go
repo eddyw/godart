@@ -1019,7 +1019,7 @@ func blockingIntrinsic(fn *types.Func) bool {
 		return false
 	}
 	switch fn.Name() {
-	case "Sleep", "Worker", "Catch", "GC",
+	case "Sleep", "Worker", "Catch", "CatchArg", "GC",
 		"DialTCP", "DialTLS", "DialTLSProxy", "ConnRead", "ConnWrite",
 		"ListenTCP", "Accept", "ListenClose",
 		"ListenTLS", "AcceptTLS",

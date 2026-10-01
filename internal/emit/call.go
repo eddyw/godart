@@ -1011,6 +1011,8 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return "$stop()", true
 	case "Catch":
 		return fmt.Sprintf("$catch(%s)", args[0]), true
+	case "CatchArg":
+		return fmt.Sprintf("$catchArg(%s, %s)", args[0], args[1]), true
 	case "Exit":
 		return fmt.Sprintf("$exit(%s)", args[0]), true
 	case "Args":

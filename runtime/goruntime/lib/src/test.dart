@@ -28,6 +28,12 @@ bool $catch(void Function()? f) {
   return true;
 }
 
+// The Dart closure preserves the direct Go caller of the test body.
+bool $catchArg<T>(void Function(T)? f, T arg) {
+  if (f == null) $panicNil();
+  return $catch(() => f(arg));
+}
+
 /// The frame of a call of [$catch] that gave up control.
 ///
 /// The frame holds the stop signal of the inner chain, exactly as the first

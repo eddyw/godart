@@ -92,6 +92,11 @@ The comparison covers replacement, errors, concurrent access, weak identity, and
 The Node adapter requests actual garbage collection for JavaScript and Wasm.
 This cache comparison does not establish native FIPS module parity.
 
+The test runner passes the test argument through the runtime stop boundary.
+The test body retains `testing.tRunner` as its direct Go caller without an extra Go closure frame.
+The original `slog.TestRecordSource` assertion covers this source metadata on all 4 targets.
+Test stop, cleanup, and fail-fast comparisons retain their original assertions.
+
 ## Assertion integrity
 
 The native baseline runs the installed Go source without Gart implementation overlays or assertion patches.

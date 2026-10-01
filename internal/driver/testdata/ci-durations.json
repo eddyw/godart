@@ -2250,6 +2250,7 @@
   "driver/short/TestSignalDeliveryUpstream": 75.9,
   "driver/short/TestSignalProcessesUpstream": 49.41,
   "driver/short/TestSignalRegistrations": 53.2,
+  "driver/short/TestSlogRecordSource": 161.58,
   "driver/short/TestSocketAddressText": 171.21,
   "driver/short/TestSocketCloseErrors": 45.44,
   "driver/short/TestSocketDeadlineEffects": 42.7,

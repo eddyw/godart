@@ -934,6 +934,11 @@ func Catch(f func()) bool {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// CatchArg calls f with arg and holds a stop signal, as Catch does.
+func CatchArg[T any](f func(T), arg T) bool {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // Exit ends the program with a status code.
 func Exit(code int) {
 	panic("syscall/dart needs the gart compiler")

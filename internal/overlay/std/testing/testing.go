@@ -1073,7 +1073,7 @@ func tRunner(t *T, call func(*T)) {
 	id := dart.GoID()
 	parent := current[id]
 	current[id] = t
-	dart.Catch(func() { call(t) })
+	dart.CatchArg(call, t)
 	t.stopping = false
 	// The parallel subtests of this test run now. Go runs them after the body
 	// and in front of the cleanups.
