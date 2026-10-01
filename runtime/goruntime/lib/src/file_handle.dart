@@ -60,6 +60,14 @@ final class DartFileHandle implements FileHandle {
 }
 
 final _libc = DynamicLibrary.process();
+final _fcntl = _libc
+    .lookupFunction<Int Function(Int, Int), int Function(int, int)>('fcntl');
+
+int nativeFileFlags(int fd) {
+  final flags = _fcntl(fd, 3);
+  return flags < 0 ? 0 : flags;
+}
+
 final _malloc = _libc
     .lookupFunction<
       Pointer<Uint8> Function(Size),

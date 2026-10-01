@@ -28,6 +28,9 @@ GoString $goos() => GoString.fromString('js');
 int $fileFd(int handle, int std) =>
     throw UnsupportedError('native file descriptors');
 
+(int, int, int) $fileFromFD(int fd) =>
+    throw UnsupportedError('native file descriptors');
+
 (int, int) $directoryOpen(GoString path) => (-1, 38);
 
 int $directoryFd(int fd) =>
@@ -50,7 +53,7 @@ int $directoryCreate(GoString path, int mode) => 38;
 (int, GoString, int) $fileSeek(int handle, int offset, int whence) =>
     (0, _noSys, 0);
 
-GoString $fileClose(int handle) => _noSys;
+(int, GoString) $fileClose(int handle) => (38, _noSys);
 
 GoString $fileTruncate(int handle, int size) => _noSys;
 

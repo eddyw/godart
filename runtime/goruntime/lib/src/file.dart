@@ -178,15 +178,18 @@ FileMode _mode(int mode) {
   }
 }
 
-GoString $fileClose(int handle) {
+(int, GoString) $fileClose(int handle) {
   final FileHandle? f = _at(handle);
-  if (f == null) return GoString.fromString('file already closed');
+  if (f == null) return (0, GoString.fromString('file already closed'));
   _open[handle] = null;
   try {
     f.closeSync();
-    return _empty;
+    return (0, _empty);
   } catch (e) {
-    return _cause(e);
+    return (
+      e is FileSystemException ? e.osError?.errorCode ?? 0 : 0,
+      _cause(e),
+    );
   }
 }
 
@@ -661,6 +664,15 @@ void $stderr(GoString text) => stderr.add(text.bytes);
   final (file, code) = NativeFileHandle.open(path, flags, mode);
   if (code != 0) return (-1, -1, code);
   return _fileFromNative(file!);
+}
+
+(int, int, int) $fileFromFD(int fd) {
+  final flags = nativeFileFlags(fd);
+  final (metadata, code) = $nativeFstat(fd);
+  if (code == 0 && metadata.array[metadata.off + 1] & 0xf000 == 0x4000) {
+    return (-1, fd, flags);
+  }
+  return (_slot(NativeFileHandle(fd)), -1, flags);
 }
 
 (int, int, int) $rootOpenFile(int parent, GoString path, int flags, int mode) {

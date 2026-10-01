@@ -532,7 +532,8 @@ func (f *File) Close() error {
 		}
 		return nil
 	}
-	return pathError("close", f.name, dart.FileClose(f.handle))
+	code, cause := dart.FileClose(f.handle)
+	return fileIOError("close", f.name, cause, code)
 }
 
 // Sync writes each held byte to the storage.
@@ -563,6 +564,17 @@ func (f *File) Stat() (FileInfo, error) {
 		return nativeFstat(f.name, int(f.Fd()))
 	}
 	return Stat(f.name)
+}
+
+// NewFile adopts fd and preserves name. The returned File owns the descriptor.
+// Native poll integration remains unsupported.
+func NewFile(fd uintptr, name string) *File {
+	fdi := int(fd)
+	if fdi < 0 {
+		return nil
+	}
+	handle, dirFD, flags := dart.FileFromFD(fdi)
+	return fileWithCleanup(&file{handle: handle, name: name, dir: dirFD >= 0, dirFD: dirFD, appendMode: flags&O_APPEND != 0})
 }
 
 // Open opens a file or directory for a read.

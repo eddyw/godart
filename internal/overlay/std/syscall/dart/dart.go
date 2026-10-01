@@ -981,6 +981,10 @@ func FileFd(handle, std int) int {
 	panic("syscall/dart needs the gart compiler")
 }
 
+func FileFromFD(fd int) (int, int, int) {
+	panic("syscall/dart needs the gart compiler")
+}
+
 func DirectoryOpen(path string) (int, int) {
 	panic("syscall/dart needs the gart compiler")
 }
@@ -1013,7 +1017,7 @@ func FileSeek(handle int, offset int64, whence int) (int64, string, int) {
 	panic("syscall/dart needs the gart compiler")
 }
 
-func FileClose(handle int) string {
+func FileClose(handle int) (int, string) {
 	panic("syscall/dart needs the gart compiler")
 }
 

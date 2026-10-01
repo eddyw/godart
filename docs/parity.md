@@ -45,6 +45,9 @@ file metadata, TLS configuration, or runtime inspection APIs.
 
 Linux and macOS support `os.File.Fd` for regular files, directories, and
 standard streams. The file owns the descriptor. Call `Close` explicitly.
+`os.NewFile` adopts native file and directory descriptors on these hosts.
+It preserves descriptor identity, the caller name, append mode, and ownership.
+Native poll integration and nonblocking readiness remain unsupported.
 Automatic file closure through Go finalizers remains unsupported.
 Gart does not raise the inherited open-file limit at startup.
 Programs can reach that limit sooner than native Go programs.

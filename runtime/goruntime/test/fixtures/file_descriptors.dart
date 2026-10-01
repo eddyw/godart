@@ -43,12 +43,25 @@ void main() {
         read.$1 == 1 && read.$2.length == 0 && bytes.array[0] == 98,
         'shared position',
       );
-      require($fileClose(handle).length == 0, 'close');
+      require($fileClose(handle).$1 == 0, 'close');
       require(flags(fd, 1) == -1, 'native descriptor closes');
       require($fileFd(handle, 0) == -1, 'closed registry slot');
     } finally {
       if ($fileFd(handle, 0) >= 0) $fileClose(handle);
     }
+    final (adoptedFD, openCode) = $syscallOpen(name, 0, 0);
+    require(openCode == 0, 'adopted descriptor open');
+    final originalFlags = flags(adoptedFD, 1);
+    require(originalFlags & 1 == 0, 'adopted descriptor lacks close-on-exec');
+    final (adopted, directoryFD, _) = $fileFromFD(adoptedFD);
+    try {
+      require(directoryFD == -1, 'adopted regular file');
+      require($fileFd(adopted, 0) == adoptedFD, 'adopted descriptor identity');
+      require(flags(adoptedFD, 1) == originalFlags, 'adoption preserves flags');
+    } finally {
+      require($fileClose(adopted).$1 == 0, 'adopted close');
+    }
+    require(flags(adoptedFD, 1) == -1, 'adoption transfers ownership');
     final original = Directory('${root.path}/original')..createSync();
     final moved = '${root.path}/moved';
     final (fd, errno) = $directoryOpen(GoString.fromString(original.path));

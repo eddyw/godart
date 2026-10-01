@@ -33,13 +33,17 @@ func main(){
  base,err:=os.MkdirTemp("","file-cleanup");must(err);defer os.RemoveAll(base)
  must(os.WriteFile(base+"/file",[]byte("contents"),0600));must(os.Mkdir(base+"/sub",0700))
  root,err:=os.OpenRoot(base);must(err);defer root.Close()
- for _,rooted:=range []bool{false,true}{
+ for _,kind:=range []string{"ordinary","rooted","adopted"}{
   for _,name:=range []string{"file","sub"}{
    path:=base+"/"+name
-   open:=func()(*os.File,error){if rooted{return root.Open(name)};return os.Open(path)}
+   open:=func()(*os.File,error){
+    if kind=="rooted"{return root.Open(name)}
+    if kind=="adopted"{fd,err:=syscall.Open(path,syscall.O_RDONLY,0);if err!=nil{return nil,err};return os.NewFile(uintptr(fd),path),nil}
+    return os.Open(path)
+   }
    live,err:=open();must(err);copy:=*live
    runtime.GC();time.Sleep(20*time.Millisecond)
-   fmt.Println("live",rooted,name,count(path)==1)
+   fmt.Println("live",kind,name,count(path)==1)
    _,err=live.Stat();must(err);must(copy.Close());fmt.Println("closed",count(path)==0)
    replacement,err:=open();must(err)
    runtime.GC();time.Sleep(20*time.Millisecond)
