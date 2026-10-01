@@ -177,6 +177,9 @@ IPv4 multicast errors retain `OpError` address metadata and available native sys
 Linux IPv4 multicast preserves the Go `int32` conversion of interface indexes and kernel error codes.
 On macOS, absent interface indexes retain the native `no such network interface` error.
 `errors.Is` recognizes the same missing-interface cause as `InterfaceByName`.
+`ListenMulticastUDP` with network `udp` supports IPv6 groups on Linux and macOS.
+IPv6 multicast preserves native interface index conversions and kernel error codes.
+`udp6` requires an IPv6-only bind, which remains incomplete.
 Mixed-family destinations, IPv6 zones, and socket controls remain incomplete.
 
 Native UDP error codes remain unreliable across separate Dart FFI calls.

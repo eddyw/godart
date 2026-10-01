@@ -31,6 +31,15 @@ func main(){
   }))
   must(conn.Close())
  }
+ conn,err:=net.ListenMulticastUDP("udp",loopback,&net.UDPAddr{IP:net.ParseIP("ff02::114")});must(err)
+ raw,err:=conn.SyscallConn();must(err)
+ must(raw.Control(func(fd uintptr){
+  for _,option:=range []struct{name string;value int}{{"ipv6-interface",syscall.IPV6_MULTICAST_IF},{"ipv6-loopback",syscall.IPV6_MULTICAST_LOOP},{"ipv6-only",syscall.IPV6_V6ONLY}}{
+   value,err:=syscall.GetsockoptInt(int(fd),syscall.IPPROTO_IPV6,option.value);must(err)
+   fmt.Println(option.name,value)
+  }
+ }))
+ must(conn.Close())
 }
 `)
 	want := programOutcome(t, dir, "go", "run", ".")
@@ -69,6 +78,22 @@ Future<void> main(List<String> args) async {
       packet.socket.close();
       await packet.closed.future;
     }
+  }
+  final packet = await _bindShared('::', 0);
+  try {
+    await _joinGroup(packet, 'ff02::114', loopback.index);
+    for (final option in [
+      ('ipv6-interface', RawSocketOption.IPv6MulticastInterface),
+      ('ipv6-loopback', Platform.isMacOS ? 11 : 19),
+      ('ipv6-only', Platform.isMacOS ? 27 : 26),
+    ]) {
+      final raw = RawSocketOption(RawSocketOption.levelIPv6, option.$2, Uint8List(4));
+      final value = ByteData.sublistView(packet.socket.getRawOption(raw)).getInt32(0, Endian.host);
+      print('${option.$1} $value');
+    }
+  } finally {
+    packet.socket.close();
+    await packet.closed.future;
   }
 }
 `)

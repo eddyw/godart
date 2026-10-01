@@ -385,7 +385,11 @@ func ListenMulticastUDP(network string, ifi *Interface, gaddr *UDPAddr) (*UDPCon
 	}
 	// The socket takes the port of the group and shares it, because each
 	// member of a group reads the same port.
-	handle, taken, cause, code := dart.ListenMulticastUDP("0.0.0.0", gaddr.Port)
+	host := "0.0.0.0"
+	if network == "udp" && gaddr.IP.To4() == nil && gaddr.IP.To16() != nil {
+		host = "::"
+	}
+	handle, taken, cause, code := dart.ListenMulticastUDP(host, gaddr.Port)
 	if cause != "" {
 		return nil, &OpError{Op: "listen", Net: network, Addr: gaddr, Err: socketSyscallCause("bind", cause, code)}
 	}
@@ -406,7 +410,7 @@ func ListenMulticastUDP(network string, ifi *Interface, gaddr *UDPAddr) (*UDPCon
 	return newUDPConn(&packet{
 		network: network,
 		handle:  handle,
-		local:   udpAddrOf("0.0.0.0", taken),
+		local:   udpAddrOf(host, taken),
 	}), nil
 }
 

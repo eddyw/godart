@@ -1455,6 +1455,38 @@ GoString $listenClose(int handle) {
 
 Future<void> _joinGroup(_Packet p, String group, int? index) async {
   final groupAddress = await _address(group);
+  if (groupAddress.type == InternetAddressType.IPv6 &&
+      (Platform.isLinux || Platform.isMacOS)) {
+    if (index != null) {
+      p.socket.setRawOption(
+        RawSocketOption.fromInt(
+          RawSocketOption.levelIPv6,
+          RawSocketOption.IPv6MulticastInterface,
+          index.toSigned(32),
+        ),
+      );
+    }
+    // IPV6_MULTICAST_LOOP takes a native int on Linux and macOS.
+    p.socket.setRawOption(
+      RawSocketOption.fromInt(
+        RawSocketOption.levelIPv6,
+        Platform.isMacOS ? 11 : 19,
+        0,
+      ),
+    );
+    final request = Uint8List(20)..setRange(0, 16, groupAddress.rawAddress);
+    ByteData.sublistView(request)
+        .setUint32(16, (index ?? 0).toUnsigned(32), Endian.host);
+    // IPV6_JOIN_GROUP consumes the 20-byte IPv6Mreq layout.
+    p.socket.setRawOption(
+      RawSocketOption(
+        RawSocketOption.levelIPv6,
+        Platform.isMacOS ? 12 : 20,
+        request,
+      ),
+    );
+    return;
+  }
   if (Platform.isLinux && groupAddress.type == InternetAddressType.IPv4) {
     final request = Uint8List(12);
     ByteData.sublistView(request)
