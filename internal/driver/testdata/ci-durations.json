@@ -2056,6 +2056,7 @@
   "driver/short/TestBigIntModular": 177.22,
   "driver/short/TestBigIntPortable": 143.29,
   "driver/short/TestBigIntText": 145.98,
+  "driver/short/TestBigNatural": 496.12,
   "driver/short/TestBigRationalPortable": 263.53,
   "driver/short/TestBigmodPortableArithmetic": 287.72,
   "driver/short/TestBodylessWithNoMarkerStaysRejected": 0.91,
