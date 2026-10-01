@@ -9,6 +9,7 @@ package net
 import (
 	"encoding/hex"
 	"errors"
+	"runtime"
 	"strconv"
 	"strings"
 	"syscall/dart"
@@ -88,7 +89,7 @@ func (ifi *Interface) Addrs() ([]Addr, error) {
 	}
 	var out []Addr
 	for _, a := range addrs {
-		if a.index == ifi.Index {
+		if a.index == ifi.Index || runtime.GOOS == "darwin" && ifi.Index == 0 {
 			out = append(out, a.addr)
 		}
 	}

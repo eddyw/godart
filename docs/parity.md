@@ -151,6 +151,7 @@ Linux and macOS expose network interface indexes, names, MTU values,
 hardware addresses, and flags. The table includes interfaces without IP addresses.
 Other native hosts report interface metadata as unsupported.
 Address enumeration remains separate. Browsers return an empty interface table.
+`Interface.Addrs` returns all interface addresses for index `0` on macOS.
 
 TCP dials accept `tcp4` and `tcp6` and restrict numeric addresses and DNS results to the requested family.
 Typed TCP dials reject malformed IP values and IPv6 addresses with `tcp4`.

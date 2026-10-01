@@ -2097,7 +2097,7 @@
   "driver/short/TestImportPrefixes": 10.18,
   "driver/short/TestImporterInputAdapters": 0,
   "driver/short/TestImporterLookup": 664.23,
-  "driver/short/TestInterfaceAddresses": 46.95,
+  "driver/short/TestInterfaceAddresses": 50.22,
   "driver/short/TestInterfaceMetadata": 43.7,
   "driver/short/TestInterfaceMulticastAddresses": 43.39,
   "driver/short/TestInterfaceUpstream": 48.8,

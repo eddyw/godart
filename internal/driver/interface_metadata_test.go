@@ -63,6 +63,7 @@ func main() {
  if _, err := validateInterfaceUnicastAddrs(all); err != nil { panic(err) }
  interfaces, err := net.Interfaces()
  if err != nil { panic(err) }
+ interfaces = append(interfaces, net.Interface{})
  sort.Slice(interfaces, func(i,j int) bool { return interfaces[i].Index < interfaces[j].Index })
  type record struct { Index int; IP []byte; Mask []byte }
  records := []record{}
