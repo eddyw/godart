@@ -1324,6 +1324,10 @@ func SyscallGetwd() (string, int) {
 	panic("syscall/dart needs the gart compiler")
 }
 
+func SyscallGetcwd(buf []byte) (int, int) {
+	panic("syscall/dart needs the gart compiler")
+}
+
 func NativeGetwd() (string, int) {
 	panic("syscall/dart needs the gart compiler")
 }

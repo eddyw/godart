@@ -5,6 +5,7 @@
 import 'dart:ffi';
 import 'dart:io';
 
+import 'slice.dart';
 import 'string.dart';
 
 final _libc = DynamicLibrary.process();
@@ -94,6 +95,22 @@ final _syscallGetcwd = _libc
       IntPtr Function(IntPtr, VarArgs<(Pointer<Uint8>, Size)>),
       int Function(int, Pointer<Uint8>, int)
     >('syscall');
+
+(int, int) $syscallGetcwd(Slice<int> data) {
+  final buffer = data.len == 0 ? nullptr.cast<Uint8>() : _malloc(data.len);
+  if (data.len != 0 && buffer == nullptr) return (-1, 12);
+  try {
+    final getcwd = _syscallGetcwd;
+    final errorAddress = _errno();
+    final number = Abi.current() == Abi.linuxArm64 ? 17 : 79;
+    final count = getcwd(number, buffer, data.len);
+    if (count < 0) return (count, errorAddress.value);
+    data.array.setRange(data.off, data.off + count, buffer.asTypedList(count));
+    return (count, 0);
+  } finally {
+    _free(buffer);
+  }
+}
 
 (GoString, int) _linuxGetwd() {
   final buffer = _malloc(4096);

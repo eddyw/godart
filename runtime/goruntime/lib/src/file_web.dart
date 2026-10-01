@@ -224,6 +224,8 @@ int $syscallSetrlimit(int resource, bool input, int cur, int max) => 38;
 
 (GoString, int) $syscallGetwd() => (GoString.empty, 38);
 
+(int, int) $syscallGetcwd(Slice<int> data) => (-1, 38);
+
 int $syscallUnlink(GoString path, bool directory) => 38;
 
 (int, int) $syscallReadlink(GoString path, Slice<GoInt> bytes) => (-1, 38);
