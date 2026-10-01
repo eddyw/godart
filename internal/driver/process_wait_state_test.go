@@ -16,12 +16,12 @@ func TestProcessWaitState(t *testing.T) {
 	writeFile(t, filepath.Join(dir, "go.mod"), "module example.com/processwaitstate\n\ngo 1.27\n")
 	writeFile(t, filepath.Join(dir, "main.go"), `package main
 import("errors";"fmt";"os";"os/exec";"runtime";"sort";"syscall")
-func outcome(p *os.Process,concurrent bool)string{
+func outcome(p *os.Process,sharedStatus bool)string{
  state,err:=p.Wait()
  if err==nil{return fmt.Sprint("exit ",state.ExitCode())}
  var call *os.SyscallError
- // Concurrent Linux waiters can reach waitid before another waiter consumes the status.
- return fmt.Sprint("error nil=",state==nil," child=",errors.Is(err,syscall.ECHILD)," syscall=",errors.As(err,&call)&&(call.Syscall=="wait"||concurrent&&runtime.GOOS=="linux"&&call.Syscall=="waitid"))
+ // Linux waiters can reach waitid after another handle consumes the status.
+ return fmt.Sprint("error nil=",state==nil," child=",errors.Is(err,syscall.ECHILD)," syscall=",errors.As(err,&call)&&(call.Syscall=="wait"||sharedStatus&&runtime.GOOS=="linux"&&call.Syscall=="waitid"))
 }
 func run(mode string){
  cmd:=exec.Command("sh","-c","sleep 0.1; exit 7")
@@ -39,7 +39,8 @@ func run(mode string){
   fmt.Println("first",outcome(cmd.Process,false))
   fmt.Println("second",outcome(cmd.Process,false))
  }
- fmt.Println("again",outcome(cmd.Process,false))
+ // An alias can consume the status without marking the original handle done.
+ fmt.Println("again",outcome(cmd.Process,mode=="aliases"))
 }
 func main(){run("sequential");run("concurrent");run("aliases")}
 `)
