@@ -101,6 +101,10 @@ final _getdents = _libc
   final buffer = data.len == 0 ? nullptr.cast<Uint8>() : _malloc(data.len);
   if (data.len != 0 && buffer == nullptr) return (-1, 12);
   try {
+    // getdents64 leaves record padding bytes unchanged.
+    if (data.len != 0) {
+      buffer.asTypedList(data.len).setRange(0, data.len, data.array, data.off);
+    }
     final n = _getdents(fd, buffer, data.len);
     if (n < 0) return (n, _errno().value);
     if (n != 0) {
