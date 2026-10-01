@@ -11,7 +11,6 @@ import (
 	"io"
 	"io/fs"
 	"runtime"
-	"strings"
 	"syscall"
 	"syscall/dart"
 	"time"
@@ -183,27 +182,6 @@ func (r *Root) Mkdir(name string, perm FileMode) error {
 		return &PathError{Op: "mkdirat", Path: name, Err: err}
 	}
 	return rootError("mkdirat", name, Mkdir(joinPath(r.real, name), perm))
-}
-
-// MkdirAll makes a directory of the root and each parent of it.
-func (r *Root) MkdirAll(name string, perm FileMode) error {
-	if perm&0o777 != perm {
-		return &PathError{Op: "mkdirat", Path: name, Err: errors.New("unsupported file mode")}
-	}
-	full, err := r.resolve("mkdirat", name)
-	if err != nil {
-		if underlyingError(err) != syscall.ENOTDIR {
-			return err
-		}
-		full = joinPath(r.real, name)
-	}
-	if err := MkdirAll(full, perm); err != nil {
-		if pe, ok := err.(*PathError); ok {
-			pe.Path = strings.TrimPrefix(pe.Path, r.real+string(PathSeparator))
-		}
-		return err
-	}
-	return nil
 }
 
 // Remove removes 1 name of the root.
