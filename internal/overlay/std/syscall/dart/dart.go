@@ -1976,3 +1976,19 @@ func SyscallFaccessatStat(dirfd int, path string, flags int) (uint32, uint32, ui
 func SyscallCapDacOverride() bool {
 	panic("syscall/dart needs the gart compiler")
 }
+
+func SyscallMkdirat(dirfd int, path string, mode uint32) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
+func SyscallFchownat(dirfd int, path string, uid, gid, flags int) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
+func SyscallUnlinkat(dirfd int, path string) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
+func SyscallRenameat(olddirfd int, oldpath string, newdirfd int, newpath string) int {
+	panic("syscall/dart needs the gart compiler")
+}

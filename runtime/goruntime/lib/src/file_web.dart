@@ -264,3 +264,16 @@ int $syscallFaccessat(int fd, GoString path, int mode, int flags) => 38;
     (0, 0, 0, 38);
 
 bool $syscallCapDacOverride() => false;
+
+int $syscallMkdirat(int fd, GoString path, int mode) => 38;
+
+int $syscallFchownat(int fd, GoString path, int uid, int gid, int flags) => 38;
+
+int $syscallUnlinkat(int fd, GoString path) => 38;
+
+int $syscallRenameat(
+  int oldFD,
+  GoString oldPath,
+  int newFD,
+  GoString newPath,
+) => 38;

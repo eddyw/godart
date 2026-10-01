@@ -65,6 +65,7 @@ Directory creation on Linux and macOS applies permission bits and the process um
 `syscall.Access` queries native permissions with the real user and group IDs on Linux and macOS.
 Linux `syscall.Faccessat` queries descriptor-relative permissions with native flags and Go fallback rules.
 Linux `syscall.Fchmodat` changes mode bits relative to an actual directory descriptor and preserves native flag errors.
+`syscall.Mkdirat`, `syscall.Fchownat`, `syscall.Unlinkat`, and `syscall.Renameat` mutate paths relative to native directory descriptors on Linux.
 Temporary directories request mode `0700`.
 Directory descriptors retain their identity after a rename or removal.
 `File.Chmod` and `File.Chown` use native descriptors on Linux and macOS.

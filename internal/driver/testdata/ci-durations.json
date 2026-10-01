@@ -2116,6 +2116,7 @@
   "driver/short/TestLinuxFaccessatUpstream": 72.42,
   "driver/short/TestLinuxFchmodat": 117.63,
   "driver/short/TestLinuxFchmodatUpstream": 173.0,
+  "driver/short/TestLinuxPathMutations": 24.32,
   "driver/short/TestListenerDeadlineUpstream": 45.49,
   "driver/short/TestLiteralResolveSource": 0,
   "driver/short/TestLocalModuleImports": 19.1,

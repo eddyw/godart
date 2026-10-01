@@ -391,3 +391,74 @@ bool $syscallCapDacOverride() {
     _free(memory);
   }
 }
+
+int _withSyscallPath(GoString path, int Function(Pointer<Uint8>) apply) {
+  final bytes = path.bytes;
+  if (bytes.contains(0)) return 22;
+  final name = _malloc(bytes.length + 1);
+  if (name == nullptr) return 12;
+  try {
+    name.asTypedList(bytes.length + 1)
+      ..setRange(0, bytes.length, bytes)
+      ..[bytes.length] = 0;
+    return apply(name);
+  } finally {
+    _free(name);
+  }
+}
+
+final _mkdirat = _libc
+    .lookupFunction<
+      Int Function(Int, Pointer<Uint8>, Uint32),
+      int Function(int, Pointer<Uint8>, int)
+    >('mkdirat');
+final _unlinkat = _libc
+    .lookupFunction<
+      Int Function(Int, Pointer<Uint8>, Int),
+      int Function(int, Pointer<Uint8>, int)
+    >('unlinkat');
+final _renameat = _libc
+    .lookupFunction<
+      Int Function(Int, Pointer<Uint8>, Int, Pointer<Uint8>),
+      int Function(int, Pointer<Uint8>, int, Pointer<Uint8>)
+    >('renameat');
+
+int $syscallMkdirat(int fd, GoString path, int mode) {
+  final mkdir = _mkdirat;
+  final errorAddress = _errno();
+  return _withSyscallPath(
+    path,
+    (name) => mkdir(fd, name, mode) == 0 ? 0 : errorAddress.value,
+  );
+}
+
+int $syscallFchownat(int fd, GoString path, int uid, int gid, int flags) {
+  final chown = _fchownat;
+  final errorAddress = _errno();
+  return _withSyscallPath(
+    path,
+    (name) => chown(fd, name, uid, gid, flags) == 0 ? 0 : errorAddress.value,
+  );
+}
+
+int $syscallUnlinkat(int fd, GoString path) {
+  final unlink = _unlinkat;
+  final errorAddress = _errno();
+  return _withSyscallPath(
+    path,
+    (name) => unlink(fd, name, 0) == 0 ? 0 : errorAddress.value,
+  );
+}
+
+int $syscallRenameat(int oldFD, GoString oldPath, int newFD, GoString newPath) {
+  final rename = _renameat;
+  final errorAddress = _errno();
+  return _withSyscallPath(
+    oldPath,
+    (oldName) => _withSyscallPath(
+      newPath,
+      (newName) =>
+          rename(oldFD, oldName, newFD, newName) == 0 ? 0 : errorAddress.value,
+    ),
+  );
+}
