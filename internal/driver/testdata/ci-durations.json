@@ -2139,6 +2139,7 @@
   "driver/short/TestLinuxSyscallTimestamps": 43.87,
   "driver/short/TestLinuxUname": 62.64,
   "driver/short/TestLinuxUtime": 22.37,
+  "driver/short/TestLinuxXattr": 65.36,
   "driver/short/TestListenerDeadlineUpstream": 45.49,
   "driver/short/TestLiteralResolveSource": 0,
   "driver/short/TestLocalModuleImports": 19.1,

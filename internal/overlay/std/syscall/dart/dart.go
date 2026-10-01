@@ -2082,3 +2082,19 @@ func SyscallUname(output bool) ([]int64, int) { return nil, 0 }
 func UnhashableError(value any) error {
 	panic("syscall/dart needs the gart compiler")
 }
+
+func SyscallGetxattr(path, attr string, dest []byte) (int, int) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+func SyscallListxattr(path string, dest []byte) (int, int) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+func SyscallSetxattr(path, attr string, data []byte, flags int) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
+func SyscallRemovexattr(path, attr string) int {
+	panic("syscall/dart needs the gart compiler")
+}

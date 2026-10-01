@@ -286,3 +286,8 @@ They do not yet provide arbitrary Dart object interop, custom value classes,
 all generic APIs, or the complete Flutter Canvas API.
 See the [Flutter architecture](flutter-design.md) and
 [binding guide](../flutter/nodegen/README.md) for precise boundaries.
+
+Linux supports native `syscall.Getxattr`, `Listxattr`, `Setxattr`, and `Removexattr` on actual files.
+The adapters preserve byte paths, attribute names, values, size queries, flags, buffers, and native errors.
+JS and Wasm return `errors.ErrUnsupported` without buffer changes.
+The documented native errno limitation also applies to these calls.

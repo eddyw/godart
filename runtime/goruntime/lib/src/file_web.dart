@@ -342,3 +342,14 @@ int $syscallRenameat(
   int newFD,
   GoString newPath,
 ) => 38;
+
+(int, int) $syscallGetxattr(GoString path, GoString attr, Slice<GoInt> dest) =>
+    (0, -1);
+(int, int) $syscallListxattr(GoString path, Slice<GoInt> dest) => (0, -1);
+int $syscallSetxattr(
+  GoString path,
+  GoString attr,
+  Slice<GoInt> data,
+  int flags,
+) => -1;
+int $syscallRemovexattr(GoString path, GoString attr) => -1;
