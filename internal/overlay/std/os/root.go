@@ -36,7 +36,12 @@ type root struct {
 
 // OpenRoot opens a directory and gives the Root of it.
 func OpenRoot(name string) (*Root, error) {
-	info, err := Stat(name)
+	f, err := Open(name)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	info, err := f.Stat()
 	if err != nil {
 		return nil, &PathError{Op: "open", Path: name, Err: underlyingError(err)}
 	}
@@ -81,7 +86,8 @@ func (r *Root) OpenFile(name string, flag int, perm FileMode) (*File, error) {
 	if perm&0o777 != perm {
 		return nil, &PathError{Op: "openat", Path: name, Err: errors.New("unsupported file mode")}
 	}
-	full, err := r.resolve("openat", name)
+	follow := flag&(O_CREATE|O_EXCL) != (O_CREATE | O_EXCL)
+	full, err := r.check("openat", name, follow)
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +106,12 @@ func (r *Root) OpenRoot(name string) (*Root, error) {
 	if err != nil {
 		return nil, err
 	}
-	info, err := Stat(full)
+	f, err := Open(full)
+	if err != nil {
+		return nil, rootError("openat", name, err)
+	}
+	defer f.Close()
+	info, err := f.Stat()
 	if err != nil {
 		return nil, rootError("openat", name, err)
 	}
