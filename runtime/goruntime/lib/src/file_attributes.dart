@@ -61,6 +61,9 @@ final _ftruncate = _libc
 final _fsync = _libc.lookupFunction<Int Function(Int), int Function(int)>(
   'fsync',
 );
+final _fdatasync = _libc.lookupFunction<Int Function(Int), int Function(int)>(
+  'fdatasync',
+);
 final _fcntl = _libc
     .lookupFunction<
       Int Function(Int, Int, VarArgs<(Int,)>),
@@ -95,6 +98,18 @@ int $nativeFsync(int fd) {
     code = sync(fd) == 0 ? 0 : errno().value;
   } while (code == 4);
   return code;
+}
+
+int $syscallFsync(int fd) {
+  final sync = _fsync;
+  final errorAddress = _errno();
+  return sync(fd) == 0 ? 0 : errorAddress.value;
+}
+
+int $syscallFdatasync(int fd) {
+  final sync = _fdatasync;
+  final errorAddress = _errno();
+  return sync(fd) == 0 ? 0 : errorAddress.value;
 }
 
 final _utimensat = _libc

@@ -52,6 +52,7 @@ Native poll integration and nonblocking readiness remain unsupported.
 Each duplicate owns its descriptor. `Dup2` replaces the target descriptor through the native syscall.
 Linux also supports `syscall.Dup3`, with atomic target replacement and close-on-exec flags.
 `syscall.CloseOnExec` and `SetNonblock` update actual native descriptor flags.
+`syscall.Fsync` calls the native filesystem sync operation. Linux also supports `syscall.Fdatasync`.
 Automatic file closure through Go finalizers remains unsupported.
 Gart does not raise the inherited open-file limit at startup.
 Programs can reach that limit sooner than native Go programs.
