@@ -58,6 +58,26 @@ final _getsid = _libc.lookupFunction<Int Function(Int), int Function(int)>(
   return (session, session < 0 ? _errno().value : 0);
 }
 
+final _setpgid = _libc
+    .lookupFunction<Int Function(Int, Int), int Function(int, int)>('setpgid');
+
+int $setpgid(int pid, int pgid) {
+  if (!_posix) return -1;
+  final set = _setpgid;
+  final errno = _errno();
+  return set(pid, pgid) == 0 ? 0 : errno.value;
+}
+
+final _setsid = _libc.lookupFunction<Int Function(), int Function()>('setsid');
+
+(int, int) $setsid() {
+  if (!_posix) return (-1, -1);
+  final set = _setsid;
+  final errno = _errno();
+  final pid = set();
+  return (pid, pid == -1 ? errno.value : 0);
+}
+
 final _linuxGetpriority = _libc
     .lookupFunction<
       Long Function(Long, VarArgs<(Int, UnsignedInt)>),

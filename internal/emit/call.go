@@ -814,9 +814,9 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$nativeChdir(%s)", args[0]), true
 	case "Getwd":
 		return "$getwd()", true
-	case "Getpid", "Getuid", "Geteuid", "Getgid", "Getegid", "Getppid", "Getpgrp", "Getpagesize", "Getgroups":
+	case "Getpid", "Getuid", "Geteuid", "Getgid", "Getegid", "Getppid", "Getpgrp", "Getpagesize", "Getgroups", "Setsid":
 		return "$" + strings.ToLower(name) + "()", true
-	case "Getpriority", "Setpriority":
+	case "Getpriority", "Setpriority", "Setpgid":
 		return "$" + strings.ToLower(name) + "(" + strings.Join(args, ", ") + ")", true
 	case "Getpgid", "Getsid":
 		return "$" + strings.ToLower(name) + "(" + args[0] + ")", true

@@ -147,7 +147,7 @@ Node retains placeholders for the other numeric values and does not support
 supplementary groups. Browser targets retain placeholders for all these
 numeric values and do not support supplementary groups.
 
-Linux and macOS support native `syscall.Getpriority` and `syscall.Setpriority`.
+Linux and macOS support native `syscall.Getpriority`, `syscall.Setpriority`, `syscall.Setpgid`, and `syscall.Setsid`.
 Linux queries preserve the raw kernel priority value that Go exposes.
 JS and Wasm targets report these APIs as unsupported.
 The documented native errno atomicity limitation also applies to these calls.

@@ -2137,6 +2137,7 @@
   "driver/short/TestMulticastSocketDefaults": 10.0,
   "driver/short/TestNamedResultsAcrossSuspension": 71.79,
   "driver/short/TestNativeAccess": 40.82,
+  "driver/short/TestNativeProcessGroups": 76.44,
   "driver/short/TestNativeSyncSyscalls": 54.23,
   "driver/short/TestNativeUmask": 46.3,
   "driver/short/TestNetworkErrorClassification": 264.87,
