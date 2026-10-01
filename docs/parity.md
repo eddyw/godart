@@ -152,6 +152,11 @@ Linux queries preserve the raw kernel priority value that Go exposes.
 JS and Wasm targets report these APIs as unsupported.
 The documented native errno atomicity limitation also applies to these calls.
 
+macOS supports native `syscall.Getfsstat`, including count queries and short buffers.
+The adapter retains actual mount statistics and unused caller buffer entries.
+JS and Wasm report this API as unsupported.
+The documented native errno capture limitation also applies to this API.
+
 Linux and macOS support native `syscall.Gettimeofday`, including nil output pointers.
 The adapter preserves the platform timeval layout, caller padding, and native errors.
 Linux `syscall.Time` uses native `Gettimeofday` and preserves its optional output pointer.

@@ -209,6 +209,9 @@ int $syscallFchmodat(int fd, GoString path, int mode, int flags) => 38;
 
 int $syscallFdatasync(int fd) => 38;
 
+(int, Slice<int>, int) $syscallGetfsstat(int count, int flags) =>
+    (-1, Slice<int>.nil(), -1);
+
 (int, int, int) $syscallGettimeofday(bool output) => (0, 0, -1);
 
 (int, int, int) $syscallGetrlimit(int resource, bool output) => (0, 0, 38);

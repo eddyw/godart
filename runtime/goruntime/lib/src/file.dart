@@ -20,6 +20,7 @@ export 'file_stat.dart';
 export 'removeall.dart' show $syscallUnlink, $rootRemove, $rootRemoveAll;
 export 'resource_limits.dart';
 export 'resource_usage.dart';
+export 'filesystem_stats.dart';
 export 'root.dart' show $rootOpen, $rootOpenAt, $rootOpenDir, $rootMkdir;
 export 'syscall_directory.dart';
 export 'working_directory.dart';

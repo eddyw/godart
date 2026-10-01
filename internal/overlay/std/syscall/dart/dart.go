@@ -1961,6 +1961,12 @@ func SyscallFdatasync(fd int) int {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// SyscallGetfsstat returns the native count, Statfs_t fields, and errno.
+// Each record has 13 scalar fields, 2064 name bytes, and 8 reserved values.
+func SyscallGetfsstat(count, flags int) (int, []int64, int) {
+ panic("syscall/dart needs the gart compiler")
+}
+
 func SyscallGettimeofday(output bool) (int64, int64, int) {
  panic("syscall/dart needs the gart compiler")
 }
