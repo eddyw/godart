@@ -12,6 +12,18 @@ func TestDarwinMkfifo(t *testing.T) {
 	if runtime.GOOS != "darwin" {
 		t.Skip("Mkfifo requires macOS")
 	}
+	testMkfifo(t)
+}
+
+func TestLinuxMkfifo(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("Mkfifo requires Linux")
+	}
+	testMkfifo(t)
+}
+
+func testMkfifo(t *testing.T) {
+	t.Helper()
 	dir, out := t.TempDir(), t.TempDir()
 	writeFile(t, filepath.Join(dir, "go.mod"), "module example.com/mkfifo\n\ngo 1.27\n")
 	writeFile(t, filepath.Join(dir, "main.go"), `package main

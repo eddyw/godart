@@ -3,6 +3,7 @@
 // license that can be found in the LICENSE file.
 
 import 'dart:ffi';
+import 'dart:io';
 
 import 'string.dart';
 
@@ -19,13 +20,19 @@ final _free = _libc
     >('free');
 final _errno = _libc
     .lookupFunction<Pointer<Int> Function(), Pointer<Int> Function()>(
-      '__error',
+      Platform.isLinux ? '__errno_location' : '__error',
     );
 final _mkfifo = _libc
     .lookupFunction<
       Int Function(Pointer<Uint8>, Uint16),
       int Function(Pointer<Uint8>, int)
     >('mkfifo');
+
+final _mknod = _libc
+    .lookupFunction<
+      Int Function(Pointer<Uint8>, Uint32, Uint64),
+      int Function(Pointer<Uint8>, int, int)
+    >('mknod');
 
 int $syscallMkfifo(GoString path, int mode) {
   if (path.bytes.contains(0)) return 22;
@@ -35,6 +42,11 @@ int $syscallMkfifo(GoString path, int mode) {
     text.asTypedList(path.length + 1)
       ..setRange(0, path.length, path.bytes)
       ..[path.length] = 0;
+    if (Platform.isLinux) {
+      final create = _mknod;
+      final errorAddress = _errno();
+      return create(text, mode | 0x1000, 0) == 0 ? 0 : errorAddress.value;
+    }
     final create = _mkfifo;
     final errorAddress = _errno();
     return create(text, mode) == 0 ? 0 : errorAddress.value;

@@ -162,9 +162,9 @@ Integer queries retain native size errors and name validation.
 JS and Wasm report both APIs as unsupported.
 The documented native errno capture limitation also applies to these queries.
 
-macOS `syscall.Mkfifo` creates actual FIFOs with native modes, the process umask, and native path errors.
+Linux and macOS `syscall.Mkfifo` create actual FIFOs with native modes, the process umask, and native path errors.
 JS and Wasm return `errors.ErrUnsupported`.
-This creation API does not establish blocking FIFO I/O parity or Linux support.
+This creation API does not establish blocking FIFO I/O parity.
 macOS `syscall.Chflags` and `syscall.Fchflags` change actual file flags through paths and native descriptors.
 They preserve native errors and return explicit unsupported errors on web targets.
 macOS `syscall.Pathconf` and `syscall.Fpathconf` query actual filesystem configuration values.
