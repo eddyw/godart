@@ -168,6 +168,7 @@ The context-based UDP dialer supports `udp`, `udp4`, and `udp6`.
 For typed UDP dials, bind and connect errors take precedence over an expired or canceled context.
 Invalid remote addresses retain `AddrError` metadata after a successful explicit local bind.
 Failed remote conversion releases that bound socket.
+IPv4 `ListenMulticastUDP` disables multicast loopback and selects the supplied native interface for outgoing packets.
 Mixed-family destinations, IPv6 zones, and socket controls remain incomplete.
 
 Native UDP error codes remain unreliable across separate Dart FFI calls.

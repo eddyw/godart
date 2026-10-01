@@ -370,9 +370,8 @@ func ListenUDP(network string, laddr *UDPAddr) (*UDPConn, error) {
 // ListenMulticastUDP opens a datagram socket that reads the datagrams of a
 // multicast group. The network is udp, udp4, or udp6.
 //
-// An ifi of nil joins the group on each interface of the system. Go marks the
-// function as older than the direct use of ListenPacket with a join, and it
-// keeps the loopback of the group open.
+// A nil ifi uses the system-assigned multicast interface.
+// The listener disables multicast loopback.
 func ListenMulticastUDP(network string, ifi *Interface, gaddr *UDPAddr) (*UDPConn, error) {
 	switch network {
 	case "udp", "udp4", "udp6":

@@ -1,3 +1,4 @@
+// Copyright 2011 The Go Authors. All rights reserved.
 // Copyright 2017 The Go Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
@@ -1428,8 +1429,8 @@ GoString $listenClose(int handle) {
   return (-1, 0, _empty, 0);
 }
 
-/// Joins a multicast group on a datagram socket. An empty interface name reads
-/// each interface of the system, exactly as a nil Interface does in Go.
+/// Joins a multicast group on a datagram socket. An empty interface name lets
+/// the system select the interface, as a nil Interface does in Go.
 ///
 /// The call blocks the goroutine, thus the caller becomes an async function.
 GoString $joinMulticast(int handle, GoString group, GoString iface) {
@@ -1462,7 +1463,33 @@ Future<void> _joinGroup(_Packet p, String group, String name) async {
       throw 'the interface $name is not present';
     }
   }
-  p.socket.joinMulticast(await _address(group), found);
+  final groupAddress = await _address(group);
+  if (found != null && groupAddress.type == InternetAddressType.IPv4) {
+    final Uint8List optionValue;
+    if (Platform.isLinux) {
+      optionValue = Uint8List(12);
+      ByteData.sublistView(optionValue).setInt32(8, found.index, Endian.host);
+    } else {
+      InternetAddress? ipv4;
+      for (final address in found.addresses) {
+        if (address.type == InternetAddressType.IPv4) {
+          ipv4 = address;
+          break;
+        }
+      }
+      if (ipv4 == null) throw 'no such network interface';
+      optionValue = ipv4.rawAddress;
+    }
+    p.socket.setRawOption(
+      RawSocketOption(
+        RawSocketOption.levelIPv4,
+        RawSocketOption.IPv4MulticastInterface,
+        optionValue,
+      ),
+    );
+  }
+  p.socket.multicastLoopback = false;
+  p.socket.joinMulticast(groupAddress, found);
 }
 
 Future<_Packet> _bindUDP(String host, int port) async {
