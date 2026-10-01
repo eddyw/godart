@@ -209,6 +209,12 @@ int $syscallFchmodat(int fd, GoString path, int mode, int flags) => 38;
 
 int $syscallFdatasync(int fd) => 38;
 
+(Slice<int>, int) $syscallStatfs(GoString path, bool output) =>
+    (Slice<int>.nil(), -1);
+
+(Slice<int>, int) $syscallFstatfs(int fd, bool output) =>
+    (Slice<int>.nil(), -1);
+
 (int, Slice<int>, int) $syscallGetfsstat(int count, int flags) =>
     (-1, Slice<int>.nil(), -1);
 

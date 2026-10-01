@@ -152,6 +152,10 @@ Linux queries preserve the raw kernel priority value that Go exposes.
 JS and Wasm targets report these APIs as unsupported.
 The documented native errno atomicity limitation also applies to these calls.
 
+macOS supports native `syscall.Statfs` and `syscall.Fstatfs` with actual filesystem statistics.
+Failed queries preserve caller output, and open descriptors retain access after path removal.
+JS and Wasm report both APIs as unsupported.
+
 macOS supports native `syscall.Getfsstat`, including count queries and short buffers.
 The adapter retains actual mount statistics and unused caller buffer entries.
 JS and Wasm report this API as unsupported.
