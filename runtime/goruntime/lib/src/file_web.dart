@@ -209,6 +209,8 @@ int $syscallFchmodat(int fd, GoString path, int mode, int flags) => 38;
 
 int $syscallFdatasync(int fd) => 38;
 
+(int, int, int) $syscallGettimeofday(bool output) => (0, 0, -1);
+
 (int, int, int) $syscallGetrlimit(int resource, bool output) => (0, 0, 38);
 
 int $syscallSetrlimit(int resource, bool input, int cur, int max) => 38;

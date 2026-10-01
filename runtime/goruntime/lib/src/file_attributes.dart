@@ -1,4 +1,5 @@
 // Copyright 2009 The Go Authors. All rights reserved.
+// Copyright 2015 The Go Authors. All rights reserved.
 // Copyright 2017 The Go Authors. All rights reserved.
 // Copyright 2018 The Go Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
@@ -343,6 +344,30 @@ final _umask = Platform.isMacOS
     : _libc.lookupFunction<Uint32 Function(Uint32), int Function(int)>('umask');
 
 int $syscallUmask(int mask) => _umask(mask);
+
+final _gettimeofday = _libc
+    .lookupFunction<
+      Int Function(Pointer<Uint8>, Pointer<Void>),
+      int Function(Pointer<Uint8>, Pointer<Void>)
+    >('gettimeofday');
+
+(int, int, int) $syscallGettimeofday(bool output) {
+  final get = _gettimeofday;
+  final buffer = output ? _malloc(16) : nullptr.cast<Uint8>();
+  if (output && buffer == nullptr) return (0, 0, 12);
+  try {
+    final errno = _errno();
+    final code = get(buffer, nullptr) == 0 ? 0 : errno.value;
+    if (code != 0 || !output) return (0, 0, code);
+    final sec = buffer.cast<Int64>().value;
+    final usec = Platform.isMacOS
+        ? (buffer + 8).cast<Int32>().value
+        : (buffer + 8).cast<Int64>().value;
+    return (sec, usec, 0);
+  } finally {
+    _free(buffer);
+  }
+}
 
 final _syscallUtime = _libc
     .lookupFunction<

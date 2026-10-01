@@ -1961,6 +1961,10 @@ func SyscallFdatasync(fd int) int {
 	panic("syscall/dart needs the gart compiler")
 }
 
+func SyscallGettimeofday(output bool) (int64, int64, int) {
+ panic("syscall/dart needs the gart compiler")
+}
+
 func SyscallGetrlimit(resource int, output bool) (uint64, uint64, int) {
 	panic("syscall/dart needs the gart compiler")
 }

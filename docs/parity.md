@@ -152,6 +152,10 @@ Linux queries preserve the raw kernel priority value that Go exposes.
 JS and Wasm targets report these APIs as unsupported.
 The documented native errno atomicity limitation also applies to these calls.
 
+Linux and macOS support native `syscall.Gettimeofday`, including nil output pointers.
+The adapter preserves the platform timeval layout, caller padding, and native errors.
+JS and Wasm report this API as unsupported.
+
 Linux and macOS expose network interface indexes, names, MTU values,
 hardware addresses, and flags. The table includes interfaces without IP addresses.
 Other native hosts report interface metadata as unsupported.
