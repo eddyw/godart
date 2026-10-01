@@ -209,6 +209,8 @@ int $syscallFchmodat(int fd, GoString path, int mode, int flags) => 38;
 
 int $syscallFdatasync(int fd) => 38;
 
+int $syscallMkfifo(GoString path, int mode) => -1;
+
 int $syscallChflags(GoString path, int flags) => -1;
 
 int $syscallFchflags(int fd, int flags) => -1;
