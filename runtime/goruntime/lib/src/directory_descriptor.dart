@@ -147,7 +147,11 @@ int $directoryClose(int fd) {
   return _close(fd) == 0 ? 0 : _errno().value;
 }
 
-int $directoryChdir(int fd) => _fchdir(fd) == 0 ? 0 : _errno().value;
+int $directoryChdir(int fd) {
+  final fchdir = _fchdir;
+  final errorAddress = _errno();
+  return fchdir(fd) == 0 ? 0 : errorAddress.value;
+}
 
 int $directoryCreate(GoString path, int mode) {
   final bytes = path.bytes;
