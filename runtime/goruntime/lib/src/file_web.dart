@@ -120,8 +120,10 @@ GoString $chtimes(
 
 (int, GoString) $remove(GoString path) => (0, _noSys);
 
-(GoString, GoString, GoString) $removeAll(GoString path) =>
-    (GoString.fromString('removeall'), path, _noSys);
+(GoString, GoString, int, GoString) $removeAll(GoString path) =>
+    path.bytes.contains(0)
+    ? (GoString.fromString('RemoveAll'), path, 22, GoString.empty)
+    : (GoString.fromString('removeall'), path, 0, _noSys);
 
 GoString $mkdir(GoString path) => _noSys;
 

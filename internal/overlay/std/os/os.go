@@ -948,10 +948,13 @@ func RemoveAll(name string) error {
 	for len(name) > 1 && IsPathSeparator(name[len(name)-1]) {
 		name = name[:len(name)-1]
 	}
-	if endsWithDot(name) || contains(name, "\x00") {
+	if endsWithDot(name) {
 		return &PathError{Op: "RemoveAll", Path: name, Err: syscall.EINVAL}
 	}
-	op, path, cause := dart.RemoveAll(name)
+	op, path, errno, cause := dart.RemoveAll(name)
+	if errno != 0 {
+		return &PathError{Op: op, Path: path, Err: syscall.Errno(errno)}
+	}
 	return pathError(op, path, cause)
 }
 

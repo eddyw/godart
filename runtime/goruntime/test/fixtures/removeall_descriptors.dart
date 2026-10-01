@@ -26,7 +26,7 @@ void main() {
         ..createSync(recursive: true);
       File('${tree.path}/file').writeAsStringSync('remove');
       final result = $removeAll(GoString.fromString('${root.path}/tree'));
-      if (result.$3.length != 0) throw StateError(result.toString());
+      if (result.$3 != 0) throw StateError(result.toString());
     }
     final after = nextDescriptor();
     if (before != after) throw StateError('$before descriptors became $after');

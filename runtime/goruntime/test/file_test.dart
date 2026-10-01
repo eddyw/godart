@@ -133,7 +133,7 @@ void main() {
     });
     final file = File('${root.path}/file')..writeAsStringSync('keep');
     final result = $removeAll(GoString.fromString('${root.path}\x00suffix'));
-    expect(result.$3.length, greaterThan(0));
+    expect(result.$3, 22);
     expect(file.readAsStringSync(), 'keep');
   }, skip: !(Platform.isLinux || Platform.isMacOS));
 
@@ -154,7 +154,7 @@ void main() {
       Link('${tree.path}/link').createSync(outside.path);
       Link('${tree.path}/broken').createSync('${root.path}/absent');
       final result = $removeAll(GoString.fromString(tree.path));
-      expect(result.$3.length, 0, reason: result.toString());
+      expect(result.$3, 0, reason: result.toString());
       expect(tree.existsSync(), isFalse);
       expect(outside.readAsStringSync(), 'keep');
     },

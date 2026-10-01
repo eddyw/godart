@@ -59,14 +59,9 @@ final _errnoLocation = _libc
     .lookupFunction<Pointer<Int> Function(), Pointer<Int> Function()>(
       Platform.isMacOS ? '__error' : '__errno_location',
     );
-final _strerror = _libc
-    .lookupFunction<Pointer<Uint8> Function(Int), Pointer<Uint8> Function(int)>(
-      'strerror',
-    );
 final _cwd = Platform.isMacOS ? -2 : -100;
-final _directoryFlags = Platform.isMacOS
-    ? 0x1000000 | 0x100000
-    : 0x80000 | 0x10000;
+final _closeOnExec = Platform.isMacOS ? 0x1000000 : 0x80000;
+final _directoryFlags = _closeOnExec | (Platform.isMacOS ? 0x100000 : 0x10000);
 final _noFollow = Platform.isMacOS ? 0x100 : 0x20000;
 final _removeDirectory = Platform.isMacOS ? 0x80 : 0x200;
 
@@ -89,48 +84,47 @@ Pointer<Uint8> _name(Uint8List bytes) {
 }
 
 int _unlink(int parent, Uint8List name, int flags) {
-  final p = _name(name);
   try {
-    return _unlinkat(parent, p, flags) == 0 ? 0 : _errnoLocation().value;
-  } finally {
-    _free(p);
-  }
-}
-
-int $syscallUnlink(GoString path, bool directory) {
-  try {
-    return _unlink(_cwd, path.bytes, directory ? _removeDirectory : 0);
+    final p = _name(name);
+    try {
+      return _unlinkat(parent, p, flags) == 0 ? 0 : _errnoLocation().value;
+    } finally {
+      _free(p);
+    }
   } on _RemovalError catch (error) {
     return error.errno;
   }
 }
+
+int $syscallUnlink(GoString path, bool directory) =>
+    _unlink(_cwd, path.bytes, directory ? _removeDirectory : 0);
 
 int removeDescriptors(GoString path) {
-  try {
-    int fileError;
-    do {
-      fileError = _unlink(_cwd, path.bytes, 0);
-    } while (fileError == 4);
-    if (fileError == 0) return 0;
-    int directoryError;
-    do {
-      directoryError = _unlink(_cwd, path.bytes, _removeDirectory);
-    } while (directoryError == 4);
-    if (directoryError == 0) return 0;
-    // ENOTDIR identifies the file error on both Linux and macOS.
-    return directoryError == 20 ? fileError : directoryError;
-  } on _RemovalError catch (error) {
-    return error.errno;
-  }
+  int fileError;
+  do {
+    fileError = _unlink(_cwd, path.bytes, 0);
+  } while (fileError == 4);
+  if (fileError == 0) return 0;
+  int directoryError;
+  do {
+    directoryError = _unlink(_cwd, path.bytes, _removeDirectory);
+  } while (directoryError == 4);
+  if (directoryError == 0) return 0;
+  // ENOTDIR identifies the file error on both Linux and macOS.
+  return directoryError == 20 ? fileError : directoryError;
 }
 
 (int, int) _open(int parent, Uint8List name, int flags) {
-  final p = _name(name);
   try {
-    final fd = _openat(parent, p, flags);
-    return (fd, fd < 0 ? _errnoLocation().value : 0);
-  } finally {
-    _free(p);
+    final p = _name(name);
+    try {
+      final fd = _openat(parent, p, flags);
+      return (fd, fd < 0 ? _errnoLocation().value : 0);
+    } finally {
+      _free(p);
+    }
+  } on _RemovalError catch (error) {
+    return (-1, error.errno);
   }
 }
 
@@ -224,58 +218,42 @@ _RemovalError? _removeFrom(int parent, Uint8List base) {
   return recurseError ?? _RemovalError('unlinkat', base, error);
 }
 
-(GoString, GoString, GoString) removeAllDescriptors(GoString path) {
-  _RemovalError? error;
-  try {
-    final bytes = path.bytes;
-    var direct = _unlink(_cwd, bytes, 0);
-    if (direct != 0 && direct != 2) {
-      direct = _unlink(_cwd, bytes, _removeDirectory);
-    }
-    if (direct == 0 || direct == 2) {
-      return (GoString.empty, GoString.empty, GoString.empty);
-    }
-    final slash = bytes.lastIndexOf(47);
-    final parent = slash < 0
-        ? Uint8List.fromList([46])
-        : Uint8List.sublistView(bytes, 0, slash == 0 ? 1 : slash);
-    final base = slash < 0 ? bytes : Uint8List.sublistView(bytes, slash + 1);
-    final (fd, openError) = _open(_cwd, parent, _directoryFlags);
-    if (fd < 0) {
-      if (openError == 2) {
-        return (GoString.empty, GoString.empty, GoString.empty);
-      }
-      error = _RemovalError('open', parent, openError);
-    } else {
-      try {
-        final childError = _removeFrom(fd, base);
-        if (childError != null) {
-          error = _RemovalError(
-            childError.op,
-            _join(parent, childError.path),
-            childError.errno,
-          );
-        }
-      } finally {
-        _close(fd);
-      }
-    }
-  } on _RemovalError catch (e) {
-    error = e;
+(GoString, GoString, int) removeAllDescriptors(GoString path) {
+  final direct = removeDescriptors(path);
+  if (direct == 0 || direct == 2) {
+    return (GoString.empty, GoString.empty, 0);
   }
-  if (error == null) return (GoString.empty, GoString.empty, GoString.empty);
+  final bytes = path.bytes;
+  final slash = bytes.lastIndexOf(47);
+  final parent = slash < 0
+      ? Uint8List.fromList([46])
+      : Uint8List.sublistView(bytes, 0, slash == 0 ? 1 : slash);
+  final base = slash < 0 ? bytes : Uint8List.sublistView(bytes, slash + 1);
+  final (fd, openError) = _open(_cwd, parent, _closeOnExec);
+  _RemovalError? error;
+  if (fd < 0) {
+    if (openError == 2) {
+      return (GoString.empty, GoString.empty, 0);
+    }
+    error = _RemovalError('open', parent, openError);
+  } else {
+    try {
+      final childError = _removeFrom(fd, base);
+      if (childError != null) {
+        error = _RemovalError(
+          childError.op,
+          _join(parent, childError.path),
+          childError.errno,
+        );
+      }
+    } finally {
+      _close(fd);
+    }
+  }
+  if (error == null) return (GoString.empty, GoString.empty, 0);
   return (
     GoString.fromString(error.op),
     GoString.fromBytes(error.path),
-    _errorMessage(error.errno),
+    error.errno,
   );
-}
-
-GoString _errorMessage(int errno) {
-  final message = _strerror(errno);
-  final bytes = <int>[];
-  for (var i = 0; message[i] != 0; i++) {
-    bytes.add(message[i]);
-  }
-  return GoString.fromBytes(bytes);
 }

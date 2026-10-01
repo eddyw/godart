@@ -467,23 +467,29 @@ GoString $chtimes(
   }
 }
 
-(GoString, GoString, GoString) $removeAll(GoString path) {
-  if (hasDescriptorRemoval) return removeAllDescriptors(path);
+(GoString, GoString, int, GoString) $removeAll(GoString path) {
+  if (hasDescriptorRemoval) {
+    final (op, name, errno) = removeAllDescriptors(path);
+    return (op, name, errno, _empty);
+  }
+  if (path.bytes.contains(0)) {
+    return (GoString.fromString('RemoveAll'), path, 22, _empty);
+  }
   final name = path.toDartString();
-  (GoString, GoString, GoString)? first;
+  (GoString, GoString, int, GoString)? first;
   try {
     final type = FileSystemEntity.typeSync(name, followLinks: false);
     if (type == FileSystemEntityType.notFound) {
-      return (_empty, _empty, _empty);
+      return (_empty, _empty, 0, _empty);
     }
     if (type == FileSystemEntityType.directory) {
       try {
         for (final child in Directory(name).listSync(followLinks: false)) {
           final result = $removeAll(GoString.fromString(child.path));
-          if (result.$3.length != 0) first ??= result;
+          if (result.$4.length != 0) first ??= result;
         }
       } catch (e) {
-        first = (GoString.fromString('readdirnames'), path, _cause(e));
+        first = (GoString.fromString('readdirnames'), path, 0, _cause(e));
       }
       Directory(name).deleteSync();
     } else if (type == FileSystemEntityType.link) {
@@ -491,9 +497,9 @@ GoString $chtimes(
     } else {
       File(name).deleteSync();
     }
-    return (_empty, _empty, _empty);
+    return (_empty, _empty, 0, _empty);
   } catch (e) {
-    return first ?? (GoString.fromString('removeall'), path, _cause(e));
+    return first ?? (GoString.fromString('removeall'), path, 0, _cause(e));
   }
 }
 
