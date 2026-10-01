@@ -43,6 +43,25 @@ void main() {
         read.$1 == 1 && read.$2.length == 0 && bytes.array[0] == 98,
         'shared position',
       );
+      final (duplicate, duplicateCode) = $syscallDup(fd);
+      require(duplicateCode == 0 && duplicate != fd, 'duplicate descriptor');
+      try {
+        require(flags(duplicate, 1) & 1 == 0, 'dup clears close-on-exec');
+        require($syscallDup2(fd, fd) == 0, 'dup2 same descriptor');
+        require(flags(fd, 1) & 1 != 0, 'same descriptor preserves flags');
+        final (target, directoryFD, targetCode) = $fileOpenFlags(name, 0, 0);
+        require(targetCode == 0 && directoryFD == -1, 'dup2 target open');
+        try {
+          final targetFD = $fileFd(target, 0);
+          require(flags(targetFD, 1) & 1 != 0, 'target close-on-exec');
+          require($syscallDup2(fd, targetFD) == 0, 'dup2 target replacement');
+          require(flags(targetFD, 1) & 1 == 0, 'dup2 clears close-on-exec');
+        } finally {
+          require($fileClose(target).$1 == 0, 'dup2 target close');
+        }
+      } finally {
+        require($syscallClose(duplicate) == 0, 'duplicate close');
+      }
       require($fileClose(handle).$1 == 0, 'close');
       require(flags(fd, 1) == -1, 'native descriptor closes');
       require($fileFd(handle, 0) == -1, 'closed registry slot');

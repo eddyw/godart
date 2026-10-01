@@ -27,6 +27,9 @@ final _open = _libc
 final _close = _libc.lookupFunction<Int Function(Int), int Function(int)>(
   'close',
 );
+final _dup = _libc.lookupFunction<Int Function(Int), int Function(int)>('dup');
+final _dup2 = _libc
+    .lookupFunction<Int Function(Int, Int), int Function(int, int)>('dup2');
 final _errno = _libc
     .lookupFunction<Pointer<Int> Function(), Pointer<Int> Function()>(
       Platform.isMacOS ? '__error' : '__errno_location',
@@ -51,6 +54,19 @@ final _errno = _libc
 }
 
 int $syscallClose(int fd) => _close(fd) == 0 ? 0 : _errno().value;
+
+(int, int) $syscallDup(int oldfd) {
+  final dup = _dup;
+  final errorAddress = _errno();
+  final fd = dup(oldfd);
+  return (fd, fd < 0 ? errorAddress.value : 0);
+}
+
+int $syscallDup2(int oldfd, int newfd) {
+  final dup2 = _dup2;
+  final errorAddress = _errno();
+  return dup2(oldfd, newfd) < 0 ? errorAddress.value : 0;
+}
 
 final _getdents = _libc
     .lookupFunction<

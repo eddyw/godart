@@ -1,3 +1,7 @@
+// Copyright 2009 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 //go:build dart && (linux || darwin) && (amd64 || arm64)
 
 package syscall
@@ -14,6 +18,21 @@ func Open(path string, mode int, perm uint32) (int, error) {
 
 func Close(fd int) error {
 	if errno := dart.SyscallClose(fd); errno != 0 {
+		return Errno(errno)
+	}
+	return nil
+}
+
+func Dup(oldfd int) (int, error) {
+	fd, errno := dart.SyscallDup(oldfd)
+	if errno != 0 {
+		return fd, Errno(errno)
+	}
+	return fd, nil
+}
+
+func Dup2(oldfd, newfd int) error {
+	if errno := dart.SyscallDup2(oldfd, newfd); errno != 0 {
 		return Errno(errno)
 	}
 	return nil

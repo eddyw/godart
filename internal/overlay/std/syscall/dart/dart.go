@@ -1903,6 +1903,14 @@ func SyscallClose(fd int) int {
 	panic("syscall/dart needs the gart compiler")
 }
 
+func SyscallDup(fd int) (int, int) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+func SyscallDup2(oldfd, newfd int) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
 func SyscallReadDirent(fd int, data []byte) (int, int) {
 	panic("syscall/dart needs the gart compiler")
 }
