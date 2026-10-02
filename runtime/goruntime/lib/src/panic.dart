@@ -181,9 +181,17 @@ String $panicChain(GoPanic p) {
     chain.add(at);
   }
   final texts = <GoPanic, String>{};
+  final skipped = <GoPanic>{};
+  final repanicked = <GoPanic>{};
   try {
     // Go visits the newest panic first. A legacy nil failure ends that pass.
-    for (final at in chain) {
+    for (int i = 0; i < chain.length; i++) {
+      final at = chain[i];
+      if (i + 1 < chain.length && identical(at.value, chain[i + 1].value)) {
+        skipped.add(at);
+        repanicked.add(chain[i + 1]);
+        continue;
+      }
       texts[at] = _panicMethodText(at.value);
     }
   } on GoPanic catch (panic) {
@@ -191,9 +199,14 @@ String $panicChain(GoPanic p) {
   }
   final StringBuffer b = StringBuffer();
   for (final GoPanic at in chain.reversed) {
+    if (skipped.contains(at)) continue;
     if (!identical(at, chain.last)) b.write('\t');
     b.write('panic: ${texts[at] ?? _panicValueText(at.value)}');
-    if (at.recovered) b.write(' [recovered]');
+    if (at.recovered) {
+      b.write(
+        repanicked.contains(at) ? ' [recovered, repanicked]' : ' [recovered]',
+      );
+    }
     b.write('\n');
   }
   return b.toString();
