@@ -99,6 +99,8 @@ and retain its BSD notice.
 The runtime caller adapter retains original declarations from
 `src/runtime/symtab_test.go`, `callers_test.go`, `stack_test.go`,
 `traceback_test.go`, and `runtime_test.go` with their Go BSD notices.
+The complete defer adapter retains all 14 original roots from
+`src/runtime/defer_test.go` with its 2019 BSD notice.
 The nil-panic adapter retains original `src/runtime/panic_test.go`
 assertions and its 2020 Go BSD notice.
 The native atomic order adapter retains original `src/sync/atomic/atomic_test.go`
