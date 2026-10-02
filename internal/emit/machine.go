@@ -351,7 +351,7 @@ func (e *emitter) machineBody(f *ir.Func, fn string) {
 		e.line("final ChainState $chain = $chainOpen($e);")
 		e.mark(f.End)
 		e.sourcePosition(f.End)
-		e.line("if (!$defer.runRecovered()) { $chainClose($chain); rethrow; }")
+		e.line("if (!$defer.runRecovered() || $e is GoStop) { $chainClose($chain); rethrow; }")
 		e.line("$chainClose($chain);")
 		if hasNamedResults(f.Results) {
 			e.line("return %s;", e.resultRead(f.Results))

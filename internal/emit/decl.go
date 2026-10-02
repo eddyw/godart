@@ -700,7 +700,7 @@ func (e *emitter) emitBody(results []*ir.Var, defers bool, body *ir.Block, end t
 	e.line("final ChainState $chain = $chainOpen($e);")
 	e.mark(end)
 	e.sourcePosition(end)
-	e.line("if (!$defer.runRecovered()) { $chainClose($chain); rethrow; }")
+	e.line("if (!$defer.runRecovered() || $e is GoStop) { $chainClose($chain); rethrow; }")
 	e.line("$chainClose($chain);")
 	e.line("}")
 	e.deferPlain = prevPlain
