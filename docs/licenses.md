@@ -107,6 +107,8 @@ Panic scalar diagnostics adapt Go `src/runtime/error.go` with its 2010 BSD notic
 The runtime license includes the Go BSD terms.
 Original named-panic declarations retain the 2020 BSD notice from
 `src/runtime/testdata/testprog/panicprint.go`.
+Panic method diagnostics adapt Go `src/runtime/panic.go` with its 2009 BSD notice.
+The runtime license includes the Go BSD terms.
 The fatal-panic adapter retains the original 19-case root from
 `src/runtime/panic_test.go` and the 2020 BSD notice from
 `src/runtime/testdata/testprog/panicprint.go`.

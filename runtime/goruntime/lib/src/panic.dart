@@ -96,9 +96,29 @@ final class GoPanic implements Exception {
 /// Go calls Error on a value that implements error, and String on a value that
 /// implements Stringer. Read preprintpanics of runtime/panic.go.
 String $panicText(Object? v) {
+  try {
+    return _panicMethodText(v);
+  } on GoPanic catch (panic) {
+    _panicPrintFailure(panic);
+    return _panicValueText(v);
+  }
+}
+
+void _panicPrintFailure(GoPanic panic) {
+  final failure = panic.value as Iface?;
+  if (failure == null) return;
+  final text = failure.desc.name == 'string'
+      ? (failure.value as GoString).toDartString()
+      : 'type ${failure.desc.display}';
+  $platformStderrText(
+    'fatal error: panic while printing panic value: ${text.replaceAll("\n", "\n\t")}\n',
+  );
+  $platformExit(2);
+}
+
+String _panicMethodText(Object? v) {
   if (v == null) return 'nil';
   if (v is Iface) {
-    // The key of a method table holds the name and the signature.
     for (final String name in const <String>[
       'Error()string',
       'String()string',
@@ -160,10 +180,19 @@ String $panicChain(GoPanic p) {
   for (GoPanic? at = p; at != null; at = at.link) {
     chain.add(at);
   }
+  final texts = <GoPanic, String>{};
+  try {
+    // Go visits the newest panic first. A legacy nil failure ends that pass.
+    for (final at in chain) {
+      texts[at] = _panicMethodText(at.value);
+    }
+  } on GoPanic catch (panic) {
+    _panicPrintFailure(panic);
+  }
   final StringBuffer b = StringBuffer();
   for (final GoPanic at in chain.reversed) {
     if (!identical(at, chain.last)) b.write('\t');
-    b.write('panic: ${$panicText(at.value)}');
+    b.write('panic: ${texts[at] ?? _panicValueText(at.value)}');
     if (at.recovered) b.write(' [recovered]');
     b.write('\n');
   }
