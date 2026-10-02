@@ -103,6 +103,10 @@ The nil-panic adapter retains original `src/runtime/panic_test.go`
 assertions and its 2020 Go BSD notice.
 The native atomic order adapter retains original `src/sync/atomic/atomic_test.go`
 assertions and its 2011 Go BSD notice.
+Panic scalar diagnostics adapt Go `src/runtime/error.go` with its 2010 BSD notice.
+The runtime license includes the Go BSD terms.
+Original named-panic declarations retain the 2020 BSD notice from
+`src/runtime/testdata/testprog/panicprint.go`.
 The panic traceback adapter preserves `src/runtime/crash_test.go` and
 `src/runtime/testdata/testprog/deadlock.go` with their Go BSD notices.
 The CPU adapter follows Go `src/runtime/os_linux.go`, `os_darwin.go`,

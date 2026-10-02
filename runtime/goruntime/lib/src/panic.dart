@@ -1,4 +1,4 @@
-// Copyright 2009 The Go Authors. All rights reserved.
+// Copyright 2009, 2010 The Go Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -7,6 +7,7 @@ import 'godebug.dart';
 import 'goint.dart';
 import 'iface.dart';
 import 'platform_native.dart' if (dart.library.js_interop) 'platform_web.dart';
+import 'print.dart' show $genericPrintText;
 import 'process_exit.dart';
 import 'sched.dart' show $activeCallerFrames, $current;
 import 'source.dart';
@@ -105,7 +106,40 @@ String $panicText(Object? v) {
       final Function? m = v.desc.methods[name];
       if (m == null || identical(m, $ifaceMethod)) continue;
       final Object? text = Function.apply(m, <Object?>[v.value]);
-      if (text is GoString) return text.toDartString();
+      if (text is GoString) {
+        return text.toDartString().replaceAll("\n", "\n\t");
+      }
+    }
+  }
+  if (v is Iface) {
+    switch (v.desc.kind) {
+      case 'string':
+      case 'bool':
+      case 'int':
+      case 'int8':
+      case 'int16':
+      case 'int32':
+      case 'int64':
+      case 'uint':
+      case 'uint8':
+      case 'uint16':
+      case 'uint32':
+      case 'uint64':
+      case 'uintptr':
+      case 'float32':
+      case 'float64':
+      case 'complex64':
+      case 'complex128':
+        final text = $genericPrintText(
+          v.value,
+          v.desc,
+        ).replaceAll('\n', '\n\t');
+        if (v.desc.methodPkg.isEmpty) return text;
+        if (v.desc.kind == 'string') return '${v.desc.display}("$text")';
+        if (v.desc.kind == 'complex64' || v.desc.kind == 'complex128') {
+          return '${v.desc.display}$text';
+        }
+        return '${v.desc.display}($text)';
     }
   }
   return '$v';

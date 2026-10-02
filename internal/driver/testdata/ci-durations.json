@@ -2211,6 +2211,7 @@
   "driver/short/TestMonotonicClock": 13.31,
   "driver/short/TestMulticastErrorMetadata": 100.2,
   "driver/short/TestMulticastSocketDefaults": 10.0,
+  "driver/short/TestNamedPanicTargets": 189.85,
   "driver/short/TestNamedResultsAcrossSuspension": 71.79,
   "driver/short/TestNativeAccess": 40.82,
   "driver/short/TestNativeGettimeofday": 155.1,
