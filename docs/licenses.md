@@ -321,3 +321,6 @@ It compares actual native Go results without native-link test probes.
 The panic-callback adapter retains 3 original roots from
 `src/runtime/crash_test.go` and their unchanged method programs from
 `src/runtime/testdata/testprog/deadlock.go`, with their BSD notices.
+
+The map-alias adapter retains the unchanged TestAlias root from
+`src/runtime/map_test.go`, with its original BSD notice.
