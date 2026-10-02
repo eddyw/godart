@@ -387,14 +387,29 @@ func (e *emitter) goStmt(s *ir.Go) {
 	// The launch wrapper is not a Go caller in the new goroutine.
 	previous := e.sourceFrame
 	e.sourceFrame = false
-	call := e.expr(s.Call)
+	var body string
+	if call, ok := s.Call.(*ir.Call); ok {
+		if fun, ok := call.Fun.(*ir.Ident); ok {
+			if _, direct := fun.Obj.(*types.Func); !direct {
+				sig := typeset.Core(fun.GoType()).(*types.Signature)
+				// Go passes a zero-parameter, zero-result function to newproc.
+				// Other calls use a non-nil wrapper, even for a nil function.
+				if sig.Params().Len() == 0 && sig.Results().Len() == 0 {
+					body = e.expr(fun)
+				}
+			}
+		}
+	}
+	if body == "" {
+		body = "() { " + e.expr(s.Call) + "; }"
+	}
 	e.sourceFrame = previous
 	origin := ""
 	if pos := ir.PosOf(s); e.cfg.Fset != nil && pos.IsValid() && e.curGoName != "" {
 		origin = fmt.Sprintf(", (%s, %s, %d)", dartString(e.curGoName), dartString(e.goFile(pos)), e.cfg.Fset.Position(pos).Line)
 	}
 	e.markDrop()
-	e.line("$go(() { %s; }%s);", call, origin)
+	e.line("$go(%s%s);", body, origin)
 }
 
 func (e *emitter) ifStmt(s *ir.If) {

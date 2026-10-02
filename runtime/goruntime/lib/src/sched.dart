@@ -482,11 +482,17 @@ void _schedule() {
 /// that type, thus the field [Goroutine.start] still keeps the value.
 /// The compiler supplies the creator name, file, and line for a Go statement.
 /// An origin requires a current Go goroutine.
-Goroutine $go(void Function() body, [(String, String, int)? origin]) => _spawn(
-  body,
-  $current?.bubble,
-  origin == null ? null : (origin.$1, origin.$2, origin.$3, $current!.id),
-);
+Goroutine $go(void Function()? body, [(String, String, int)? origin]) {
+  if (body == null) {
+    $platformStderrText('fatal error: go of nil func value\n');
+    $platformExit(2);
+  }
+  return _spawn(
+    body,
+    $current?.bubble,
+    origin == null ? null : (origin.$1, origin.$2, origin.$3, $current!.id),
+  );
+}
 
 /// Starts a goroutine inside the bubble b, and gives its handle. A null bubble
 /// starts a goroutine outside each bubble.
