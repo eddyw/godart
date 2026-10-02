@@ -254,6 +254,10 @@ String $ustring(GoInt v) {
 /// thus the method of the class already gives the value with no virtual call.
 double $todouble(GoInt v) => v.toDouble();
 
+GoFloat32 $tof32(GoInt v) => $integerFloat32(_sbig(v));
+
+GoFloat32 $utof32(GoInt v) => $integerFloat32(_ubig(v));
+
 double $utodouble(GoInt v) => _u32(v.$h) * 4294967296.0 + v.$l.toDouble();
 
 /// The IEEE 754 bit pattern of a 64-bit value.

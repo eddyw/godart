@@ -113,6 +113,10 @@ String $ustring(GoInt v) {
 /// because a Go integer holds no negative zero and no NaN.
 double $todouble(GoInt v) => v.$v + 0.0;
 
+GoFloat32 $tof32(GoInt v) => $integerFloat32(BigInt.from(v.$v));
+
+GoFloat32 $utof32(GoInt v) => $integerFloat32(BigInt.from(v.$v).toUnsigned(64));
+
 double $utodouble(GoInt v) {
   if (v.$v >= 0) return v.$v + 0.0;
   return ((v.$v >>> 1) + 0.0) * 2.0 + ((v.$v & 1) + 0.0);

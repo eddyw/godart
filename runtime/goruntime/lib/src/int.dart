@@ -43,6 +43,33 @@ final class GoFloat32 {
 GoFloat32 $f32(double value) => GoFloat32.fromDouble(value);
 GoFloat32 $float32Zero() => GoFloat32.zero;
 
+// The value must fit a signed or unsigned 64-bit Go integer.
+GoFloat32 $integerFloat32(BigInt value) {
+  if (value == BigInt.zero) return GoFloat32.zero;
+  final sign = value.isNegative ? 0x80000000 : 0;
+  final magnitude = value.abs();
+  var exponent = magnitude.bitLength - 1;
+  var significand = 0;
+  if (exponent <= 23) {
+    significand = magnitude.toInt() << (23 - exponent);
+  } else {
+    final shift = exponent - 23;
+    significand = (magnitude >> shift).toInt();
+    final remainder = magnitude - (BigInt.from(significand) << shift);
+    final half = BigInt.one << (shift - 1);
+    if (remainder > half || remainder == half && significand.isOdd) {
+      significand++;
+      if (significand == 1 << 24) {
+        significand >>= 1;
+        exponent++;
+      }
+    }
+  }
+  return GoFloat32.fromBits(
+    (sign | ((exponent + 127) << 23) | (significand & 0x7fffff)).toUnsigned(32),
+  );
+}
+
 final class $Float32List extends ListBase<GoFloat32> {
   final Uint32List _bits;
   $Float32List(int length) : _bits = Uint32List(length);

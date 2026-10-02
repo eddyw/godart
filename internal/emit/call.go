@@ -2037,13 +2037,16 @@ func (e *emitter) conv(x *ir.Conv) string {
 		}
 		return fmt.Sprintf("$stringToBytes(%s)", text)
 	case isFloat(to) && isInteger(from):
+		if basicOf(to).Kind() == types.Float32 {
+			if isUnsigned64(from) {
+				return fmt.Sprintf("$utof32(%s)", text)
+			}
+			return fmt.Sprintf("$tof32(%s)", text)
+		}
 		if isUnsigned64(from) {
 			text = fmt.Sprintf("$utodouble(%s)", text)
 		} else {
 			text = fmt.Sprintf("$todouble(%s)", text)
-		}
-		if basicOf(to).Kind() == types.Float32 {
-			return "$f32(" + text + ")"
 		}
 		return "$f64(" + text + ")"
 	case isInteger(to) && isFloat(from):

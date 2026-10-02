@@ -2685,8 +2685,18 @@ Iface? $valueConvert(Iface? value, int handle) {
 }
 
 /// The compiler supplies types that Go permits in a conversion.
-T $convert<T>(Object? value, TypeDesc from, TypeDesc to) =>
-    _converted(from, to, value) as T;
+T $convert<T>(Object? value, TypeDesc from, TypeDesc to) {
+  // Go reflection converts through float64, but a language cast does not.
+  if (to.kind == 'float32' && value is GoInt) {
+    return (from.kind == 'uint64' ||
+                from.kind == 'uint' ||
+                from.kind == 'uintptr'
+            ? $utof32(value)
+            : $tof32(value))
+        as T;
+  }
+  return _converted(from, to, value) as T;
+}
 
 Object? $structLiteral(TypeDesc desc, List<Object?> fields) {
   final Object? out = desc.zero!();
