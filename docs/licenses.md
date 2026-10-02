@@ -310,3 +310,6 @@ Its source preserves the Go BSD notice.
 
 The channel-consumer adapter retains the unchanged TestMultiConsumer root
 from `src/runtime/chan_test.go`, with its original BSD notice.
+
+The channel-fairness adapter retains the unchanged TestSelectFairness root
+from `src/runtime/chan_test.go`, with its original BSD notice.
