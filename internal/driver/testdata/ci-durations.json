@@ -2051,6 +2051,7 @@
   "driver/short/TestBench": 24.7,
   "driver/short/TestBenchFilter": 28.14,
   "driver/short/TestBigAliasing": 177.57,
+  "driver/short/TestBigExamples": 131.03,
   "driver/short/TestBigFloatArithmetic": 177.18,
   "driver/short/TestBigFloatEncoding": 223.67,
   "driver/short/TestBigFloatRepresentation": 155.0,
