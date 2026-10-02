@@ -2297,6 +2297,7 @@
   "driver/short/TestRuntimePanicLanguage": 77.83,
   "driver/short/TestRuntimePanicTraceback": 50.42,
   "driver/short/TestRuntimeStack": 158.62,
+  "driver/short/TestRuntimeValues": 100.82,
   "driver/short/TestSQLScanContext": 163.29,
   "driver/short/TestSelectedUpstreamMethods": 0,
   "driver/short/TestShardCoverage": 0,
