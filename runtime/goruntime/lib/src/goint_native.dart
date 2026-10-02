@@ -119,7 +119,8 @@ GoFloat32 $utof32(GoInt v) => $integerFloat32(BigInt.from(v.$v).toUnsigned(64));
 
 double $utodouble(GoInt v) {
   if (v.$v >= 0) return v.$v + 0.0;
-  return ((v.$v >>> 1) + 0.0) * 2.0 + ((v.$v & 1) + 0.0);
+  // Retain the low bit before conversion to avoid double rounding.
+  return (((v.$v >>> 1) | (v.$v & 1)) + 0.0) * 2.0;
 }
 
 /// The IEEE 754 bit pattern of a 64-bit value.
