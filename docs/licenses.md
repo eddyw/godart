@@ -114,6 +114,8 @@ The runtime license includes the Go BSD terms.
 The fatal-panic adapter retains the original 19-case root from
 `src/runtime/panic_test.go` and the 2020 BSD notice from
 `src/runtime/testdata/testprog/panicprint.go`.
+The recursive-panic adapter retains 5 original roots from `src/runtime/crash_test.go`
+and the BSD notice from `src/runtime/testdata/testprog/deadlock.go`.
 The repanic adapter retains 4 original roots from `src/runtime/crash_test.go`
 and the 2015 BSD notice from `src/runtime/testdata/testprog/crash.go`.
 The panic traceback adapter preserves `src/runtime/crash_test.go` and
