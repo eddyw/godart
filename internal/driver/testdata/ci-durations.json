@@ -2280,6 +2280,7 @@
   "driver/short/TestRunReportsTheExitCode": 2.53,
   "driver/short/TestRuntimeCaller": 130.72,
   "driver/short/TestRuntimeChannels": 120.44,
+  "driver/short/TestRuntimeDefers": 115.11,
   "driver/short/TestRuntimeGoroutineOrigins": 133.9,
   "driver/short/TestRuntimePanicFrames": 12.02,
   "driver/short/TestRuntimePanicGoroutine": 31.55,
