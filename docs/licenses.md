@@ -307,3 +307,6 @@ Multicast interface enumeration adapts Go `net/interface_linux.go` and
 
 Time text marshaling retains Go `src/time/time.go`.
 Its source preserves the Go BSD notice.
+
+The channel-consumer adapter retains the unchanged TestMultiConsumer root
+from `src/runtime/chan_test.go`, with its original BSD notice.
