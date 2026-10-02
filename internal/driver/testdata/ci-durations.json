@@ -2067,6 +2067,7 @@
   "driver/short/TestBigNaturalText": 140.82,
   "driver/short/TestBigProbablyPrime": 262.39,
   "driver/short/TestBigRationalPortable": 263.53,
+  "driver/short/TestBigWordCarry": 167.29,
   "driver/short/TestBigmodPortableArithmetic": 287.72,
   "driver/short/TestBodylessWithNoMarkerStaysRejected": 0.91,
   "driver/short/TestBuildRunChildOfGoTest": 43.89,
