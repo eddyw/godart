@@ -984,7 +984,11 @@ void _exitMain() {
 /// Go writes such a report for a fault that a program must not handle. A
 /// channel of a bubble that a goroutine outside it reached is 1 such fault.
 Never $fatalError(String text) {
-  $platformStderrText('fatal error: $text\n');
+  final panic = $chainPanic;
+  if (panic != null) {
+    $platformStderrText($fatalPanicChain(panic));
+  }
+  $platformStderrText('${panic == null ? '' : '\t'}fatal error: $text\n');
   $platformExit(2);
 }
 

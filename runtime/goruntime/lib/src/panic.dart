@@ -111,6 +111,11 @@ String $panicText(Object? v) {
       }
     }
   }
+  return _panicValueText(v);
+}
+
+String _panicValueText(Object? v) {
+  if (v == null) return 'nil';
   if (v is Iface) {
     switch (v.desc.kind) {
       case 'string':
@@ -134,7 +139,9 @@ String $panicText(Object? v) {
           v.value,
           v.desc,
         ).replaceAll('\n', '\n\t');
-        if (v.desc.methodPkg.isEmpty) return text;
+        if (v.desc.methodPkg.isEmpty && v.desc.name != 'runtime.errorString') {
+          return text;
+        }
         if (v.desc.kind == 'string') return '${v.desc.display}("$text")';
         if (v.desc.kind == 'complex64' || v.desc.kind == 'complex128') {
           return '${v.desc.display}$text';
@@ -159,6 +166,35 @@ String $panicChain(GoPanic p) {
     b.write('panic: ${$panicText(at.value)}');
     if (at.recovered) b.write(' [recovered]');
     b.write('\n');
+  }
+  return b.toString();
+}
+
+// Fatal reports bypass Error and String methods. The active values remain raw.
+String $fatalPanicChain(GoPanic p) {
+  final chain = <GoPanic>[];
+  for (GoPanic? at = p; at != null; at = at.link) {
+    chain.add(at);
+  }
+  final lines = <String>[];
+  bool repanicked = false;
+  for (int i = 0; i < chain.length; i++) {
+    final at = chain[i];
+    if (i + 1 < chain.length && identical(at.value, chain[i + 1].value)) {
+      repanicked = true;
+      continue;
+    }
+    final line = StringBuffer('panic: ${_panicValueText(at.value)}');
+    if (at.recovered) {
+      line.write(repanicked ? ' [recovered, repanicked]' : ' [recovered]');
+    }
+    lines.add(line.toString());
+    repanicked = false;
+  }
+  final b = StringBuffer();
+  for (final line in lines.reversed) {
+    if (b.isNotEmpty) b.write('\t');
+    b.writeln(line);
   }
   return b.toString();
 }

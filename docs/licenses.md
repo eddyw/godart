@@ -107,6 +107,9 @@ Panic scalar diagnostics adapt Go `src/runtime/error.go` with its 2010 BSD notic
 The runtime license includes the Go BSD terms.
 Original named-panic declarations retain the 2020 BSD notice from
 `src/runtime/testdata/testprog/panicprint.go`.
+The fatal-panic adapter retains the original 19-case root from
+`src/runtime/panic_test.go` and the 2020 BSD notice from
+`src/runtime/testdata/testprog/panicprint.go`.
 The panic traceback adapter preserves `src/runtime/crash_test.go` and
 `src/runtime/testdata/testprog/deadlock.go` with their Go BSD notices.
 The CPU adapter follows Go `src/runtime/os_linux.go`, `os_darwin.go`,
