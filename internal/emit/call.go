@@ -858,6 +858,8 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return "$" + strings.ToLower(name) + "(" + strings.Join(args, ", ") + ")", true
 	case "Getpgid", "Getsid":
 		return "$" + strings.ToLower(name) + "(" + args[0] + ")", true
+	case "NumCPU":
+		return "$numCPU()", true
 	case "Hostname":
 		return "$hostname()", true
 	case "Executable":

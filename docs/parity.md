@@ -11,7 +11,7 @@ SDK versions, modes, and exclusions.
 |---|---|
 | Language versions | Package and file versions govern language semantics. The installed SDK still supplies standard library code. |
 | Goroutines | Cooperative execution in 1 Dart isolate. Loops in state machines yield periodically. Busy synchronous functions can block other work. |
-| Parallelism | No shared-memory Go execution across native threads. `GOMAXPROCS` and `NumCPU` report 1. |
+| Parallelism | No shared-memory Go execution across native threads. `GOMAXPROCS` reports 1. `NumCPU` records native OS CPU availability at startup. JS and Wasm report 1, as Go js/wasm does. |
 | Type layout | `unsafe.Sizeof`, `unsafe.Alignof`, and `unsafe.Offsetof` use 64-bit Go type metadata, including generic types. They do not describe Dart object storage. |
 | Compiler diagnostics | Native Go optimization messages and instruction selection are outside the Gart compiler contract. Source compilation and runtime behavior require separate coverage. |
 | Native access | Nil `unsafe.Pointer` values and constant-zero conversions are supported. No cgo, native pointer arithmetic, or pointer reinterpretation. |

@@ -12,6 +12,7 @@ export 'src/array.dart';
 export 'src/box.dart';
 export 'src/chan.dart';
 export 'src/complex.dart';
+export 'src/cpu.dart' if (dart.library.js_interop) 'src/cpu_web.dart';
 export 'src/dict.dart';
 export 'src/fetch.dart' if (dart.library.js_interop) 'src/fetch_web.dart';
 export 'src/file.dart' if (dart.library.js_interop) 'src/file_web.dart';

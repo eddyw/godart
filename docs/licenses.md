@@ -101,6 +101,9 @@ The runtime caller adapter retains original declarations from
 `traceback_test.go`, and `runtime_test.go` with their Go BSD notices.
 The panic traceback adapter preserves `src/runtime/crash_test.go` and
 `src/runtime/testdata/testprog/deadlock.go` with their Go BSD notices.
+The CPU adapter follows Go `src/runtime/os_linux.go`, `os_darwin.go`,
+and `os_wasm.go`. It retains their 2009 and 2023 BSD notices.
+The runtime license includes the Go BSD terms.
 The process identity adapter adapts group-count validation from Go
 `src/syscall/syscall_bsd.go` and `src/syscall/syscall_linux.go`.
 The process priority and process group adapters follow the Go generated Linux and macOS syscall wrappers.

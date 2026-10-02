@@ -25,9 +25,11 @@ func GOMAXPROCS(n int) int { return 1 }
 // already gives 1, and the call needs no operation.
 func SetDefaultGOMAXPROCS() {}
 
-// NumCPU gives the count of processors that the program uses. The value is
-// always 1, exactly as GOMAXPROCS.
-func NumCPU() int { return 1 }
+var numCPUStartup = dart.NumCPU()
+
+// NumCPU gives the count of logical CPUs available at process startup.
+// Later CPU allocation changes do not change this value.
+func NumCPU() int { return numCPUStartup }
 
 // NumGoroutine gives the count of goroutines that did not return. The
 // scheduler holds each one, and the count holds the goroutine that calls.

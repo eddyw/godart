@@ -1897,6 +1897,8 @@ func Getppid() int               { panic("syscall/dart needs the gart compiler")
 func Getpgrp() int               { panic("syscall/dart needs the gart compiler") }
 func Getpgid(pid int) (int, int) { panic("syscall/dart needs the gart compiler") }
 func Getsid(pid int) (int, int)  { panic("syscall/dart needs the gart compiler") }
+func NumCPU() int { panic("syscall/dart needs the gart compiler") }
+
 func Getpagesize() int           { panic("syscall/dart needs the gart compiler") }
 
 func Setpgid(pid, pgid int) int { panic("syscall/dart needs the gart compiler") }
