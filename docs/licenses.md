@@ -101,6 +101,8 @@ The runtime caller adapter retains original declarations from
 `traceback_test.go`, and `runtime_test.go` with their Go BSD notices.
 The nil-panic adapter retains original `src/runtime/panic_test.go`
 assertions and its 2020 Go BSD notice.
+The native atomic order adapter retains original `src/sync/atomic/atomic_test.go`
+assertions and its 2011 Go BSD notice.
 The panic traceback adapter preserves `src/runtime/crash_test.go` and
 `src/runtime/testdata/testprog/deadlock.go` with their Go BSD notices.
 The CPU adapter follows Go `src/runtime/os_linux.go`, `os_darwin.go`,
