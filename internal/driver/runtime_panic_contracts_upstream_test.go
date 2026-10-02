@@ -13,7 +13,7 @@ func TestRuntimePanicContracts(t *testing.T) {
 	fixture, out := t.TempDir(), t.TempDir()
 	writeFile(t, filepath.Join(fixture, "go.mod"), "module runtime_test\n\ngo 1.27\n")
 	writeFile(t, filepath.Join(fixture, "000_package.go"), "package runtime_test\n")
-	source := selectedUpstreamSource(t, filepath.Join(dir, "crash_test.go"), []string{"TestGoexitDefer", "TestRuntimePanicWithRuntimeError", "panicValue"})
+	source := selectedUpstreamSource(t, filepath.Join(dir, "crash_test.go"), []string{"TestGoexitDefer", "TestRuntimePanicWithRuntimeError", "panicValue", "TestPanicInlined", "point", "point.negate"})
 	writeFile(t, filepath.Join(fixture, "crash_test.go"), source)
 
 	stats, err := driver.BuildWithStats(driver.Options{Dir: fixture, Patterns: []string{"."}, Out: out, Runtime: runtimeDir(t), Tests: true, TrimPath: true})
@@ -24,7 +24,7 @@ func TestRuntimePanicContracts(t *testing.T) {
 		t.Fatalf("got %d binaries", len(stats.Binaries))
 	}
 	prepareDart(t, out)
-	const filter = "^(TestGoexitDefer|TestRuntimePanicWithRuntimeError)$"
+	const filter = "^(TestGoexitDefer|TestRuntimePanicWithRuntimeError|TestPanicInlined)$"
 	args := upstreamTestArgs("-test.run=" + filter)
 	result := upstreamOutcome(t, dir, nil, runLimit, "dart", append([]string{filepath.Join(out, stats.Binaries[0].Entry)}, args...)...)
 	compareUpstream(t, "runtime-panic-contracts", "runtime", filter, "vm", dir, result.Text, result.Exit, true)

@@ -117,8 +117,11 @@ The fatal-panic adapter retains the original 19-case root from
 The crash-contract adapter retains the original nil-go, main identity and
 panic-after-Goexit roots from `src/runtime/crash_test.go` and their unchanged
 programs from `src/runtime/testdata/testprog/deadlock.go`, with BSD notices.
-The panic-contract adapter retains the original Goexit defer and runtime.Error
-assertions from `src/runtime/crash_test.go`, with the original BSD notice.
+The panic-contract adapter retains the original Goexit defer, runtime.Error
+and recovered pointer-method stack assertions from `src/runtime/crash_test.go`, with the original BSD notice.
+The panic-print adapter retains the original 7-case TestPanicWhilePanicking
+root and unchanged method-failure programs from `src/runtime/crash_test.go`
+and `src/runtime/testdata/testprog/crash.go`, with their BSD notices.
 The recursive-panic adapter retains 5 original roots from `src/runtime/crash_test.go`
 and the BSD notice from `src/runtime/testdata/testprog/deadlock.go`.
 The repanic adapter retains 4 original roots from `src/runtime/crash_test.go`
