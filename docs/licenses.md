@@ -317,3 +317,7 @@ from `src/runtime/chan_test.go`, with its original BSD notice.
 The Goexit recovery adapter executes 4 unchanged programs from
 `src/runtime/testdata/testprog/deadlock.go`, with its original BSD notice.
 It compares actual native Go results without native-link test probes.
+
+The panic-callback adapter retains 3 original roots from
+`src/runtime/crash_test.go` and their unchanged method programs from
+`src/runtime/testdata/testprog/deadlock.go`, with their BSD notices.
