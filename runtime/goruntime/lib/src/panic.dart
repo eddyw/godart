@@ -159,7 +159,9 @@ String _panicValueText(Object? v) {
           v.value,
           v.desc,
         ).replaceAll('\n', '\n\t');
-        if (v.desc.methodPkg.isEmpty && v.desc.name != 'runtime.errorString') {
+        if (v.desc.methodPkg.isEmpty &&
+            v.desc.name != 'runtime.errorString' &&
+            v.desc.name != 'runtime.plainError') {
           return text;
         }
         if (v.desc.kind == 'string') return '${v.desc.display}("$text")';

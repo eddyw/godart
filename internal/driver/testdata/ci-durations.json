@@ -2240,6 +2240,7 @@
   "driver/short/TestPanicMethodFailureTargets": 139.7,
   "driver/short/TestPanicNilEnvironment": 107.24,
   "driver/short/TestParityHarness": 37.74,
+  "driver/short/TestPlainErrorFatalTargets": 90.1,
   "driver/short/TestProcessIdentity": 204.71,
   "driver/short/TestProcessPriority": 47.82,
   "driver/short/TestProcessRelease": 144.18,
