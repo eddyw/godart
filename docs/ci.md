@@ -92,6 +92,9 @@ Driver weights include parallel child costs because Go excludes that time from p
 These weights estimate work. Command durations determine timeouts.
 New tests receive a nonzero estimate.
 Full runs use short estimates when no full measurement exists.
+Linux driver shards use separate Linux measurements with shared costs as a fallback.
+Full measurements take precedence over short estimates.
+Linux duration updates preserve shared host measurements and configured command bounds.
 Review the changed weights before a commit. Measure the revised shard allocation
 before a timeout change.
 

@@ -10,6 +10,24 @@ spec.loader.exec_module(module)
 
 
 class DurationTest(unittest.TestCase):
+    def test_linux_driver_measurements_keep_shared_costs_separate(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "run.json").write_text(json.dumps(dict(
+                mode="short", source="snapshot", platform="linux", image="linux-sdk")))
+            (root / "result.json").write_text(json.dumps(dict(exit=1, suite="driver")))
+            (root / "ci.log").write_text(
+                "--- PASS: TestPortable (12.00s)\n"
+                "--- SKIP: TestHostOnly (0.00s)\n"
+                "--- FAIL: TestFailure (60.00s)\n"
+                "=== RUN   TestActive\n")
+            weights, evidence = module.measurements(root)
+            self.assertEqual(weights, {"driver/linux/short/TestPortable": 12.0,
+                                       "driver/linux/short/TestHostOnly": 0.0})
+            self.assertEqual(evidence["platform"], "linux")
+            self.assertEqual(evidence["image"], "linux-sdk")
+            self.assertEqual(evidence["logs"][0]["exit"], 1)
+
     def test_language_weights_use_completed_target_fixtures(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

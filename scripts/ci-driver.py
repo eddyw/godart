@@ -10,7 +10,11 @@ import sys
 
 def shards(names, durations, mode, count):
     def weight(name):
-        return durations.get(f"driver/{mode}/{name}", durations.get(f"driver/short/{name}", 1)) or 1
+        prefix = "driver/linux" if sys.platform == "linux" else "driver"
+        return durations.get(f"{prefix}/{mode}/{name}",
+                             durations.get(f"driver/{mode}/{name}",
+                                           durations.get(f"{prefix}/short/{name}",
+                                                         durations.get(f"driver/short/{name}", 1)))) or 1
 
     selected = [[] for _ in range(count)]
     loads = [0.0] * count

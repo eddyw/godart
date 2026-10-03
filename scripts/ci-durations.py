@@ -70,8 +70,9 @@ def measurements(directory):
             weights[key] = max(weights.get(key, 0), duration)
             accepted[key] = max(accepted.get(key, 0), duration)
         if result.get("suite") == "driver" or path.parent.parent.name.startswith("driver-"):
+            prefix = "driver/linux" if metadata.get("platform") == "linux" else "driver"
             for name, duration in driver_costs(data.decode()).items():
-                key = f"driver/{mode}/{name}"
+                key = f"{prefix}/{mode}/{name}"
                 weights[key] = max(weights.get(key, 0), duration)
                 accepted[key] = max(accepted.get(key, 0), duration)
         if accepted:
@@ -80,7 +81,8 @@ def measurements(directory):
     if not weights:
         raise ValueError(f"no completed cases: {directory}")
     return weights, {"run": str(directory), "source": metadata["source"],
-                     "image": metadata.get("image"), "mode": mode, "logs": evidence}
+                     "image": metadata.get("image"), "platform": metadata.get("platform"),
+                     "mode": mode, "logs": evidence}
 
 
 def main():
