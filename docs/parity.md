@@ -154,8 +154,16 @@ Process-state text preserves the actual exit result, but child signal dispositio
 Other native signal watches remain unsupported. Browser builds cannot send
 or receive operating system signals.
 
-`log/syslog` supports TCP, UDP, and Unix streams. Unix datagrams and local
-daemons that require them remain unsupported.
+Linux and macOS VM/AOT programs support Unix datagrams through actual native
+nonblocking descriptors. Bind, connect, packet data, sender names, message
+flags, control bytes, buffer sizes, directional shutdown and deadlines use
+native operations. Received descriptor control messages retain close-on-exec.
+Unix streams still lack control messages, File and SyscallConn.
+Unix packet sockets and web Unix datagrams remain unsupported.
+The native errno capture limitation also applies to Unix datagram calls.
+
+`log/syslog` supports TCP, UDP, Unix streams and Unix datagrams on these hosts.
+Local daemon availability remains an external requirement.
 
 On Linux and macOS, x64 and arm64 builds use native directory descriptors
 for recursive removal. Other native hosts retain Dart filesystem adapters.

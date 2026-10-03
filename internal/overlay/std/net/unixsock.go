@@ -13,24 +13,8 @@ import (
 	"time"
 )
 
-// This file holds the connection of a Unix domain socket.
-//
-// `dart:io` opens such a socket through an `InternetAddress` that holds the
-// type `InternetAddressType.unix`. It gives a stream socket alone, thus the
-// networks unixgram and unixpacket stay out. `ListenUnixgram` needs a
-// datagram socket of the domain, and Dart opens none.
-//
-// The socket gives no file descriptor, thus `File` and `SyscallConn` stay out.
-// `CloseWrite` and `CloseRead`
-// each ride `RawSocket.shutdown`, which ends 1 direction of the socket. The
-// socket reads no control message, thus `ReadMsgUnix` and `WriteMsgUnix` stay
-// out.
-//
-// `WriteTo` and `WriteToUnix` stay out too. Go writes such a datagram with
-// sendto, and a socket that a dial connected gives ErrWriteToConnected. A
-// socket that an accept gave holds no such mark, and the answer of the system
-// then differs: macOS writes the bytes and Linux gives EOPNOTSUPP. Dart holds
-// no sendto, thus the overlay can match neither.
+// Unix streams use dart:io. Unix datagrams use native nonblocking descriptors.
+// Stream control messages, File and SyscallConn remain unsupported.
 //
 // A Unix listener has no `File` or `SyscallConn` method because Dart owns the descriptor.
 // `SetUnlinkOnClose` stays out because the runtime always removes the socket file at close.
@@ -42,16 +26,23 @@ import (
 // A UnixConn is a connection of a Unix domain socket. It holds each method of
 // the Conn interface.
 type UnixConn struct {
-	c conn
+	c    conn
+	gram *unixgram
 }
 
 // SetReadBuffer writes the size of the receive buffer of the socket.
 func (c *UnixConn) SetReadBuffer(bytes int) error {
+	if c.gram != nil {
+		return c.gram.buffer(true, bytes)
+	}
 	return c.c.setOption("rcvbuf", bytes)
 }
 
 // SetWriteBuffer writes the size of the send buffer of the socket.
 func (c *UnixConn) SetWriteBuffer(bytes int) error {
+	if c.gram != nil {
+		return c.gram.buffer(false, bytes)
+	}
 	return c.c.setOption("sndbuf", bytes)
 }
 
@@ -61,36 +52,94 @@ func newUnixConn(handle int) *UnixConn {
 }
 
 // Read reads bytes of the connection into the slice.
-func (u *UnixConn) Read(b []byte) (int, error) { return u.c.Read(b) }
+func (u *UnixConn) Read(b []byte) (int, error) {
+	if u.gram != nil {
+		if u.gram.closed {
+			return 0, u.gram.opError("read", ErrClosed)
+		}
+		if len(b) == 0 {
+			return 0, nil
+		}
+		n, _, _, _, err := u.gram.readMsg(b, nil)
+		return n, err
+	}
+	return u.c.Read(b)
+}
 
 // Write writes the bytes of the slice to the connection.
-func (u *UnixConn) Write(b []byte) (int, error) { return u.c.Write(b) }
+func (u *UnixConn) Write(b []byte) (int, error) {
+	if u.gram != nil {
+		n, _, err := u.gram.writeMsg(b, nil, nil, false)
+		return n, err
+	}
+	return u.c.Write(b)
+}
 
 // Close ends the connection in both directions.
-func (u *UnixConn) Close() error { return u.c.Close() }
+func (u *UnixConn) Close() error {
+	if u.gram != nil {
+		return u.gram.close()
+	}
+	return u.c.Close()
+}
 
 // CloseWrite ends the write side of the connection. The peer then reads the
 // end of the stream, and this side still reads.
-func (u *UnixConn) CloseWrite() error { return u.c.closeWrite() }
+func (u *UnixConn) CloseWrite() error {
+	if u.gram != nil {
+		return u.gram.shutdown(1)
+	}
+	return u.c.closeWrite()
+}
 
 // CloseRead ends the read side of the connection. Each read of this side then
 // gives io.EOF, and the system drops each byte that the peer writes after it.
-func (u *UnixConn) CloseRead() error { return u.c.closeRead() }
+func (u *UnixConn) CloseRead() error {
+	if u.gram != nil {
+		return u.gram.shutdown(0)
+	}
+	return u.c.closeRead()
+}
 
 // LocalAddr gives the address of this side of the connection.
-func (u *UnixConn) LocalAddr() Addr { return u.c.LocalAddr() }
+func (u *UnixConn) LocalAddr() Addr {
+	if u.gram != nil {
+		return u.gram.local
+	}
+	return u.c.LocalAddr()
+}
 
 // RemoteAddr gives the address of the peer.
-func (u *UnixConn) RemoteAddr() Addr { return u.c.RemoteAddr() }
+func (u *UnixConn) RemoteAddr() Addr {
+	if u.gram != nil {
+		return u.gram.remote.opAddr()
+	}
+	return u.c.RemoteAddr()
+}
 
 // SetDeadline writes the deadline of a read and of a write.
-func (u *UnixConn) SetDeadline(t time.Time) error { return u.c.SetDeadline(t) }
+func (u *UnixConn) SetDeadline(t time.Time) error {
+	if u.gram != nil {
+		return u.gram.deadline(t, 3)
+	}
+	return u.c.SetDeadline(t)
+}
 
 // SetReadDeadline writes the deadline of a read.
-func (u *UnixConn) SetReadDeadline(t time.Time) error { return u.c.SetReadDeadline(t) }
+func (u *UnixConn) SetReadDeadline(t time.Time) error {
+	if u.gram != nil {
+		return u.gram.deadline(t, 1)
+	}
+	return u.c.SetReadDeadline(t)
+}
 
 // SetWriteDeadline writes the deadline of a write.
-func (u *UnixConn) SetWriteDeadline(t time.Time) error { return u.c.SetWriteDeadline(t) }
+func (u *UnixConn) SetWriteDeadline(t time.Time) error {
+	if u.gram != nil {
+		return u.gram.deadline(t, 2)
+	}
+	return u.c.SetWriteDeadline(t)
+}
 
 // ReadFromUnix reads bytes of the connection into the slice, and it gives the
 // name of the source.
@@ -98,6 +147,10 @@ func (u *UnixConn) SetWriteDeadline(t time.Time) error { return u.c.SetWriteDead
 // Linux reports a named peer for a successful stream read. macOS reports no
 // source address for a stream read.
 func (u *UnixConn) ReadFromUnix(b []byte) (int, *UnixAddr, error) {
+	if u.gram != nil {
+		n, _, _, from, err := u.gram.readMsg(b, nil)
+		return n, from, err
+	}
 	n, err := u.c.Read(b)
 	if err == nil && runtime.GOOS == "linux" {
 		addr := u.RemoteAddr().(*UnixAddr)
@@ -118,15 +171,18 @@ func (u *UnixConn) ReadFrom(b []byte) (int, Addr, error) {
 	return n, nil, err
 }
 
-// DialUnix opens a connection to a Unix domain socket. The network is unix.
-//
-// Dart opens a stream socket of the domain alone, thus the networks unixgram
-// and unixpacket give an error. Dart binds no local address of a dial, thus a
-// laddr that is not nil gives an error too.
+// DialUnix opens a Unix stream or datagram connection.
+// Unix streams do not support a local dial address.
 func DialUnix(network string, laddr, raddr *UnixAddr) (*UnixConn, error) {
+	if network == "unixgram" {
+		if laddr == nil && raddr == nil {
+			return nil, &OpError{Op: "dial", Net: network, Err: errMissingAddress}
+		}
+		return openUnixgram("dial", laddr, raddr)
+	}
 	switch network {
 	case "unix":
-	case "unixgram", "unixpacket":
+	case "unixpacket":
 		return nil, errors.New("dial " + network +
 			": dart:io opens a stream socket of the Unix domain alone")
 	default:

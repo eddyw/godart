@@ -409,3 +409,8 @@ The exec value and lookup adapter retains 4 original roots from
 `src/os/exec/lp_test.go`, `lp_unix_test.go`, `env_test.go` and
 `internal_test.go`. These sources retain their SDK BSD notices and exact
 lookup, environment and prefix/suffix capture assertions.
+
+The Unix datagram adapters preserve the original syslog TestWithSimulated
+and 4 net roots from `src/log/syslog/syslog_test.go` and
+`src/net/unixsock_test.go`. Original helpers and platform predicates retain
+their SDK BSD notices, packet inputs, timing bounds and address assertions.

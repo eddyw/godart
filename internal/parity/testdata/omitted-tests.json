@@ -23,12 +23,6 @@
       "reason": "The original assertion requires native Go heap allocation counters. Dart exposes no equivalent counter. The complete assertion remains excluded."
     }
   },
-  "log/syslog": {
-    "TestWithSimulated/unixgram": {
-      "classification": "implementation-gap",
-      "reason": "The net adapter does not implement Unix datagram sockets. Preserve the native assertion and track its result separately."
-    }
-  },
   "net/textproto": {
     "TestReadMIMEHeaderAllocations": {
       "classification": "target-limit",

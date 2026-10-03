@@ -144,3 +144,48 @@ GoString $packetDeadline(int handle, int read, int write) => _noNet;
 
 (Slice<GoString>, GoString) $interfaceMulticastAddrs(int index) =>
     (Slice<GoString>.nil(), _empty);
+
+(int, GoString, GoString, GoString, int) $unixgramOpen(
+  GoString local,
+  GoString remote,
+  bool bind,
+  bool connect,
+) => (
+  -1,
+  GoString.empty,
+  GoString.empty,
+  GoString.fromString('operation not supported'),
+  38,
+);
+(int, int, int, GoString, GoString, int, bool) $unixgramRead(
+  int handle,
+  Slice<GoInt> data,
+  Slice<GoInt> control,
+) => (
+  0,
+  0,
+  0,
+  GoString.empty,
+  GoString.fromString('operation not supported'),
+  38,
+  false,
+);
+(int, int, GoString, int, bool) $unixgramWrite(
+  int handle,
+  Slice<GoInt> data,
+  Slice<GoInt> control,
+  GoString destination,
+  bool sendTo,
+) => (0, 0, GoString.fromString('operation not supported'), 38, false);
+(GoString, int) $unixgramClose(int handle) =>
+    (GoString.fromString('operation not supported'), 38);
+(GoString, int) $unixgramDeadline(
+  int handle,
+  int timeout,
+  int mode,
+  bool clear,
+) => (GoString.fromString('operation not supported'), 38);
+(GoString, int) $unixgramBuffer(int handle, bool read, int size) =>
+    (GoString.fromString('operation not supported'), 38);
+(GoString, int) $unixgramShutdown(int handle, int direction) =>
+    (GoString.fromString('operation not supported'), 38);

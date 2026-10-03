@@ -718,6 +718,20 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$fileRead(%s, %s)", args[0], args[1]), true
 	case "FileWrite":
 		return fmt.Sprintf("$fileWrite(%s, %s)", args[0], args[1]), true
+	case "UnixgramOpen":
+		return fmt.Sprintf("$unixgramOpen(%s, %s, %s, %s)", args[0], args[1], args[2], args[3]), true
+	case "UnixgramRead":
+		return fmt.Sprintf("$unixgramRead(%s, %s, %s)", args[0], args[1], args[2]), true
+	case "UnixgramWrite":
+		return fmt.Sprintf("$unixgramWrite(%s, %s, %s, %s, %s)", args[0], args[1], args[2], args[3], args[4]), true
+	case "UnixgramClose":
+		return fmt.Sprintf("$unixgramClose(%s)", args[0]), true
+	case "UnixgramDeadline":
+		return fmt.Sprintf("$unixgramDeadline(%s, %s, %s, %s)", args[0], args[1], args[2], args[3]), true
+	case "UnixgramBuffer":
+		return fmt.Sprintf("$unixgramBuffer(%s, %s, %s)", args[0], args[1], args[2]), true
+	case "UnixgramShutdown":
+		return fmt.Sprintf("$unixgramShutdown(%s, %s)", args[0], args[1]), true
 	case "FileDeadline":
 		return fmt.Sprintf("$fileDeadline(%s, %s, %s, %s)", args[0], args[1], args[2], args[3]), true
 	case "FileSeek":

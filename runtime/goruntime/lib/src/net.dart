@@ -17,6 +17,7 @@ import 'slice.dart';
 import 'string.dart';
 
 export 'interface_native.dart';
+export 'unix_datagram_runtime.dart';
 
 /// One open connection.
 ///

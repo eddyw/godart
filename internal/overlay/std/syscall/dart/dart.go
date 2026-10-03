@@ -2122,3 +2122,24 @@ func SyscallSetxattr(path, attr string, data []byte, flags int) int {
 func SyscallRemovexattr(path, attr string) int {
 	panic("syscall/dart needs the gart compiler")
 }
+
+// UnixgramOpen creates an owned native datagram descriptor and reads its actual names.
+func UnixgramOpen(local, remote string, bind, connect bool) (int, string, string, string, int) {
+	panic("syscall/dart needs the gart compiler")
+}
+func UnixgramRead(handle int, data, control []byte) (int, int, int, string, string, int, bool) {
+	panic("syscall/dart needs the gart compiler")
+}
+func UnixgramWrite(handle int, data, control []byte, destination string, sendTo bool) (int, int, string, int, bool) {
+	panic("syscall/dart needs the gart compiler")
+}
+func UnixgramClose(handle int) (string, int) { panic("syscall/dart needs the gart compiler") }
+func UnixgramDeadline(handle int, timeout int64, mode int, clear bool) (string, int) {
+	panic("syscall/dart needs the gart compiler")
+}
+func UnixgramBuffer(handle int, read bool, size int) (string, int) {
+	panic("syscall/dart needs the gart compiler")
+}
+func UnixgramShutdown(handle int, direction int) (string, int) {
+	panic("syscall/dart needs the gart compiler")
+}

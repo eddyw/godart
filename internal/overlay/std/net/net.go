@@ -472,6 +472,16 @@ func Dial(network, address string) (Conn, error) {
 // numeric form, or the name of a socket of the Unix domain.
 func (d *Dialer) dialOne(network, address string) (Conn, error) {
 	switch network {
+	case "unixgram":
+		var local *UnixAddr
+		if d.LocalAddr != nil {
+			var ok bool
+			local, ok = d.LocalAddr.(*UnixAddr)
+			if !ok {
+				return nil, &OpError{Op: "dial", Net: network, Source: d.LocalAddr, Err: syscall.EINVAL}
+			}
+		}
+		return DialUnix(network, local, &UnixAddr{Name: address, Net: network})
 	case "tcp", "tcp4", "tcp6":
 		host, port, err := hostPort(address)
 		if err != nil {
@@ -578,6 +588,9 @@ func Listen(network, address string) (Listener, error) {
 // system for a free port, and LocalAddr then gives the port that the system
 // took.
 func ListenPacket(network, address string) (PacketConn, error) {
+	if network == "unixgram" {
+		return ListenUnixgram(network, &UnixAddr{Name: address, Net: network})
+	}
 	switch network {
 	case "udp", "udp4", "udp6":
 	default:
@@ -931,16 +944,26 @@ func (d *Dialer) DialUDP(ctx context.Context, network string, laddr, raddr netip
 	return c, nil
 }
 
-// DialUnix opens a connection of the Unix domain with the context. The
-// network is unix.
-//
-// Dart opens a stream socket of the domain alone, thus the networks unixgram
-// and unixpacket give an error. Dart binds no local address of a dial, thus a
-// laddr that is not nil gives an error too.
+// DialUnix opens a Unix stream or datagram connection with the context.
+// Unix streams do not support a local dial address.
 func (d *Dialer) DialUnix(ctx context.Context, network string, laddr, raddr *UnixAddr) (*UnixConn, error) {
+	if network == "unixgram" {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		conn, err := DialUnix(network, laddr, raddr)
+		if err != nil {
+			return nil, err
+		}
+		if err := ctx.Err(); err != nil {
+			conn.Close()
+			return nil, err
+		}
+		return conn, nil
+	}
 	switch network {
 	case "unix":
-	case "unixgram", "unixpacket":
+	case "unixpacket":
 		return nil, errors.New("dial " + network +
 			": dart:io opens a stream socket of the Unix domain alone")
 	default:
