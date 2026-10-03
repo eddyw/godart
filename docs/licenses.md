@@ -343,3 +343,8 @@ The DirFS adapter retains 3 unchanged symlink roots from
 The embedded-interface adapter retains the original method panic assertion from
 `src/reflect/type_test.go` and its unchanged panic helper from
 `src/reflect/all_test.go`, with their BSD notices.
+
+The file-flag adapter retains 4 unchanged path and access-mode roots from
+`src/os/os_test.go`, the original rooted helper from `src/os/root_test.go`,
+and the symlink support predicates from `src/internal/testenv`.
+These sources retain their BSD notices.
