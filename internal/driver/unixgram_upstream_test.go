@@ -24,7 +24,7 @@ func TestUnixgramOriginal(t *testing.T) {
 	for _, path := range files {
 		switch filepath.Base(path) {
 		case "unixsock_test.go":
-			sources[path] = []byte(selectedUpstreamSource(t, path, []string{"TestUnixgramZeroBytePayload", "TestUnixgramZeroByteBuffer", "TestUnixgramWrite", "testUnixgramWriteConn", "testUnixgramWritePacketConn", "TestUnixgramConnLocalAndRemoteNames"}))
+			sources[path] = []byte(selectedUpstreamSource(t, path, []string{"TestReadUnixgramWithUnnamedSocket", "TestUnixgramZeroBytePayload", "TestUnixgramZeroByteBuffer", "TestUnixgramWrite", "testUnixgramWriteConn", "testUnixgramWritePacketConn", "TestUnixgramConnLocalAndRemoteNames"}))
 		case "platform_test.go":
 			sources[path] = []byte(selectedUpstreamSource(t, path, []string{"testableNetwork"}))
 		case "platform_unix_test.go":
@@ -57,7 +57,7 @@ func supportsIPv6() bool {
 		t.Fatal(err)
 	}
 	prepareDart(t, out)
-	const filter = "^(TestUnixgramZeroBytePayload|TestUnixgramZeroByteBuffer|TestUnixgramWrite|TestUnixgramConnLocalAndRemoteNames)$"
+	const filter = "^(TestReadUnixgramWithUnnamedSocket|TestUnixgramZeroBytePayload|TestUnixgramZeroByteBuffer|TestUnixgramWrite|TestUnixgramConnLocalAndRemoteNames)$"
 	args := upstreamTestArgs("-test.run=" + filter)
 	for _, target := range []string{"vm", "aot"} {
 		t.Run(target, func(t *testing.T) {

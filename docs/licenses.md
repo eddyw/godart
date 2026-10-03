@@ -414,3 +414,7 @@ The Unix datagram adapters preserve the original syslog TestWithSimulated
 and 4 net roots from `src/log/syslog/syslog_test.go` and
 `src/net/unixsock_test.go`. Original helpers and platform predicates retain
 their SDK BSD notices, packet inputs, timing bounds and address assertions.
+
+The Unix datagram adapter also preserves TestReadUnixgramWithUnnamedSocket
+from `src/net/unixsock_test.go`. It retains the original SDK BSD notice,
+actual raw sender, unnamed source assertion and exact packet bytes.

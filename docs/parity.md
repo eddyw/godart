@@ -319,4 +319,7 @@ The documented native errno limitation also applies to these calls.
 `syscall.Socket` creates actual Linux/macOS socket descriptors through Dart FFI.
 The caller owns each descriptor and must close it. SocketDisableIPv6 preserves
 the SDK IPv6 rejection contract. The existing non-atomic errno limit applies.
-This does not supply socket address operations or raw descriptor polling.
+`syscall.SockaddrUnix` and `Sendto` use actual native Unix destination bytes.
+The caller owns the raw descriptor. These calls do not supply raw polling,
+deadlines or descriptor inheritance. A blocking raw descriptor can stop the
+Dart scheduler. Other socket address types remain unsupported.

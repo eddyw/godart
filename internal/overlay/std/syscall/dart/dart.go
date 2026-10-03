@@ -2143,3 +2143,7 @@ func UnixgramBuffer(handle int, read bool, size int) (string, int) {
 func UnixgramShutdown(handle int, direction int) (string, int) {
 	panic("syscall/dart needs the gart compiler")
 }
+
+func SyscallUnixSendto(fd int, data []byte, flags int, destination string, hasDestination bool) int {
+	panic("syscall/dart needs the gart compiler")
+}

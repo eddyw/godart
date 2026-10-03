@@ -20,3 +20,24 @@ func Socket(domain, typ, proto int) (fd int, err error) {
 	}
 	return fd, nil
 }
+
+type Sockaddr interface {
+	sockaddrUnix() string
+}
+
+type SockaddrUnix struct {
+	Name string
+}
+
+func (a *SockaddrUnix) sockaddrUnix() string { return a.Name }
+
+func Sendto(fd int, data []byte, flags int, destination Sockaddr) error {
+	name := ""
+	if destination != nil {
+		name = destination.sockaddrUnix()
+	}
+	if code := dart.SyscallUnixSendto(fd, data, flags, name, destination != nil); code != 0 {
+		return Errno(code)
+	}
+	return nil
+}

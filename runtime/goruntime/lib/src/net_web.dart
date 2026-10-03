@@ -189,3 +189,11 @@ GoString $packetDeadline(int handle, int read, int write) => _noNet;
     (GoString.fromString('operation not supported'), 38);
 (GoString, int) $unixgramShutdown(int handle, int direction) =>
     (GoString.fromString('operation not supported'), 38);
+
+int $syscallUnixSendto(
+  int descriptor,
+  Slice<GoInt> data,
+  int flags,
+  GoString destination,
+  bool hasDestination,
+) => 38;
