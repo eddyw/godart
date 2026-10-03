@@ -351,3 +351,8 @@ These sources retain their BSD notices.
 
 The DirFS path adapter retains 4 unchanged roots and their helpers from
 `src/os/os_test.go`, with its BSD notice and original `testdata/dirfs` fixtures.
+
+The CopyFS adapter retains 2 unchanged roots and their helpers from
+`src/os/os_test.go`, with original `testdata/dirfs` fixtures and symlink
+support predicates from `src/internal/testenv`. These sources retain
+their BSD notices.
