@@ -371,3 +371,7 @@ They retain the SDK BSD notices, original helpers, inputs and assertions.
 
 The proc and temporary name adapter retains 3 unchanged roots from
 `src/os/os_test.go`, with the SDK BSD notice and original platform skips.
+
+The long path adapter preserves TestStatRelativeSymlink, TestLongPath and
+size from `src/os/os_test.go`, with actual SDK symlink/link predicates.
+These sources retain their BSD notices and original path lengths.
