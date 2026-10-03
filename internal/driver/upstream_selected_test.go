@@ -685,6 +685,9 @@ func selectedUpstreamSource(t *testing.T, path string, names []string) string {
 	for _, imp := range f.Imports {
 		path, _ := strconv.Unquote(imp.Path.Value)
 		name := filepath.Base(path)
+		if path == "math/rand/v2" {
+			name = "rand"
+		}
 		if imp.Name != nil {
 			name = imp.Name.Name
 		}

@@ -385,3 +385,8 @@ The error export adapter retains TestWriteAtInAppendMode and the 2 original
 bad-pattern roots from `src/os/os_test.go` and `src/os/tempfile_test.go`.
 It uses their actual error variables from `src/os/export_test.go`.
 These declarations retain their SDK BSD notices and original error identities.
+
+The file copy adapter preserves TestCopyFileToFile and its original helpers
+from `src/os/copy_test.go`. These sources retain their SDK BSD notices,
+original 1 MiB input, seed, copy limits, file offsets and byte comparisons.
+This acceptance does not establish native sendfile or splice fast paths.
