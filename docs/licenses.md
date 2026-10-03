@@ -356,3 +356,6 @@ The CopyFS adapter retains 2 unchanged roots and their helpers from
 `src/os/os_test.go`, with original `testdata/dirfs` fixtures and symlink
 support predicates from `src/internal/testenv`. These sources retain
 their BSD notices.
+
+The nil-file adapter retains the original nil receiver assertion and its
+complete 15-method table from `src/os/os_test.go`, with its BSD notice.
