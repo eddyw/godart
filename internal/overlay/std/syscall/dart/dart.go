@@ -1941,6 +1941,10 @@ func NativeSymlink(from, to string) int {
 	panic("syscall/dart needs the gart compiler")
 }
 
+func SyscallSocket(domain, typ, proto int) (int, int) {
+	panic("syscall/dart needs the gart compiler")
+}
+
 func SyscallOpen(path string, flags int, mode uint32) (int, int) {
 	panic("syscall/dart needs the gart compiler")
 }

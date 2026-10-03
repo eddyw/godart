@@ -24,6 +24,10 @@ final _open = _libc
       Int Function(Pointer<Uint8>, Int, VarArgs<(UnsignedInt,)>),
       int Function(Pointer<Uint8>, int, int)
     >('open');
+final _socket = _libc
+    .lookupFunction<Int Function(Int, Int, Int), int Function(int, int, int)>(
+      'socket',
+    );
 final _close = _libc.lookupFunction<Int Function(Int), int Function(int)>(
   'close',
 );
@@ -60,6 +64,13 @@ final _errno = _libc
   } finally {
     _free(name);
   }
+}
+
+(int, int) $syscallSocket(int domain, int type, int protocol) {
+  final socket = _socket;
+  final errorAddress = _errno();
+  final fd = socket(domain, type, protocol);
+  return (fd, fd < 0 ? errorAddress.value : 0);
 }
 
 int $syscallClose(int fd) => _close(fd) == 0 ? 0 : _errno().value;

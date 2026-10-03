@@ -399,3 +399,8 @@ The Unix error table adapter preserves TestIsExist and TestIsPermission
 from `src/os/error_test.go`, including the original table additions from
 `src/os/error_unix_test.go`. These sources retain their SDK BSD notices
 and exact errno identities inside PathError, LinkError and SyscallError.
+
+The network copy adapter preserves TestLargeCopyViaNetwork and its helpers
+from `src/os/copy_test.go`, with the original vendored nettest probes.
+These sources retain their SDK BSD notices, 10 MiB input and exact byte
+comparisons. This acceptance does not establish sendfile or splice fast paths.

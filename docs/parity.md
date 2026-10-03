@@ -307,3 +307,8 @@ Linux supports native `syscall.Getxattr`, `Listxattr`, `Setxattr`, and `Removexa
 The adapters preserve byte paths, attribute names, values, size queries, flags, buffers, and native errors.
 JS and Wasm return `errors.ErrUnsupported` without buffer changes.
 The documented native errno limitation also applies to these calls.
+
+`syscall.Socket` creates actual Linux/macOS socket descriptors through Dart FFI.
+The caller owns each descriptor and must close it. SocketDisableIPv6 preserves
+the SDK IPv6 rejection contract. The existing non-atomic errno limit applies.
+This does not supply socket address operations or raw descriptor polling.
