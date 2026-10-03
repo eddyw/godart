@@ -4,8 +4,10 @@ import 'dart:typed_data';
 import 'directory_descriptor.dart';
 import 'file_handle.dart';
 import 'file_stat.dart';
+import 'goint.dart';
 import 'removeall.dart';
 import 'root.dart';
+import 'sched.dart';
 import 'slice.dart';
 import 'string.dart';
 import 'syscall_directory.dart';
@@ -64,6 +66,7 @@ GoString _empty = GoString.empty;
 /// _cause writes the message of a failure. Go reads such a text as the message
 /// of an error value.
 GoString _cause(Object e) {
+  if (e is ClosedPipe) return GoString.fromString('file already closed');
   if (e is FileSystemException) {
     final String os = e.osError?.message ?? '';
     if (os.isNotEmpty) return GoString.fromString('${e.path}: $os');
@@ -130,12 +133,31 @@ FileMode _mode(int mode) {
   return FileMode.read;
 }
 
+(int, int, int) $filePipe() {
+  final (reader, writer, code) = $nativePipe();
+  if (code != 0) return (-1, -1, code);
+  return (_slot(reader!), _slot(writer!), 0);
+}
+
 /// Reads bytes into the slice and gives the count. A count of 0 with no cause
 /// means the end of the file.
 (int, GoString, int) $fileRead(int handle, Slice<int> p) {
   final FileHandle? f = _at(handle);
   if (f == null) return (0, GoString.fromString('file already closed'), 0);
   if (p.len == 0) return (0, _empty, 0);
+  if (f is NativePipeHandle) {
+    $await(
+      f
+          .read(p.array, p.off, p.off + p.len)
+          .then((count) => ($gi(count), _empty, $gi(0))),
+      (cause) => (
+        $gi(0),
+        _cause(cause),
+        $gi(cause is FileSystemException ? cause.osError?.errorCode ?? 0 : 0),
+      ),
+    );
+    return (0, _empty, 0);
+  }
   try {
     final int n = f.readIntoSync(p.array, p.off, p.off + p.len);
     return (n, _empty, 0);
@@ -154,6 +176,25 @@ FileMode _mode(int mode) {
 (int, GoString, int) $fileWrite(int handle, Slice<int> p) {
   final FileHandle? f = _at(handle);
   if (f == null) return (0, GoString.fromString('file already closed'), 0);
+  if (f is NativePipeHandle) {
+    $await(
+      f
+          .write(p.array, p.off, p.off + p.len)
+          .then((count) => ($gi(count), _empty, $gi(0))),
+      (cause) => (
+        $gi(
+          cause is PartialFileWrite
+              ? cause.count
+              : cause is ClosedPipe
+              ? cause.count
+              : 0,
+        ),
+        _cause(cause),
+        $gi(cause is FileSystemException ? cause.osError?.errorCode ?? 0 : 0),
+      ),
+    );
+    return (0, _empty, 0);
+  }
   try {
     final count = f.writeFromSync(p.array, p.off, p.off + p.len);
     return (count, _empty, 0);

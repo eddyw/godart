@@ -28,6 +28,8 @@ GoString $goos() => GoString.fromString('js');
 int $fileFd(int handle, int std) =>
     throw UnsupportedError('native file descriptors');
 
+(int, int, int) $filePipe() => (-1, -1, 38);
+
 (int, int, int) $fileFromFD(int fd) =>
     throw UnsupportedError('native file descriptors');
 

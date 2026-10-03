@@ -986,6 +986,10 @@ func FileFd(handle, std int) int {
 	panic("syscall/dart needs the gart compiler")
 }
 
+func FilePipe() (int, int, int) {
+	panic("syscall/dart needs the gart compiler")
+}
+
 func FileFromFD(fd int) (int, int, int) {
 	panic("syscall/dart needs the gart compiler")
 }
@@ -1007,12 +1011,13 @@ func DirectoryClose(fd int) int {
 }
 
 // FileRead reads bytes into the slice and gives the count. A count of 0 with no
-// cause means the end of the file.
+// cause means the end of the file. Native pipe I/O can suspend the goroutine.
 func FileRead(handle int, p []byte) (int, string, int) {
 	panic("syscall/dart needs the gart compiler")
 }
 
 // FileWrite writes the bytes of the slice and gives the count.
+// Native pipe I/O can suspend the goroutine.
 func FileWrite(handle int, p []byte) (int, string, int) {
 	panic("syscall/dart needs the gart compiler")
 }

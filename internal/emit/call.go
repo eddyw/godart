@@ -710,6 +710,8 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$directoryChdir(%s)", args[0]), true
 	case "DirectoryClose":
 		return fmt.Sprintf("$directoryClose(%s)", args[0]), true
+	case "FilePipe":
+		return "$filePipe()", true
 	case "FileRead":
 		return fmt.Sprintf("$fileRead(%s, %s)", args[0], args[1]), true
 	case "FileWrite":

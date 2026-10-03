@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+import 'dart:async';
 import 'dart:ffi';
 import 'dart:io';
 import 'dart:typed_data';
@@ -267,5 +268,130 @@ final class NativeFileHandle implements FileHandle {
   void closeSync() {
     final code = $syscallClose(descriptor);
     if (code != 0) throw _failure(code);
+  }
+}
+
+final _pipe = _libc
+    .lookupFunction<Int Function(Pointer<Int>), int Function(Pointer<Int>)>(
+      'pipe',
+    );
+
+final _pipe2 = _libc
+    .lookupFunction<
+      Int Function(Pointer<Int>, Int),
+      int Function(Pointer<Int>, int)
+    >('pipe2');
+
+(NativePipeHandle?, NativePipeHandle?, int) $nativePipe() {
+  final pipe = Platform.isMacOS
+      ? _pipe
+      : (Pointer<Int> pair) => _pipe2(pair, 0x80000 | 0x800);
+  final errno = _errno;
+  final descriptors = _malloc(2 * sizeOf<Int>());
+  if (descriptors == nullptr) return (null, null, 12);
+  try {
+    final pair = descriptors.cast<Int>();
+    int result;
+    int code;
+    do {
+      result = pipe(pair);
+      code = result < 0 ? errno().value : 0;
+    } while (code == 4);
+    if (code != 0) return (null, null, code);
+    final reader = NativePipeHandle(pair[0]);
+    final writer = NativePipeHandle(pair[1]);
+    if (Platform.isMacOS) {
+      for (final fd in [reader.descriptor, writer.descriptor]) {
+        for (final command in [(2, 1), (4, 4)]) {
+          final (_, error) = $syscallFcntl(fd, command.$1, command.$2);
+          if (error != 0) {
+            $syscallClose(reader.descriptor);
+            $syscallClose(writer.descriptor);
+            return (null, null, error);
+          }
+        }
+      }
+    }
+    return (reader, writer, 0);
+  } finally {
+    _free(descriptors);
+  }
+}
+
+final class ClosedPipe implements Exception {
+  final int count;
+  ClosedPipe(this.count);
+}
+
+final class NativePipeHandle extends NativeFileHandle {
+  bool _closed = false;
+  final _waiters = <Completer<void>, Timer>{};
+  Future<void> _reads = Future.value();
+  Future<void> _writes = Future.value();
+  NativePipeHandle(super.descriptor);
+
+  // Each retry reaches the actual nonblocking syscall. The timer releases
+  // the scheduler without registering or replacing the descriptor in Dart.
+  Future<void> _retry() {
+    final waiter = Completer<void>();
+    _waiters[waiter] = Timer(const Duration(milliseconds: 1), () {
+      _waiters.remove(waiter);
+      waiter.complete();
+    });
+    return waiter.future;
+  }
+
+  bool _wouldBlock(FileSystemException error) =>
+      error.osError?.errorCode == (Platform.isMacOS ? 35 : 11);
+
+  Future<int> read(List<int> bytes, int start, int end) {
+    final next = _reads.then((_) => _read(bytes, start, end));
+    _reads = next.then<void>((_) {}, onError: (Object _) {});
+    return next;
+  }
+
+  Future<int> _read(List<int> bytes, int start, int end) async {
+    while (true) {
+      if (_closed) throw ClosedPipe(0);
+      try {
+        return readIntoSync(bytes, start, end);
+      } on FileSystemException catch (error) {
+        if (!_wouldBlock(error)) rethrow;
+        await _retry();
+      }
+    }
+  }
+
+  Future<int> write(List<int> bytes, int start, int end) {
+    final next = _writes.then((_) => _write(bytes, start, end));
+    _writes = next.then<void>((_) {}, onError: (Object _) {});
+    return next;
+  }
+
+  Future<int> _write(List<int> bytes, int start, int end) async {
+    var count = 0;
+    while (true) {
+      if (_closed) throw ClosedPipe(count);
+      try {
+        return count + writeFromSync(bytes, start + count, end);
+      } on PartialFileWrite catch (error) {
+        count += error.count;
+        if (!_wouldBlock(error)) {
+          throw PartialFileWrite(count, error.osError!.errorCode);
+        }
+        await _retry();
+      }
+    }
+  }
+
+  @override
+  void closeSync() {
+    _closed = true;
+    for (final waiter in _waiters.entries) {
+      waiter.value.cancel();
+      waiter.key.complete();
+    }
+    _waiters.clear();
+    super.closeSync();
   }
 }

@@ -44,11 +44,21 @@ Dart VM and AOT programs use `dart:io` adapters for files, processes, sockets,
 and HTTP. These adapters do not provide all native descriptor, process-group,
 file metadata, TLS configuration, or runtime inspection APIs.
 
-Linux and macOS support `os.File.Fd` for regular files, directories, and
-standard streams. The file owns the descriptor. Call `Close` explicitly.
+Linux and macOS support `os.File.Fd` for regular files, pipes, directories,
+and standard streams. The file owns the descriptor. Call `Close` explicitly.
 `os.NewFile` adopts native file and directory descriptors on these hosts.
 It preserves descriptor identity, the caller name, append mode, and ownership.
-Native poll integration and nonblocking readiness remain unsupported.
+Native poll integration for adopted descriptors remains unsupported.
+`os.Pipe` creates actual native descriptors on Linux and macOS.
+The files own their descriptors and use close-on-exec and nonblocking flags.
+Pipe reads and writes suspend the goroutine after actual EAGAIN results.
+A timer schedules each syscall retry without a Dart descriptor registration.
+Close cancels pending retries and preserves partial write counts.
+Pipe Fd retains the nonblocking flags.
+A blocking descriptor can stop the Dart scheduler.
+Do not clear O_NONBLOCK before pipe reads or writes through os.File.
+Pipe deadlines and descriptor inheritance remain unsupported.
+The existing native errno capture limitation also applies to pipes.
 `syscall.Dup` and `Dup2` duplicate actual descriptors and preserve shared file offsets.
 Each duplicate owns its descriptor. `Dup2` replaces the target descriptor through the native syscall.
 Linux also supports `syscall.Dup3`, with atomic target replacement and close-on-exec flags.

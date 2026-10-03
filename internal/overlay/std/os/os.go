@@ -203,10 +203,13 @@ var (
 	Stderr = &File{&file{std: stdErr, name: "/dev/stderr"}}
 )
 
-// Pipe gives a connected pair of files. The Dart platform holds no pipe, thus
-// the call gives an error.
+// Pipe returns connected native files. Each File owns its descriptor.
 func Pipe() (*File, *File, error) {
-	return nil, nil, &PathError{Op: "pipe", Err: errors.New("not supported")}
+	r, w, code := dart.FilePipe()
+	if code != 0 {
+		return nil, nil, &PathError{Op: "pipe", Err: syscall.Errno(code)}
+	}
+	return fileWithCleanup(&file{handle: r, name: "|0"}), fileWithCleanup(&file{handle: w, name: "|1"}), nil
 }
 
 // Name gives the name that the caller of Open gave. Go reads the field with no
@@ -215,6 +218,7 @@ func (f *File) Name() string { return f.name }
 
 // Fd returns the native descriptor. The caller must not close it.
 // Use runtime.KeepAlive after the last operation on the descriptor.
+// Pipe descriptors remain nonblocking because pipe I/O uses scheduler retries.
 func (f *File) Fd() uintptr {
 	defer runtime.KeepAlive(f)
 	if f == nil || f.closed {
