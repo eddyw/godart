@@ -328,3 +328,6 @@ The map-alias adapter retains the unchanged TestAlias root from
 The large-string adapter retains the unchanged TestLargeStringConcat root from
 `src/runtime/string_test.go` and the original stringconcat program from
 `src/runtime/testdata/testprog/stringconcat.go`, with their BSD notices.
+
+The slice-closure adapter retains 5 unchanged lifetime roots and helpers from
+`src/runtime/slice_test.go`, with its original BSD notice.
