@@ -368,3 +368,6 @@ These sources retain their BSD notices.
 The native pipe and file error adapters preserve original declarations from
 `src/os/os_test.go`, `src/os/pipe_test.go` and `src/os/root_test.go`.
 They retain the SDK BSD notices, original helpers, inputs and assertions.
+
+The proc and temporary name adapter retains 3 unchanged roots from
+`src/os/os_test.go`, with the SDK BSD notice and original platform skips.

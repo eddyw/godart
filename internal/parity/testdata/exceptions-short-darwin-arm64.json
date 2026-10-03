@@ -13984,5 +13984,19 @@
       "reason": "The original inverse fixture skips modulus 1 because the modulus must exceed 1.",
       "test": "TestInverse/line_19"
     }
+  ],
+  "proc-temp-original": [
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Darwin has no /proc/sys/fs/pipe-max-size. Both original assertions skip when the real file is absent.",
+      "test": "TestDirFSReadFileProc"
+    },
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "Darwin has no /proc/sys/fs/pipe-max-size. Both original assertions skip when the real file is absent.",
+      "test": "TestReadFileProc"
+    }
   ]
 }
