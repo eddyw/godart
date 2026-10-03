@@ -348,3 +348,6 @@ The file-flag adapter retains 4 unchanged path and access-mode roots from
 `src/os/os_test.go`, the original rooted helper from `src/os/root_test.go`,
 and the symlink support predicates from `src/internal/testenv`.
 These sources retain their BSD notices.
+
+The DirFS path adapter retains 4 unchanged roots and their helpers from
+`src/os/os_test.go`, with its BSD notice and original `testdata/dirfs` fixtures.
