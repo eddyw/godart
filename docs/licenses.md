@@ -418,3 +418,8 @@ their SDK BSD notices, packet inputs, timing bounds and address assertions.
 The Unix datagram adapter also preserves TestReadUnixgramWithUnnamedSocket
 from `src/net/unixsock_test.go`. It retains the original SDK BSD notice,
 actual raw sender, unnamed source assertion and exact packet bytes.
+
+The syslog daemon adapter retains TestDial, TestNew and TestNewLogger from
+`src/log/syslog/syslog_test.go`. The declarations retain their SDK BSD
+notices, original priority inputs and actual daemon availability predicates.
+These assertions do not send a message to the local daemon.

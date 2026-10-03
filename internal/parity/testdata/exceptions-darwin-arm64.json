@@ -13275,26 +13275,6 @@
       "test": "TestJSONAllocs/message"
     }
   ],
-  "log/syslog": [
-    {
-      "test": "TestDial",
-      "native": "pass",
-      "gart": "skip",
-      "reason": "The local daemon accepts Unix datagrams. Gart cannot open that transport, and the original assertion reports its daemon-unavailable skip."
-    },
-    {
-      "test": "TestNew",
-      "native": "pass",
-      "gart": "skip",
-      "reason": "The local daemon accepts Unix datagrams. Gart cannot open that transport, and the original assertion reports its daemon-unavailable skip."
-    },
-    {
-      "test": "TestNewLogger",
-      "native": "pass",
-      "gart": "skip",
-      "reason": "The local daemon accepts Unix datagrams. Gart cannot open that transport, and the original assertion reports its daemon-unavailable skip."
-    }
-  ],
   "crypto/x509": [
     {
       "gart": "skip",
