@@ -429,3 +429,7 @@ The Unix control-message adapter retains TestUnixRightsRoundtrip from
 The codec follows the native `sockcmsg_unix.go` contracts and selected SDK
 headers. These sources retain their SDK BSD notices. Actual descriptor
 transfer uses live file descriptors in the native datagram regression.
+
+The syscall error adapter retains TestSeekFailure and TestENFILETemporary
+from `src/syscall/syscall_unix_test.go`. The selected declarations retain
+the SDK BSD notice, invalid descriptor input and errno assertion.

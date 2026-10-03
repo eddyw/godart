@@ -330,3 +330,6 @@ transfer descriptors, and the receiver owns each received descriptor.
 The caller owns the raw descriptor. These calls do not supply raw polling,
 deadlines or descriptor inheritance. A blocking raw descriptor can stop the
 Dart scheduler. Other socket address types remain unsupported.
+
+The original syscall error assertions retain the invalid Seek descriptor and
+ENFILE temporary-error contract. Native VM/AOT preserve their SDK errors.
