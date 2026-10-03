@@ -380,3 +380,8 @@ The native pipe deadline adapter retains original roots and helpers from
 `src/os/timeout_test.go`, the Unix anonymous-pipe factory from
 `src/os/timeout_unix_test.go`, and isDeadlineExceeded from `src/os/os_test.go`.
 These sources retain their SDK BSD notices and original timing bounds.
+
+The error export adapter retains TestWriteAtInAppendMode and the 2 original
+bad-pattern roots from `src/os/os_test.go` and `src/os/tempfile_test.go`.
+It uses their actual error variables from `src/os/export_test.go`.
+These declarations retain their SDK BSD notices and original error identities.
