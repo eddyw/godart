@@ -394,3 +394,8 @@ This acceptance does not establish native sendfile or splice fast paths.
 The adopted append adapter preserves TestIssue60181 from
 `src/os/os_unix_test.go`, including actual syscall descriptors and file data.
 The source retains its SDK BSD notice and original append assertion.
+
+The Unix error table adapter preserves TestIsExist and TestIsPermission
+from `src/os/error_test.go`, including the original table additions from
+`src/os/error_unix_test.go`. These sources retain their SDK BSD notices
+and exact errno identities inside PathError, LinkError and SyscallError.
