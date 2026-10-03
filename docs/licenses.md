@@ -390,3 +390,7 @@ The file copy adapter preserves TestCopyFileToFile and its original helpers
 from `src/os/copy_test.go`. These sources retain their SDK BSD notices,
 original 1 MiB input, seed, copy limits, file offsets and byte comparisons.
 This acceptance does not establish native sendfile or splice fast paths.
+
+The adopted append adapter preserves TestIssue60181 from
+`src/os/os_unix_test.go`, including actual syscall descriptors and file data.
+The source retains its SDK BSD notice and original append assertion.
