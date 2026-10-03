@@ -333,3 +333,7 @@ Dart scheduler. Other socket address types remain unsupported.
 
 The original syscall error assertions retain the invalid Seek descriptor and
 ENFILE temporary-error contract. Native VM/AOT preserve their SDK errors.
+
+Unix datagram listeners accept an empty address and preserve the native
+kernel result. Linux supplies an actual abstract autobind address. Darwin
+returns EINVAL. A nil listener address retains the missing-address error.

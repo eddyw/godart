@@ -146,7 +146,7 @@ func ListenUnixgram(network string, local *UnixAddr) (*UnixConn, error) {
 	if network != "unixgram" {
 		return nil, &OpError{Op: "listen", Net: network, Addr: local.opAddr(), Err: UnknownNetworkError(network)}
 	}
-	if local == nil || local.Name == "" {
+	if local == nil {
 		return nil, &OpError{Op: "listen", Net: network, Addr: local.opAddr(), Err: errMissingAddress}
 	}
 	return openUnixgram("listen", local, nil)

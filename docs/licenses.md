@@ -433,3 +433,8 @@ transfer uses live file descriptors in the native datagram regression.
 The syscall error adapter retains TestSeekFailure and TestENFILETemporary
 from `src/syscall/syscall_unix_test.go`. The selected declarations retain
 the SDK BSD notice, invalid descriptor input and errno assertion.
+
+The Linux Unix datagram address adapter retains TestUnixgramAutobind and
+TestUnixgramLinuxAbstractLongName from `src/net/unixsock_linux_test.go`.
+The selected declarations retain the SDK BSD notice, kernel address
+assertions, original 108-byte address and 100-millisecond read deadline.
