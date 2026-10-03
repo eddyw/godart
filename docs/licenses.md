@@ -359,3 +359,8 @@ their BSD notices.
 
 The nil-file adapter retains the original nil receiver assertion and its
 complete 15-method table from `src/os/os_test.go`, with its BSD notice.
+
+The file metadata adapter retains 8 unchanged roots and their system-file
+selection and helper declarations from `src/os/os_test.go`. It also
+retains original symlink predicates from `src/internal/testenv`.
+These sources retain their BSD notices.
