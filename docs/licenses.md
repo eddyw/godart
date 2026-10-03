@@ -335,3 +335,7 @@ The slice-closure adapter retains 5 unchanged lifetime roots and helpers from
 The scheduler adapter retains unchanged TestYieldProgress and TestNumGoroutine from
 `src/runtime/proc_test.go` and the original NumGoroutine program from
 `src/runtime/testdata/testprog/misc.go`, with their BSD notices.
+
+The DirFS adapter retains 3 unchanged symlink roots from
+`src/os/file_test.go` and the original symlink support predicates from
+`src/internal/testenv`, with their BSD notices.
