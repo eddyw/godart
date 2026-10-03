@@ -404,3 +404,8 @@ The network copy adapter preserves TestLargeCopyViaNetwork and its helpers
 from `src/os/copy_test.go`, with the original vendored nettest probes.
 These sources retain their SDK BSD notices, 10 MiB input and exact byte
 comparisons. This acceptance does not establish sendfile or splice fast paths.
+
+The exec value and lookup adapter retains 4 original roots from
+`src/os/exec/lp_test.go`, `lp_unix_test.go`, `env_test.go` and
+`internal_test.go`. These sources retain their SDK BSD notices and exact
+lookup, environment and prefix/suffix capture assertions.
