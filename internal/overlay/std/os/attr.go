@@ -240,30 +240,42 @@ func Link(oldname, newname string) error {
 	return &LinkError{Op: "link", Old: oldname, New: newname, Err: causeError(cause)}
 }
 
-// SetDeadline gives ErrNoDeadline.
-//
-// A read of the Dart side is 1 synchronous call, and no deadline stops it. Go
-// gives the same error for an ordinary file of a platform whose poller holds no
-// such file. The test of the receiver stands first, exactly as in Go.
+// SetDeadline sets both pipe deadlines. A zero time cancels them.
+// Other file types return ErrNoDeadline.
 func (f *File) SetDeadline(t time.Time) error {
 	if err := f.checkValid("SetDeadline"); err != nil {
 		return err
 	}
-	return ErrNoDeadline
+	return f.setDeadline(t, 3)
 }
 
-// SetReadDeadline gives ErrNoDeadline, as SetDeadline does.
+// SetReadDeadline sets the pipe read deadline. A zero time cancels it.
 func (f *File) SetReadDeadline(t time.Time) error {
 	if err := f.checkValid("SetReadDeadline"); err != nil {
 		return err
 	}
-	return ErrNoDeadline
+	return f.setDeadline(t, 1)
 }
 
-// SetWriteDeadline gives ErrNoDeadline, as SetDeadline does.
+// SetWriteDeadline sets the pipe write deadline. A zero time cancels it.
 func (f *File) SetWriteDeadline(t time.Time) error {
 	if err := f.checkValid("SetWriteDeadline"); err != nil {
 		return err
 	}
-	return ErrNoDeadline
+	return f.setDeadline(t, 2)
+}
+
+func (f *File) setDeadline(t time.Time, mode int) error {
+	if f.dir || f.std != stdNone {
+		return ErrNoDeadline
+	}
+	clear := t.IsZero()
+	var timeout int64
+	if !clear {
+		timeout = time.Until(t).Nanoseconds()
+	}
+	if !dart.FileDeadline(f.handle, timeout, mode, clear) {
+		return ErrNoDeadline
+	}
+	return nil
 }

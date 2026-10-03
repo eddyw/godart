@@ -1012,13 +1012,21 @@ func DirectoryClose(fd int) int {
 
 // FileRead reads bytes into the slice and gives the count. A count of 0 with no
 // cause means the end of the file. Native pipe I/O can suspend the goroutine.
-func FileRead(handle int, p []byte) (int, string, int) {
+// The last result identifies actual deadline expiry.
+func FileRead(handle int, p []byte) (int, string, int, bool) {
 	panic("syscall/dart needs the gart compiler")
 }
 
 // FileWrite writes the bytes of the slice and gives the count.
 // Native pipe I/O can suspend the goroutine.
-func FileWrite(handle int, p []byte) (int, string, int) {
+// The last result identifies actual deadline expiry.
+func FileWrite(handle int, p []byte) (int, string, int, bool) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// FileDeadline sets a relative pipe timeout in nanoseconds. Clear cancels it.
+// Mode 1 sets read, mode 2 sets write, and mode 3 sets both.
+func FileDeadline(handle int, timeout int64, mode int, clear bool) bool {
 	panic("syscall/dart needs the gart compiler")
 }
 

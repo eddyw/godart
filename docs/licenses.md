@@ -375,3 +375,8 @@ The proc and temporary name adapter retains 3 unchanged roots from
 The long path adapter preserves TestStatRelativeSymlink, TestLongPath and
 size from `src/os/os_test.go`, with actual SDK symlink/link predicates.
 These sources retain their BSD notices and original path lengths.
+
+The native pipe deadline adapter retains original roots and helpers from
+`src/os/timeout_test.go`, the Unix anonymous-pipe factory from
+`src/os/timeout_unix_test.go`, and isDeadlineExceeded from `src/os/os_test.go`.
+These sources retain their SDK BSD notices and original timing bounds.

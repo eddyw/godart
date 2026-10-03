@@ -57,7 +57,10 @@ Close cancels pending retries and preserves partial write counts.
 Pipe Fd retains the nonblocking flags.
 A blocking descriptor can stop the Dart scheduler.
 Do not clear O_NONBLOCK before pipe reads or writes through os.File.
-Pipe deadlines and descriptor inheritance remain unsupported.
+Files from `os.Pipe` support read and write deadlines, including pending I/O.
+A zero deadline cancels the limit. Timeout errors wrap `os.ErrDeadlineExceeded`.
+Regular files and adopted descriptors still return `os.ErrNoDeadline`.
+Pipe descriptor inheritance remains unsupported.
 The existing native errno capture limitation also applies to pipes.
 `syscall.Dup` and `Dup2` duplicate actual descriptors and preserve shared file offsets.
 Each duplicate owns its descriptor. `Dup2` replaces the target descriptor through the native syscall.

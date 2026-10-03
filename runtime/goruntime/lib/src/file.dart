@@ -67,6 +67,7 @@ GoString _empty = GoString.empty;
 /// of an error value.
 GoString _cause(Object e) {
   if (e is ClosedPipe) return GoString.fromString('file already closed');
+  if (e is ExpiredPipe) return GoString.fromString('i/o timeout');
   if (e is FileSystemException) {
     final String os = e.osError?.message ?? '';
     if (os.isNotEmpty) return GoString.fromString('${e.path}: $os');
@@ -141,26 +142,29 @@ FileMode _mode(int mode) {
 
 /// Reads bytes into the slice and gives the count. A count of 0 with no cause
 /// means the end of the file.
-(int, GoString, int) $fileRead(int handle, Slice<int> p) {
+(int, GoString, int, bool) $fileRead(int handle, Slice<int> p) {
   final FileHandle? f = _at(handle);
-  if (f == null) return (0, GoString.fromString('file already closed'), 0);
-  if (p.len == 0) return (0, _empty, 0);
+  if (f == null) {
+    return (0, GoString.fromString('file already closed'), 0, false);
+  }
+  if (p.len == 0) return (0, _empty, 0, false);
   if (f is NativePipeHandle) {
     $await(
       f
           .read(p.array, p.off, p.off + p.len)
-          .then((count) => ($gi(count), _empty, $gi(0))),
+          .then((count) => ($gi(count), _empty, $gi(0), false)),
       (cause) => (
         $gi(0),
         _cause(cause),
         $gi(cause is FileSystemException ? cause.osError?.errorCode ?? 0 : 0),
+        cause is ExpiredPipe,
       ),
     );
-    return (0, _empty, 0);
+    return (0, _empty, 0, false);
   }
   try {
     final int n = f.readIntoSync(p.array, p.off, p.off + p.len);
-    return (n, _empty, 0);
+    return (n, _empty, 0, false);
   } catch (e) {
     return (
       0,
@@ -168,36 +172,42 @@ FileMode _mode(int mode) {
       f is NativeFileHandle && e is FileSystemException
           ? e.osError?.errorCode ?? 0
           : 0,
+      false,
     );
   }
 }
 
 /// Writes the bytes of the slice and gives the count.
-(int, GoString, int) $fileWrite(int handle, Slice<int> p) {
+(int, GoString, int, bool) $fileWrite(int handle, Slice<int> p) {
   final FileHandle? f = _at(handle);
-  if (f == null) return (0, GoString.fromString('file already closed'), 0);
+  if (f == null) {
+    return (0, GoString.fromString('file already closed'), 0, false);
+  }
   if (f is NativePipeHandle) {
     $await(
       f
           .write(p.array, p.off, p.off + p.len)
-          .then((count) => ($gi(count), _empty, $gi(0))),
+          .then((count) => ($gi(count), _empty, $gi(0), false)),
       (cause) => (
         $gi(
           cause is PartialFileWrite
               ? cause.count
               : cause is ClosedPipe
               ? cause.count
+              : cause is ExpiredPipe
+              ? cause.count
               : 0,
         ),
         _cause(cause),
         $gi(cause is FileSystemException ? cause.osError?.errorCode ?? 0 : 0),
+        cause is ExpiredPipe,
       ),
     );
-    return (0, _empty, 0);
+    return (0, _empty, 0, false);
   }
   try {
     final count = f.writeFromSync(p.array, p.off, p.off + p.len);
-    return (count, _empty, 0);
+    return (count, _empty, 0, false);
   } catch (e) {
     return (
       e is PartialFileWrite ? e.count : 0,
@@ -205,8 +215,16 @@ FileMode _mode(int mode) {
       f is NativeFileHandle && e is FileSystemException
           ? e.osError?.errorCode ?? 0
           : 0,
+      false,
     );
   }
+}
+
+bool $fileDeadline(int handle, int timeout, int mode, bool clear) {
+  final f = _at(handle);
+  if (f is! NativePipeHandle) return false;
+  f.setDeadline(timeout, mode, clear);
+  return true;
 }
 
 /// Moves the read position and gives the new offset from the start.

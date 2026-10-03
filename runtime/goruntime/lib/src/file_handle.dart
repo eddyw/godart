@@ -323,8 +323,17 @@ final class ClosedPipe implements Exception {
   ClosedPipe(this.count);
 }
 
+final class ExpiredPipe implements Exception {
+  final int count;
+  ExpiredPipe(this.count);
+}
+
+final _pipeClock = Stopwatch()..start();
+
 final class NativePipeHandle extends NativeFileHandle {
   bool _closed = false;
+  int? _readDeadline;
+  int? _writeDeadline;
   final _waiters = <Completer<void>, Timer>{};
   Future<void> _reads = Future.value();
   Future<void> _writes = Future.value();
@@ -341,6 +350,29 @@ final class NativePipeHandle extends NativeFileHandle {
     return waiter.future;
   }
 
+  void setDeadline(int timeout, int mode, bool clear) {
+    // Relative deadlines use the host monotonic clock. Microseconds avoid
+    // overflow when Go saturates a distant future timeout at MaxInt64.
+    final micros = timeout <= 0
+        ? 0
+        : timeout ~/ 1000 + (timeout % 1000 == 0 ? 0 : 1);
+    final deadline = clear ? null : _pipeClock.elapsedMicroseconds + micros;
+    if (mode & 1 != 0) _readDeadline = deadline;
+    if (mode & 2 != 0) _writeDeadline = deadline;
+    _wakeRetries();
+  }
+
+  bool _expired(int? micros) =>
+      micros != null && micros <= _pipeClock.elapsedMicroseconds;
+
+  void _wakeRetries() {
+    for (final waiter in _waiters.entries) {
+      waiter.value.cancel();
+      waiter.key.complete();
+    }
+    _waiters.clear();
+  }
+
   bool _wouldBlock(FileSystemException error) =>
       error.osError?.errorCode == (Platform.isMacOS ? 35 : 11);
 
@@ -353,6 +385,7 @@ final class NativePipeHandle extends NativeFileHandle {
   Future<int> _read(List<int> bytes, int start, int end) async {
     while (true) {
       if (_closed) throw ClosedPipe(0);
+      if (_expired(_readDeadline)) throw ExpiredPipe(0);
       try {
         return readIntoSync(bytes, start, end);
       } on FileSystemException catch (error) {
@@ -372,6 +405,7 @@ final class NativePipeHandle extends NativeFileHandle {
     var count = 0;
     while (true) {
       if (_closed) throw ClosedPipe(count);
+      if (_expired(_writeDeadline)) throw ExpiredPipe(count);
       try {
         return count + writeFromSync(bytes, start + count, end);
       } on PartialFileWrite catch (error) {
@@ -387,11 +421,7 @@ final class NativePipeHandle extends NativeFileHandle {
   @override
   void closeSync() {
     _closed = true;
-    for (final waiter in _waiters.entries) {
-      waiter.value.cancel();
-      waiter.key.complete();
-    }
-    _waiters.clear();
+    _wakeRetries();
     super.closeSync();
   }
 }

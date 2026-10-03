@@ -13662,5 +13662,13 @@
       "reason": "Darwin has no /proc/sys/fs/pipe-max-size. Both original assertions skip when the real file is absent.",
       "test": "TestReadFileProc"
     }
+  ],
+  "pipe-deadlines-original": [
+    {
+      "test": "TestNonpollableDeadline",
+      "native": "skip",
+      "gart": "skip",
+      "reason": "The original nonpollable regular-file deadline test runs only on Linux and Windows. Darwin retains its original skip."
+    }
   ]
 }

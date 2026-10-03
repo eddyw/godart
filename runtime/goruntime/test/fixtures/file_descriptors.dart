@@ -29,7 +29,7 @@ void main() {
     final (handle, error) = $fileOpen(name, $openWrite);
     require(error.length == 0, 'open: $error');
     try {
-      final (count, cause, _) = $fileWrite(handle, Slice.of([97, 98, 99]));
+      final (count, cause, _, _) = $fileWrite(handle, Slice.of([97, 98, 99]));
       require(count == 3 && cause.length == 0, 'write');
       final fd = $fileFd(handle, 0);
       for (var i = 0; i < 100; i++) {

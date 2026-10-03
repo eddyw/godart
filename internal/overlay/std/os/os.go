@@ -262,7 +262,10 @@ func (f *File) Write(p []byte) (int, error) {
 	if f.dir {
 		return 0, &PathError{Op: "write", Path: f.name, Err: syscall.EBADF}
 	}
-	n, cause, code := dart.FileWrite(f.handle, p)
+	n, cause, code, timedOut := dart.FileWrite(f.handle, p)
+	if timedOut {
+		return n, &PathError{Op: "write", Path: f.name, Err: ErrDeadlineExceeded}
+	}
 	return n, fileIOError("write", f.name, cause, code)
 }
 
@@ -302,7 +305,10 @@ func (f *File) Read(p []byte) (int, error) {
 	if f.dir {
 		return 0, &PathError{Op: "read", Path: f.name, Err: syscall.EISDIR}
 	}
-	n, cause, code := dart.FileRead(f.handle, p)
+	n, cause, code, timedOut := dart.FileRead(f.handle, p)
+	if timedOut {
+		return n, &PathError{Op: "read", Path: f.name, Err: ErrDeadlineExceeded}
+	}
 	if err := fileIOError("read", f.name, cause, code); err != nil {
 		return n, err
 	}
@@ -357,7 +363,7 @@ func (f *File) ReadAt(p []byte, off int64) (int, error) {
 	read := 0
 	var err error
 	for read < len(p) {
-		n, cause, code := dart.FileRead(f.handle, p[read:])
+		n, cause, code, _ := dart.FileRead(f.handle, p[read:])
 		if err = fileIOError("read", f.name, cause, code); err != nil {
 			break
 		}
@@ -420,7 +426,7 @@ func (f *File) WriteAt(p []byte, off int64) (int, error) {
 	if _, cause, code := dart.FileSeek(f.handle, off, dart.SeekStart); cause != "" || code != 0 {
 		return 0, fileIOError("write", f.name, cause, code)
 	}
-	written, cause, code := dart.FileWrite(f.handle, p)
+	written, cause, code, _ := dart.FileWrite(f.handle, p)
 	err := fileIOError("write", f.name, cause, code)
 	if _, cause, code := dart.FileSeek(f.handle, pos, dart.SeekStart); (cause != "" || code != 0) && err == nil {
 		err = fileIOError("write", f.name, cause, code)

@@ -716,6 +716,8 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$fileRead(%s, %s)", args[0], args[1]), true
 	case "FileWrite":
 		return fmt.Sprintf("$fileWrite(%s, %s)", args[0], args[1]), true
+	case "FileDeadline":
+		return fmt.Sprintf("$fileDeadline(%s, %s, %s, %s)", args[0], args[1], args[2], args[3]), true
 	case "FileSeek":
 		return fmt.Sprintf("$fileSeek(%s, %s, %s)", args[0], args[1], args[2]), true
 	case "FileClose":

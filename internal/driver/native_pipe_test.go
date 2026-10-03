@@ -23,6 +23,7 @@ import (
  "io"
  "os"
  "syscall"
+ "time"
 )
 
 func must(err error) { if err != nil { panic(err) } }
@@ -64,6 +65,40 @@ func main() {
  n := <-done
  fmt.Println("partial close", n > 0, n < len(data), n == len(got), bytes.Equal(got, data[:n]))
  must(r.Close())
+ r, w, err = os.Pipe()
+ must(err)
+ go func() {
+  n, err := w.Write(data)
+  if !errors.Is(err, os.ErrDeadlineExceeded) || !os.IsTimeout(err) { panic("write did not report timeout") }
+  done <- n
+ }()
+ prefix = make([]byte, 1)
+ _, err = io.ReadFull(r, prefix)
+ must(err)
+ must(w.SetWriteDeadline(time.Now().Add(-time.Second)))
+ n = <-done
+ must(w.Close())
+ got, err = io.ReadAll(r)
+ must(err)
+ got = append(prefix, got...)
+ fmt.Println("partial timeout", n > 0, n < len(data), n == len(got), bytes.Equal(got, data[:n]))
+ must(r.Close())
+
+ r, w, err = os.Pipe()
+ must(err)
+ _, err = w.Write([]byte("x"))
+ must(err)
+ must(r.SetReadDeadline(time.Unix(0, 0)))
+ one := make([]byte, 1)
+ n, err = r.Read(one)
+ if n != 0 || !errors.Is(err, os.ErrDeadlineExceeded) { panic("epoch deadline did not expire") }
+ must(r.SetReadDeadline(time.Date(9999, 1, 1, 0, 0, 0, 0, time.UTC)))
+ n, err = r.Read(one)
+ must(err)
+ fmt.Println("deadline range", n == 1, one[0] == 'x')
+ must(r.Close())
+ must(w.Close())
+
 }
 `)
 	want := programOutcome(t, dir, "go", "run", ".")
