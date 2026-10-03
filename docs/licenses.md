@@ -331,3 +331,7 @@ The large-string adapter retains the unchanged TestLargeStringConcat root from
 
 The slice-closure adapter retains 5 unchanged lifetime roots and helpers from
 `src/runtime/slice_test.go`, with its original BSD notice.
+
+The scheduler adapter retains unchanged TestYieldProgress and TestNumGoroutine from
+`src/runtime/proc_test.go` and the original NumGoroutine program from
+`src/runtime/testdata/testprog/misc.go`, with their BSD notices.
