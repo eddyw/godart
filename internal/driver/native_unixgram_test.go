@@ -14,7 +14,7 @@ func TestNativeUnixDatagramContracts(t *testing.T) {
 	dir, out := t.TempDir(), t.TempDir()
 	writeFile(t, filepath.Join(dir, "go.mod"), "module example.com/unixgramcontracts\n\ngo 1.27\n")
 	writeFile(t, filepath.Join(dir, "main.go"), `package main
-import("bytes";"encoding/binary";"errors";"fmt";"net";"os";"path/filepath";"runtime";"syscall";"time")
+import("bytes";"errors";"fmt";"net";"os";"path/filepath";"runtime";"syscall";"time")
 func require(ok bool, message string){if !ok{panic(message)}}
 func main(){
  dir,err:=os.MkdirTemp("","ug");if err!=nil{panic(err)};defer os.RemoveAll(dir)
@@ -36,20 +36,23 @@ func main(){
  require(client.SetWriteDeadline(time.Unix(0,0))==nil,"write epoch");_,err=client.Write(payload);require(errors.Is(err,os.ErrDeadlineExceeded),"write timeout");require(client.SetWriteDeadline(time.Time{})==nil,"write cancel")
  fileName:=filepath.Join(dir,"rights");require(os.WriteFile(fileName,[]byte("native descriptor data"),0600)==nil,"file write")
  file,err:=os.Open(fileName);if err!=nil{panic(err)}
- header,space,levelOffset,typeOffset:=16,24,8,12
- if runtime.GOOS=="darwin" {header,space,levelOffset,typeOffset=12,16,4,8}
- control:=make([]byte,space)
- if runtime.GOOS=="darwin" {binary.LittleEndian.PutUint32(control,uint32(header+4))}else{binary.LittleEndian.PutUint64(control,uint64(header+4))}
- binary.LittleEndian.PutUint32(control[levelOffset:],uint32(syscall.SOL_SOCKET));binary.LittleEndian.PutUint32(control[typeOffset:],uint32(syscall.SCM_RIGHTS));binary.LittleEndian.PutUint32(control[header:],uint32(file.Fd()))
+ control:=syscall.UnixRights(int(file.Fd()))
  n,oobn,err:=server.WriteMsgUnix([]byte("rights"),control,client.LocalAddr().(*net.UnixAddr));if err!=nil||n!=6||oobn!=len(control){panic(fmt.Sprintf("rights write: n=%d oobn=%d error=%v",n,oobn,err))};require(file.Close()==nil,"sender ownership")
- received:=make([]byte,64);n,oobn,flags,from,err=client.ReadMsgUnix(buffer,received);require(err==nil&&n==6&&oobn>=header+4&&flags&syscall.MSG_CTRUNC==0&&from.Name==serverName&&string(buffer[:n])=="rights","rights read")
- require(binary.LittleEndian.Uint32(received[levelOffset:])==uint32(syscall.SOL_SOCKET)&&binary.LittleEndian.Uint32(received[typeOffset:])==uint32(syscall.SCM_RIGHTS),"rights header")
- fd:=int(binary.LittleEndian.Uint32(received[header:]));adopted:=os.NewFile(uintptr(fd),"received");require(adopted!=nil,"received file");data,err:=os.ReadFile(fileName);require(err==nil,"original file")
+ received:=make([]byte,64);n,oobn,flags,from,err=client.ReadMsgUnix(buffer,received);require(err==nil&&n==6&&oobn>=syscall.CmsgLen(4)&&flags&syscall.MSG_CTRUNC==0&&from.Name==serverName&&string(buffer[:n])=="rights","rights read")
+ messages,err:=syscall.ParseSocketControlMessage(received[:oobn]);require(err==nil&&len(messages)==1,"rights messages")
+ require(messages[0].Header.Level==syscall.SOL_SOCKET&&messages[0].Header.Type==syscall.SCM_RIGHTS,"rights header")
+ fds,err:=syscall.ParseUnixRights(&messages[0]);require(err==nil&&len(fds)==1,"rights descriptors")
+ fd:=fds[0];adopted:=os.NewFile(uintptr(fd),"received");require(adopted!=nil,"received file");data,err:=os.ReadFile(fileName);require(err==nil,"original file")
  got:=make([]byte,len(data));n,err=adopted.Read(got);require(err==nil&&bytes.Equal(got[:n],data),"descriptor contents");require(adopted.Close()==nil&&errors.Is(syscall.Close(fd),syscall.EBADF),"receiver ownership")
- file,err=os.Open(fileName);if err!=nil{panic(err)};binary.LittleEndian.PutUint32(control[header:],uint32(file.Fd()))
+ file,err=os.Open(fileName);if err!=nil{panic(err)};control=syscall.UnixRights(int(file.Fd()))
  n,oobn,err=server.WriteMsgUnix(nil,control,client.LocalAddr().(*net.UnixAddr));require(err==nil&&n==0&&oobn==len(control),"zero-data rights write");require(file.Close()==nil,"zero-data sender ownership")
- n,oobn,_,_,err=client.ReadMsgUnix(nil,received);expected:=0;if runtime.GOOS=="darwin"{expected=1};require(err==nil&&n==expected&&oobn>=header+4,"zero-data rights read")
- fd=int(binary.LittleEndian.Uint32(received[header:]));require(syscall.Close(fd)==nil,"zero-data receiver ownership")
+ n,oobn,_,_,err=client.ReadMsgUnix(nil,received);expected:=0;if runtime.GOOS=="darwin"{expected=1};require(err==nil&&n==expected&&oobn>=syscall.CmsgLen(4),"zero-data rights read")
+ messages,err=syscall.ParseSocketControlMessage(received[:oobn]);require(err==nil&&len(messages)==1,"zero-data messages")
+ fds,err=syscall.ParseUnixRights(&messages[0]);require(err==nil&&len(fds)==1,"zero-data descriptors");fd=fds[0];require(syscall.Close(fd)==nil,"zero-data receiver ownership")
+ malformed:=syscall.UnixRights();malformed[0]=0;_,err=syscall.ParseSocketControlMessage(malformed);require(errors.Is(err,syscall.EINVAL),"short header length")
+ for i:=0;i<syscall.SizeofCmsghdr-8;i++{malformed[i]=255};_,err=syscall.ParseSocketControlMessage(malformed);require(errors.Is(err,syscall.EINVAL),"oversized header length")
+ wrong:=syscall.SocketControlMessage{Header:syscall.Cmsghdr{Level:0,Type:syscall.SCM_RIGHTS},Data:[]byte{0,0,0,0}};_,err=syscall.ParseUnixRights(&wrong);require(errors.Is(err,syscall.EINVAL),"wrong control level")
+ wrong.Header.Level=syscall.SOL_SOCKET;wrong.Header.Type=-1;_,err=syscall.ParseUnixRights(&wrong);require(errors.Is(err,syscall.EINVAL),"wrong control type")
  for _,zero:=range []*net.UnixConn{new(net.UnixConn)} {
   _,_,_,_,err=zero.ReadMsgUnix(nil,nil);require(errors.Is(err,syscall.EINVAL),"zero readmsg")
   _,_,err=zero.WriteMsgUnix(nil,nil,nil);require(errors.Is(err,syscall.EINVAL),"zero writemsg")

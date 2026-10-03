@@ -319,6 +319,13 @@ The documented native errno limitation also applies to these calls.
 `syscall.Socket` creates actual Linux/macOS socket descriptors through Dart FFI.
 The caller owns each descriptor and must close it. SocketDisableIPv6 preserves
 the SDK IPv6 rejection contract. The existing non-atomic errno limit applies.
+Linux/macOS 64-bit programs use the selected SDK Cmsghdr types and constants.
+`CmsgLen`, `CmsgSpace`, `UnixRights`, `ParseSocketControlMessage` and
+`ParseUnixRights` preserve native header lengths, alignment and byte order.
+The codecs validate external control-message header lengths and identities.
+They do not validate descriptor ownership. Actual sendmsg/recvmsg operations
+transfer descriptors, and the receiver owns each received descriptor.
+
 `syscall.SockaddrUnix` and `Sendto` use actual native Unix destination bytes.
 The caller owns the raw descriptor. These calls do not supply raw polling,
 deadlines or descriptor inheritance. A blocking raw descriptor can stop the

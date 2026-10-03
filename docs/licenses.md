@@ -423,3 +423,9 @@ The syslog daemon adapter retains TestDial, TestNew and TestNewLogger from
 `src/log/syslog/syslog_test.go`. The declarations retain their SDK BSD
 notices, original priority inputs and actual daemon availability predicates.
 These assertions do not send a message to the local daemon.
+
+The Unix control-message adapter retains TestUnixRightsRoundtrip from
+`src/syscall/syscall_unix_test.go`, including its original integer inputs.
+The codec follows the native `sockcmsg_unix.go` contracts and selected SDK
+headers. These sources retain their SDK BSD notices. Actual descriptor
+transfer uses live file descriptors in the native datagram regression.
