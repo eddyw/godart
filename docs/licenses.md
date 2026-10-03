@@ -339,3 +339,7 @@ The scheduler adapter retains unchanged TestYieldProgress and TestNumGoroutine f
 The DirFS adapter retains 3 unchanged symlink roots from
 `src/os/file_test.go` and the original symlink support predicates from
 `src/internal/testenv`, with their BSD notices.
+
+The embedded-interface adapter retains the original method panic assertion from
+`src/reflect/type_test.go` and its unchanged panic helper from
+`src/reflect/all_test.go`, with their BSD notices.

@@ -1827,7 +1827,18 @@ int $structOf(
           ),
         );
         if (_methodPackage(method.key).isNotEmpty) continue;
-        methods.putIfAbsent(method.key, () => $ifaceMethod);
+        methods.putIfAbsent(method.key, () {
+          if (elem.kind != 'interface') return $ifaceMethod;
+          final sig = method.type!();
+          return _typedResultFunc(
+            sig,
+            (args) => _resultList(
+              sig,
+              invoke(Iface(elem, args[0]), method, args.sublist(1)),
+            ),
+            sig.params.length + 1,
+          );
+        });
         methodTypes.putIfAbsent(method.key, () => method.type!);
         forwards.putIfAbsent(
           method.key,
