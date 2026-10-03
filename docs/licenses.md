@@ -324,3 +324,7 @@ The panic-callback adapter retains 3 original roots from
 
 The map-alias adapter retains the unchanged TestAlias root from
 `src/runtime/map_test.go`, with its original BSD notice.
+
+The large-string adapter retains the unchanged TestLargeStringConcat root from
+`src/runtime/string_test.go` and the original stringconcat program from
+`src/runtime/testdata/testprog/stringconcat.go`, with their BSD notices.
