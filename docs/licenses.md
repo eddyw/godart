@@ -477,3 +477,8 @@ The selected SDK has no standalone byte socket-option test in `src/syscall`.
 The Darwin byte socket-option differential adapter follows the selected
 Go SDK `src/syscall/syscall_bsd.go` contract under the Go BSD license.
 The selected SDK has no standalone byte socket-option getter test in `src/syscall`.
+
+The Linux socket-credential differential adapter follows the selected
+Go SDK `src/syscall/syscall_linux.go` and
+`src/syscall/ztypes_linux_amd64.go` contracts under the Go BSD license.
+The selected SDK has no standalone socket-credential getter test in `src/syscall`.

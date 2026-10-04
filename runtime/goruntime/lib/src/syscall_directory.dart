@@ -331,3 +331,25 @@ int $syscallSetsockoptInt(int fd, int level, int option, int value) {
     _free(buffer);
   }
 }
+
+(int, int, int, int) $syscallGetsockoptUcred(int fd, int level, int option) {
+  final buffer = _malloc(16);
+  if (buffer == nullptr) return (0, 0, 0, 12);
+  try {
+    buffer.asTypedList(12).fillRange(0, 12, 0);
+    final length = (buffer + 12).cast<Uint32>();
+    length.value = 12;
+    final getsockopt = _getsockopt;
+    final errorAddress = _errno();
+    final result = getsockopt(fd, level, option, buffer, length);
+    final code = result < 0 ? errorAddress.value : 0;
+    return (
+      buffer.cast<Int32>().value,
+      (buffer + 4).cast<Uint32>().value,
+      (buffer + 8).cast<Uint32>().value,
+      code,
+    );
+  } finally {
+    _free(buffer);
+  }
+}

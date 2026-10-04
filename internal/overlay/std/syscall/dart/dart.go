@@ -2180,3 +2180,7 @@ func SyscallSocketpair(domain, typ, proto int) (int, int, int) {
 func SyscallGetsockoptByte(fd, level, opt int) (int, int) {
 	panic("syscall/dart needs the gart compiler")
 }
+
+func SyscallGetsockoptUcred(fd, level, opt int) (int, int, int, int) {
+	panic("syscall/dart needs the gart compiler")
+}

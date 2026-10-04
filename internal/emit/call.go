@@ -624,6 +624,8 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$syscallUnixSendto(%s, %s, %s, %s, %s)", args[0], args[1], args[2], args[3], args[4]), true
 	case "SyscallGetsockoptByte":
 		return fmt.Sprintf("$syscallGetsockoptByte(%s, %s, %s)", args[0], args[1], args[2]), true
+	case "SyscallGetsockoptUcred":
+		return fmt.Sprintf("$syscallGetsockoptUcred(%s, %s, %s)", args[0], args[1], args[2]), true
 	case "SyscallGetsockoptInt":
 		return fmt.Sprintf("$syscallGetsockoptInt(%s, %s, %s)", args[0], args[1], args[2]), true
 	case "SyscallSetsockoptInt":

@@ -380,3 +380,6 @@ int $syscallSetsockoptInt(int fd, int level, int option, int value) => 38;
     (0, 0, 38);
 
 (int, int) $syscallGetsockoptByte(int fd, int level, int option) => (0, 38);
+
+(int, int, int, int) $syscallGetsockoptUcred(int fd, int level, int option) =>
+    (0, 0, 0, 38);
