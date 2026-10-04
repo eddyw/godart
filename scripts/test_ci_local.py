@@ -14,7 +14,7 @@ class LocalRunnerTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             (root / "scripts").mkdir()
-            for name in ["ci.sh", "ci-driver.py"]:
+            for name in ["ci.sh", "ci-driver.py", "ci-matrix.json"]:
                 shutil.copy(Path(__file__).with_name(name), root / "scripts" / name)
             durations = root / "internal/driver/testdata/ci-durations.json"
             durations.parent.mkdir(parents=True)

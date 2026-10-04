@@ -37,6 +37,8 @@ Without shard arguments, `ci.sh` executes the complete named suite.
 The priority suite distributes selected packages across shards.
 Only shard 0 also executes the shared HTTP and parity-harness tests.
 The driver suite distributes complete top-level tests across shards.
+Configured driver shards distribute measured work in proportion to their test timeouts.
+Manual shard counts without a matching matrix retain equal shares.
 Only driver shard 0 also executes the resident compiler tests.
 The selector discovers new tests and retains the selection in each report directory.
 

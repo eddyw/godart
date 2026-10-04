@@ -8,7 +8,7 @@ import re
 import sys
 
 
-def shards(names, durations, mode, count):
+def shards(names, durations, mode, timeouts):
     def weight(name):
         prefix = "driver/linux" if sys.platform == "linux" else "driver"
         return durations.get(f"{prefix}/{mode}/{name}",
@@ -16,10 +16,10 @@ def shards(names, durations, mode, count):
                                            durations.get(f"{prefix}/short/{name}",
                                                          durations.get(f"driver/short/{name}", 1)))) or 1
 
-    selected = [[] for _ in range(count)]
-    loads = [0.0] * count
+    selected = [[] for _ in timeouts]
+    loads = [0.0] * len(timeouts)
     for name in sorted(names, key=lambda name: (-weight(name), name)):
-        index = min(range(count), key=lambda index: loads[index])
+        index = min(range(len(timeouts)), key=lambda index: loads[index] / timeouts[index])
         selected[index].append(name)
         loads[index] += weight(name)
     return selected
@@ -38,7 +38,12 @@ def main():
              if re.fullmatch(r"(?:Test|Example|Fuzz)\w*", line)
              and not re.fullmatch(args.exclude, line)]
     durations = json.loads(Path("internal/driver/testdata/ci-durations.json").read_text())
-    selected = shards(names, durations, args.mode, args.shard_count)[args.shard_index]
+    matrix = json.loads(Path("scripts/ci-matrix.json").read_text())["include"]
+    timeouts = [1] * args.shard_count
+    for job in matrix:
+        if job["suite"] == "driver" and job["shards"] == args.shard_count:
+            timeouts[job["shard"]] = job.get("full_timeout", job["timeout"]) if args.mode == "full" else job["timeout"]
+    selected = shards(names, durations, args.mode, timeouts)[args.shard_index]
     directory = os.environ.get("GART_PARITY_REPORT_DIR")
     if directory:
         path = Path(directory) / f"driver-selection-{args.shard_index}.json"
