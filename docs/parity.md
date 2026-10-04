@@ -646,3 +646,9 @@ Linux 64-bit programs support `syscall.SyncFileRange` through the actual
 native call. Signed 64-bit offsets and lengths, flags, typed errors, file
 positions and descriptor ownership follow the SDK. This API does not guarantee
 metadata durability. The raw call can stop the Dart scheduler.
+
+Linux 64-bit programs support `syscall.UnixCredentials` and
+`syscall.ParseUnixCredentials`. The codecs preserve native control-message
+headers, all raw credential fields, validation order, nil panics and independent
+value copies. Actual `SO_PASSCRED` local datagrams preserve kernel identities.
+These APIs do not establish process inheritance or high-level stream transport.

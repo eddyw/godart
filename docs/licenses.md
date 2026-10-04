@@ -653,3 +653,8 @@ The Linux SyncFileRange differential follows the selected Go SDK
 `src/syscall/zsyscall_linux_amd64.go` contract under the Go BSD license.
 It preserves native flags, signed ranges, file bytes, positions, errors and
 descriptor ownership.
+
+The Linux credential codec differential follows the selected Go SDK
+`src/syscall/sockcmsg_linux.go` contracts under the Go BSD license. It retains
+raw fields, validation order, nil panics, independent copies and actual local
+SO_PASSCRED datagrams. It does not adapt the process-inheritance upstream test.
