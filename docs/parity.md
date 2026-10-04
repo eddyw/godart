@@ -409,6 +409,13 @@ Web targets return `ENOSYS`. Broader IPv6 zone and mixed-family contracts
 remain limited. Raw blocking calls can stop the Dart scheduler.
 The non-atomic errno limit applies.
 
+Native `syscall.Getsockname` and `syscall.Getpeername` support Unix,
+IPv4 and IPv6 sockets. Returned addresses preserve actual kernel names,
+network ports, address bytes, scope IDs and independent SDK values.
+The calls retain typed errors, nil addresses on failure and descriptor ownership.
+Other address families remain unsupported. Web targets return `ENOSYS`.
+The non-atomic errno limit applies.
+
 Native 64-bit Linux and macOS programs support `syscall.Select` through
 Dart FFI. The call preserves actual descriptor readiness, native FD sets,
 shared FD-set pointer aliases, nil pointers and native timeval fields.

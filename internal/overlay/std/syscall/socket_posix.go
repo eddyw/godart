@@ -140,3 +140,19 @@ func Listen(fd, how int) error {
 	}
 	return nil
 }
+
+func Getsockname(fd int) (Sockaddr, error) {
+	data := make([]byte, SizeofSockaddrAny)
+	if code := dart.SyscallGetsockname(fd, data); code != 0 {
+		return nil, Errno(code)
+	}
+	return sockaddrFromBytes(data)
+}
+
+func Getpeername(fd int) (Sockaddr, error) {
+	data := make([]byte, SizeofSockaddrAny)
+	if code := dart.SyscallGetpeername(fd, data); code != 0 {
+		return nil, Errno(code)
+	}
+	return sockaddrFromBytes(data)
+}

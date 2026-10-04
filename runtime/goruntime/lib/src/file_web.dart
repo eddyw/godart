@@ -476,3 +476,6 @@ int $syscallFallocate(int fd, int mode, int offset, int length) => 38;
 int $syscallBind(int fd, Slice<int> address) => 38;
 int $syscallConnect(int fd, Slice<int> address) => 38;
 int $syscallSendto(int fd, Slice<int> data, int flags, Slice<int> address) => 38;
+
+int $syscallGetsockname(int fd, Slice<int> data) => 38;
+int $syscallGetpeername(int fd, Slice<int> data) => 38;

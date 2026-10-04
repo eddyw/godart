@@ -33,6 +33,14 @@ final _socketpair = _libc
       Int Function(Int, Int, Int, Pointer<Int32>),
       int Function(int, int, int, Pointer<Int32>)
     >('socketpair');
+final _getsockname = _libc.lookupFunction<
+  Int Function(Int, Pointer<Uint8>, Pointer<Uint32>),
+  int Function(int, Pointer<Uint8>, Pointer<Uint32>)
+>('getsockname');
+final _getpeername = _libc.lookupFunction<
+  Int Function(Int, Pointer<Uint8>, Pointer<Uint32>),
+  int Function(int, Pointer<Uint8>, Pointer<Uint32>)
+>('getpeername');
 final _socketBind = _libc
     .lookupFunction<Int Function(Int, Pointer<Uint8>, Uint32), int Function(int, Pointer<Uint8>, int)>('bind');
 final _socketConnect = _libc
@@ -640,3 +648,30 @@ int $syscallSendto(int fd, Slice<int> data, int flags, Slice<int> address) {
     if (destination != nullptr) _free(destination);
   }
 }
+
+int _socketName(
+  int Function(int, Pointer<Uint8>, Pointer<Uint32>) call,
+  int fd,
+  Slice<int> data,
+) {
+  final address = _malloc(data.len + 4);
+  if (address == nullptr) return 12;
+  try {
+    final bytes = address.asTypedList(data.len);
+    bytes.fillRange(0, bytes.length, 0);
+    final length = Pointer<Uint32>.fromAddress(address.address + data.len);
+    length.value = data.len;
+    final errorAddress = _errno();
+    if (call(fd, address, length) < 0) return errorAddress.value;
+    data.array.setRange(data.off, data.off + data.len, bytes);
+    return 0;
+  } finally {
+    _free(address);
+  }
+}
+
+int $syscallGetsockname(int fd, Slice<int> data) =>
+    _socketName(_getsockname, fd, data);
+
+int $syscallGetpeername(int fd, Slice<int> data) =>
+    _socketName(_getpeername, fd, data);

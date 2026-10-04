@@ -2270,3 +2270,12 @@ func SyscallBind(fd int, address []byte) int {
 func SyscallConnect(fd int, address []byte) int {
 	panic("syscall/dart needs the gart compiler")
 }
+
+// SyscallGetsockname and SyscallGetpeername require SizeofSockaddrAny bytes.
+func SyscallGetsockname(fd int, data []byte) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
+func SyscallGetpeername(fd int, data []byte) int {
+	panic("syscall/dart needs the gart compiler")
+}

@@ -568,3 +568,9 @@ The raw Internet socket address differential follows the selected Go SDK
 `src/syscall/syscall_bsd.go` contracts under the Go BSD license.
 The fixture preserves actual kernel address bytes, network port bytes,
 error precedence, packets and descriptor ownership.
+
+The raw socket name differential follows the selected Go SDK
+`src/syscall/syscall_unix.go`, `src/syscall/syscall_linux.go` and
+`src/syscall/syscall_bsd.go` contracts under the Go BSD license.
+The fixture preserves actual kernel names, local and peer address fields,
+typed errors and descriptor ownership.

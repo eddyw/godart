@@ -620,6 +620,10 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$fileFd(%s, %s)", args[0], args[1]), true
 	case "FileFromFD":
 		return fmt.Sprintf("$fileFromFD(%s)", args[0]), true
+	case "SyscallGetsockname":
+		return fmt.Sprintf("$syscallGetsockname(%s, %s)", args[0], args[1]), true
+	case "SyscallGetpeername":
+		return fmt.Sprintf("$syscallGetpeername(%s, %s)", args[0], args[1]), true
 	case "SyscallBind":
 		return fmt.Sprintf("$syscallBind(%s, %s)", args[0], args[1]), true
 	case "SyscallConnect":
