@@ -396,8 +396,17 @@ The calls preserve exact SDK address lengths, native header bytes,
 mutable cached path bytes, name validation and error precedence.
 Actual local datagram bytes and duplicate connection state remain.
 The caller owns all descriptors. Web targets return `ENOSYS`.
-Raw Internet addresses, ancillary data and process inheritance remain
-unsupported. A blocking connect can stop the Dart scheduler.
+Ancillary data and process inheritance remain unsupported.
+A blocking connect can stop the Dart scheduler.
+The non-atomic errno limit applies.
+
+Raw `syscall.Bind`, `syscall.Connect` and `syscall.Sendto` also support
+`SockaddrInet4` and `SockaddrInet6` on these native targets. Exact SDK
+headers, network port bytes, cached fields and port validation remain.
+Actual IPv4/IPv6 loopback datagrams, connected writes, replies, nil
+addresses, empty packets and duplicate ownership match native Go.
+Web targets return `ENOSYS`. Broader IPv6 zone and mixed-family contracts
+remain limited. Raw blocking calls can stop the Dart scheduler.
 The non-atomic errno limit applies.
 
 Native 64-bit Linux and macOS programs support `syscall.Select` through

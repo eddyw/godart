@@ -620,12 +620,12 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$fileFd(%s, %s)", args[0], args[1]), true
 	case "FileFromFD":
 		return fmt.Sprintf("$fileFromFD(%s)", args[0]), true
-	case "SyscallUnixBind":
-		return fmt.Sprintf("$syscallUnixBind(%s, %s)", args[0], args[1]), true
-	case "SyscallUnixConnect":
-		return fmt.Sprintf("$syscallUnixConnect(%s, %s)", args[0], args[1]), true
-	case "SyscallUnixSendto":
-		return fmt.Sprintf("$syscallUnixSendto(%s, %s, %s, %s)", args[0], args[1], args[2], args[3]), true
+	case "SyscallBind":
+		return fmt.Sprintf("$syscallBind(%s, %s)", args[0], args[1]), true
+	case "SyscallConnect":
+		return fmt.Sprintf("$syscallConnect(%s, %s)", args[0], args[1]), true
+	case "SyscallSendto":
+		return fmt.Sprintf("$syscallSendto(%s, %s, %s, %s)", args[0], args[1], args[2], args[3]), true
 	case "SyscallGetsockoptByte":
 		return fmt.Sprintf("$syscallGetsockoptByte(%s, %s, %s)", args[0], args[1], args[2]), true
 	case "SyscallGetsockoptUcred":

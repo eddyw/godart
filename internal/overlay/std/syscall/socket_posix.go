@@ -28,6 +28,19 @@ type Sockaddr interface {
 	sockaddrBytes() ([]byte, error)
 }
 
+type SockaddrInet4 struct {
+	Port int
+	Addr [4]byte
+	raw  RawSockaddrInet4
+}
+
+type SockaddrInet6 struct {
+	Port   int
+	ZoneId uint32
+	Addr   [16]byte
+	raw    RawSockaddrInet6
+}
+
 type SockaddrUnix struct {
 	Name string
 	raw  RawSockaddrUnix
@@ -38,7 +51,7 @@ func Bind(fd int, sa Sockaddr) error {
 	if err != nil {
 		return err
 	}
-	if code := dart.SyscallUnixBind(fd, address); code != 0 {
+	if code := dart.SyscallBind(fd, address); code != 0 {
 		return Errno(code)
 	}
 	return nil
@@ -49,7 +62,7 @@ func Connect(fd int, sa Sockaddr) error {
 	if err != nil {
 		return err
 	}
-	if code := dart.SyscallUnixConnect(fd, address); code != 0 {
+	if code := dart.SyscallConnect(fd, address); code != 0 {
 		return Errno(code)
 	}
 	return nil
@@ -64,7 +77,7 @@ func Sendto(fd int, data []byte, flags int, destination Sockaddr) error {
 			return err
 		}
 	}
-	if code := dart.SyscallUnixSendto(fd, data, flags, address); code != 0 {
+	if code := dart.SyscallSendto(fd, data, flags, address); code != 0 {
 		return Errno(code)
 	}
 	return nil

@@ -33,11 +33,11 @@ final _socketpair = _libc
       Int Function(Int, Int, Int, Pointer<Int32>),
       int Function(int, int, int, Pointer<Int32>)
     >('socketpair');
-final _unixBind = _libc
+final _socketBind = _libc
     .lookupFunction<Int Function(Int, Pointer<Uint8>, Uint32), int Function(int, Pointer<Uint8>, int)>('bind');
-final _unixConnect = _libc
+final _socketConnect = _libc
     .lookupFunction<Int Function(Int, Pointer<Uint8>, Uint32), int Function(int, Pointer<Uint8>, int)>('connect');
-final _unixSendto = _libc
+final _socketSendto = _libc
     .lookupFunction<IntPtr Function(Int, Pointer<Uint8>, Size, Int, Pointer<Uint8>, Uint32), int Function(int, Pointer<Uint8>, int, int, Pointer<Uint8>, int)>('sendto');
 final _select = _libc
     .lookupFunction<
@@ -595,7 +595,7 @@ int $syscallFallocate(int fd, int mode, int offset, int length) {
   }
 }
 
-int _unixAddressCall(
+int _socketAddressCall(
   int Function(int, Pointer<Uint8>, int) call,
   int fd,
   Slice<int> address,
@@ -611,13 +611,13 @@ int _unixAddressCall(
   }
 }
 
-int $syscallUnixBind(int fd, Slice<int> address) =>
-    _unixAddressCall(_unixBind, fd, address);
+int $syscallBind(int fd, Slice<int> address) =>
+    _socketAddressCall(_socketBind, fd, address);
 
-int $syscallUnixConnect(int fd, Slice<int> address) =>
-    _unixAddressCall(_unixConnect, fd, address);
+int $syscallConnect(int fd, Slice<int> address) =>
+    _socketAddressCall(_socketConnect, fd, address);
 
-int $syscallUnixSendto(int fd, Slice<int> data, int flags, Slice<int> address) {
+int $syscallSendto(int fd, Slice<int> data, int flags, Slice<int> address) {
   final destination = address.isNil ? nullptr.cast<Uint8>() : _malloc(address.len);
   if (!address.isNil && destination == nullptr) return 12;
   try {
@@ -630,7 +630,7 @@ int $syscallUnixSendto(int fd, Slice<int> data, int flags, Slice<int> address) {
       if (data.len != 0) {
         payload.asTypedList(data.len).setRange(0, data.len, data.array, data.off);
       }
-      final sendto = _unixSendto;
+      final sendto = _socketSendto;
       final errorAddress = _errno();
       return sendto(fd, payload, data.len, flags, destination, address.len) < 0 ? errorAddress.value : 0;
     } finally {

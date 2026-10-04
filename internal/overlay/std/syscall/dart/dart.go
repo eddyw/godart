@@ -2148,7 +2148,7 @@ func UnixgramShutdown(handle int, direction int) (string, int) {
 	panic("syscall/dart needs the gart compiler")
 }
 
-func SyscallUnixSendto(fd int, data []byte, flags int, destination []byte) int {
+func SyscallSendto(fd int, data []byte, flags int, destination []byte) int {
 	panic("syscall/dart needs the gart compiler")
 }
 
@@ -2262,11 +2262,11 @@ func SyscallSelect(nfd int, read, write, except, timeout []byte) (int, int) {
 	panic("syscall/dart needs the gart compiler")
 }
 
-// SyscallUnixBind and SyscallUnixConnect require a complete native Unix address.
-func SyscallUnixBind(fd int, address []byte) int {
+// SyscallBind and SyscallConnect require a complete native socket address.
+func SyscallBind(fd int, address []byte) int {
 	panic("syscall/dart needs the gart compiler")
 }
 
-func SyscallUnixConnect(fd int, address []byte) int {
+func SyscallConnect(fd int, address []byte) int {
 	panic("syscall/dart needs the gart compiler")
 }
