@@ -479,3 +479,5 @@ int $syscallSendto(int fd, Slice<int> data, int flags, Slice<int> address) => 38
 
 int $syscallGetsockname(int fd, Slice<int> data) => 38;
 int $syscallGetpeername(int fd, Slice<int> data) => 38;
+
+(int, int) $syscallRecvfrom(int fd, Slice<int> data, int flags, Slice<int> address) => (-1, 38);

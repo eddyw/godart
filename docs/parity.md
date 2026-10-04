@@ -416,6 +416,15 @@ The calls retain typed errors, nil addresses on failure and descriptor ownership
 Other address families remain unsupported. Web targets return `ENOSYS`.
 The non-atomic errno limit applies.
 
+Native `syscall.Recvfrom` supports Unix, IPv4 and IPv6 sockets. The call
+preserves actual datagram counts, payload slice offsets, source addresses,
+peek/truncation flags, empty packets and typed errors. Linux truncation
+can report more bytes than the supplied buffer. Only received bytes
+within that buffer replace its contents. The caller owns all descriptors.
+Other address families remain unsupported. Web targets return `ENOSYS`.
+Raw blocking calls can stop the Dart scheduler. The non-atomic errno
+limit applies.
+
 Native 64-bit Linux and macOS programs support `syscall.Select` through
 Dart FFI. The call preserves actual descriptor readiness, native FD sets,
 shared FD-set pointer aliases, nil pointers and native timeval fields.

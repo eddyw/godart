@@ -33,6 +33,10 @@ final _socketpair = _libc
       Int Function(Int, Int, Int, Pointer<Int32>),
       int Function(int, int, int, Pointer<Int32>)
     >('socketpair');
+final _recvfrom = _libc.lookupFunction<
+  IntPtr Function(Int, Pointer<Uint8>, Size, Int, Pointer<Uint8>, Pointer<Uint32>),
+  int Function(int, Pointer<Uint8>, int, int, Pointer<Uint8>, Pointer<Uint32>)
+>('recvfrom');
 final _getsockname = _libc.lookupFunction<
   Int Function(Int, Pointer<Uint8>, Pointer<Uint32>),
   int Function(int, Pointer<Uint8>, Pointer<Uint32>)
@@ -675,3 +679,37 @@ int $syscallGetsockname(int fd, Slice<int> data) =>
 
 int $syscallGetpeername(int fd, Slice<int> data) =>
     _socketName(_getpeername, fd, data);
+
+(int, int) $syscallRecvfrom(
+  int fd,
+  Slice<int> data,
+  int flags,
+  Slice<int> address,
+) {
+  final nativeAddress = _malloc(address.len + 4);
+  if (nativeAddress == nullptr) return (-1, 12);
+  try {
+    final bytes = nativeAddress.asTypedList(address.len);
+    bytes.fillRange(0, bytes.length, 0);
+    final length = Pointer<Uint32>.fromAddress(nativeAddress.address + address.len);
+    length.value = address.len;
+    final payload = _malloc(data.len == 0 ? 1 : data.len);
+    if (payload == nullptr) return (-1, 12);
+    try {
+      final recvfrom = _recvfrom;
+      final errorAddress = _errno();
+      final count = recvfrom(fd, payload, data.len, flags, nativeAddress, length);
+      if (count < 0) return (count, errorAddress.value);
+      final copied = count < data.len ? count : data.len;
+      if (copied != 0) {
+        data.array.setRange(data.off, data.off + copied, payload.asTypedList(copied));
+      }
+      address.array.setRange(address.off, address.off + address.len, bytes);
+      return (count, 0);
+    } finally {
+      _free(payload);
+    }
+  } finally {
+    _free(nativeAddress);
+  }
+}
