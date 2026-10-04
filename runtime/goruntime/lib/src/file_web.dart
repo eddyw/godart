@@ -483,3 +483,6 @@ int $syscallGetpeername(int fd, Slice<int> data) => 38;
 (int, int) $syscallRecvfrom(int fd, Slice<int> data, int flags, Slice<int> address) => (-1, 38);
 
 (int, int, int) $syscallAccept(int fd, int flags, Slice<int> address) => (-1, 0, 38);
+
+(int, int) $syscallSendmsgN(int fd, Slice<int> data, Slice<int> control, int flags, Slice<int> address) => (0, 38);
+(int, int, int, int) $syscallRecvmsg(int fd, Slice<int> data, Slice<int> control, int flags, Slice<int> address) => (0, 0, 0, 38);

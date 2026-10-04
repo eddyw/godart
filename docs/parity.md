@@ -443,6 +443,17 @@ close-on-exec behavior. The caller owns the accepted descriptors.
 Portable `Accept` retains flags 0. Descriptor inheritance remains limited.
 The raw blocking and non-atomic errno limits still apply.
 
+Native `syscall.Sendmsg`, `syscall.SendmsgN` and `syscall.Recvmsg`
+support Unix, IPv4 and IPv6 socket addresses. The calls preserve exact
+SDK dummy-byte rules, payload/control slice offsets, actual counts and
+flags, source addresses, typed errors and caller ownership.
+Genuine same-process `SCM_RIGHTS` transport preserves actual file
+content and descriptor lifetimes. Linux `MSG_CMSG_CLOEXEC` preserves
+actual received close-on-exec state. Process inheritance and credential
+control decoding remain unsupported. Other address families remain
+unsupported. Web targets return `ENOSYS`. Raw blocking calls can stop
+the Dart scheduler. The non-atomic errno limit applies.
+
 Native 64-bit Linux and macOS programs support `syscall.Select` through
 Dart FFI. The call preserves actual descriptor readiness, native FD sets,
 shared FD-set pointer aliases, nil pointers and native timeval fields.

@@ -7,6 +7,7 @@ import 'dart:ffi';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'slice.dart';
 import 'string.dart';
 import 'syscall_directory.dart';
 
@@ -516,5 +517,91 @@ final class UnixDatagram {
     _wake();
     final code = $syscallClose(descriptor);
     if (code != 0) throw _error(code);
+  }
+}
+
+(int, int) $syscallSendmsgN(
+  int fd,
+  Slice<int> data,
+  Slice<int> control,
+  int flags,
+  Slice<int> address,
+) {
+  late _MessageBuffer buffer;
+  try {
+    buffer = _MessageBuffer(data.len, control.len);
+  } on SocketException catch (error) {
+    return (0, error.osError!.errorCode);
+  }
+  try {
+    if (data.len == 0) {
+      (buffer.memory + 64).cast<_Vector>().ref.data = nullptr;
+    } else {
+      buffer.data.asTypedList(data.len).setRange(0, data.len, data.array, data.off);
+    }
+    buffer.control.asTypedList(control.len).setRange(0, control.len, control.array, control.off);
+    if (!address.isNil) {
+      buffer.name.asTypedList(address.len).setRange(0, address.len, address.array, address.off);
+    }
+    if (Platform.isMacOS) {
+      buffer.memory.cast<_DarwinMessage>().ref
+        ..name = address.isNil ? nullptr : buffer.name.cast<Void>()
+        ..nameLength = address.len;
+    } else {
+      buffer.memory.cast<_LinuxMessage>().ref
+        ..name = address.isNil ? nullptr : buffer.name.cast<Void>()
+        ..nameLength = address.len;
+    }
+    final send = _sendmsg;
+    final errorAddress = _errno();
+    final count = send(fd, buffer.memory.cast<Void>(), flags);
+    final code = count < 0 ? errorAddress.value : 0;
+    return (count, code);
+  } finally {
+    buffer.release();
+  }
+}
+
+(int, int, int, int) $syscallRecvmsg(
+  int fd,
+  Slice<int> data,
+  Slice<int> control,
+  int flags,
+  Slice<int> address,
+) {
+  late _MessageBuffer buffer;
+  try {
+    buffer = _MessageBuffer(data.len, control.len);
+  } on SocketException catch (error) {
+    return (0, 0, 0, error.osError!.errorCode);
+  }
+  try {
+    if (data.len == 0) {
+      (buffer.memory + 64).cast<_Vector>().ref.data = nullptr;
+    }
+    buffer.control.asTypedList(control.len).setRange(0, control.len, control.array, control.off);
+    if (Platform.isMacOS) {
+      buffer.memory.cast<_DarwinMessage>().ref.nameLength = address.len;
+    } else {
+      buffer.memory.cast<_LinuxMessage>().ref.nameLength = address.len;
+    }
+    final receive = _recvmsg;
+    final errorAddress = _errno();
+    final count = receive(fd, buffer.memory.cast<Void>(), flags);
+    if (count < 0) return (count, 0, 0, errorAddress.value);
+    final receivedControl = buffer.receivedControl;
+    final receivedFlags = buffer.flags;
+    final copied = count < data.len ? count : data.len;
+    if (copied != 0) {
+      data.array.setRange(data.off, data.off + copied, buffer.data.asTypedList(copied));
+    }
+    final copiedControl = receivedControl < control.len ? receivedControl : control.len;
+    if (copiedControl != 0) {
+      control.array.setRange(control.off, control.off + copiedControl, buffer.control.asTypedList(copiedControl));
+    }
+    address.array.setRange(address.off, address.off + address.len, buffer.name.asTypedList(address.len));
+    return (count, receivedControl, receivedFlags, 0);
+  } finally {
+    buffer.release();
   }
 }

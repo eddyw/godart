@@ -2289,3 +2289,13 @@ func SyscallRecvfrom(fd int, data []byte, flags int, address []byte) (int, int) 
 func SyscallAccept(fd int, flags int, address []byte) (int, int, int) {
 	panic("syscall/dart needs the gart compiler")
 }
+
+// SyscallSendmsgN requires a complete native socket address or nil.
+func SyscallSendmsgN(fd int, data, oob []byte, flags int, address []byte) (int, int) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// SyscallRecvmsg requires SizeofSockaddrAny bytes in address.
+func SyscallRecvmsg(fd int, data, oob []byte, flags int, address []byte) (int, int, int, int) {
+	panic("syscall/dart needs the gart compiler")
+}

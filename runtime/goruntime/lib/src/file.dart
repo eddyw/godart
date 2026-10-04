@@ -27,6 +27,7 @@ export 'resource_usage.dart';
 export 'filesystem_stats.dart';
 export 'root.dart' show $rootOpen, $rootOpenAt, $rootOpenDir, $rootMkdir;
 export 'syscall_directory.dart';
+export 'unix_datagram.dart' show $syscallSendmsgN, $syscallRecvmsg;
 export 'sysctl_darwin.dart';
 export 'pathconf_darwin.dart';
 export 'chflags_darwin.dart';

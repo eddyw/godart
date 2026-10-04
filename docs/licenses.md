@@ -592,3 +592,11 @@ The Linux socket Accept4 differential follows the selected Go SDK
 `src/syscall/syscall_bsd.go` contracts under the Go BSD license.
 The fixture preserves actual accepted descriptors, peer addresses,
 descriptor flags, typed errors, transport bytes and descriptor ownership.
+
+The raw socket message differential follows the selected Go SDK
+`src/syscall/syscall_unix.go`, `src/syscall/syscall_linux.go` and
+`src/syscall/syscall_bsd.go` contracts under the Go BSD license.
+The fixture preserves actual payload/control bytes, SDK dummy-byte rules,
+source addresses, flags, genuine SCM_RIGHTS transport and ownership.
+Linux uses its actual SDK `MSG_CMSG_CLOEXEC` name. macOS uses flags 0.
+No process inheritance assertion exists in this fixture.
