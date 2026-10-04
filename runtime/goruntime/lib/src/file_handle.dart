@@ -425,3 +425,42 @@ final class NativePipeHandle extends NativeFileHandle {
     super.closeSync();
   }
 }
+
+(int, int) $nativeRead(int fd, Slice<int> bytes) {
+  final read = _read;
+  final buffer = bytes.len == 0 ? nullptr.cast<Uint8>() : _malloc(bytes.len);
+  if (bytes.len != 0 && buffer == nullptr) return (-1, 12);
+  try {
+    final errno = _errno();
+    final count = read(fd, buffer, bytes.len);
+    final code = count < 0 ? errno.value : 0;
+    if (count > 0) {
+      bytes.array.setRange(
+        bytes.off,
+        bytes.off + count,
+        buffer.asTypedList(count),
+      );
+    }
+    return (count, code);
+  } finally {
+    _free(buffer);
+  }
+}
+
+(int, int) $nativeWrite(int fd, Slice<int> bytes) {
+  final write = _write;
+  final buffer = bytes.len == 0 ? nullptr.cast<Uint8>() : _malloc(bytes.len);
+  if (bytes.len != 0 && buffer == nullptr) return (-1, 12);
+  try {
+    if (bytes.len != 0) {
+      buffer
+          .asTypedList(bytes.len)
+          .setRange(0, bytes.len, bytes.array, bytes.off);
+    }
+    final errno = _errno();
+    final count = write(fd, buffer, bytes.len);
+    return (count, count < 0 ? errno.value : 0);
+  } finally {
+    _free(buffer);
+  }
+}

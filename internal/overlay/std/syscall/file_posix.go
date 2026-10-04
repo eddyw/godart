@@ -182,3 +182,19 @@ func Readlink(path string, buf []byte) (int, error) {
 	}
 	return n, nil
 }
+
+func Read(fd int, p []byte) (int, error) {
+	n, code := dart.NativeRead(fd, p)
+	if code != 0 {
+		return n, Errno(code)
+	}
+	return n, nil
+}
+
+func Write(fd int, p []byte) (int, error) {
+	n, code := dart.NativeWrite(fd, p)
+	if code != 0 {
+		return n, Errno(code)
+	}
+	return n, nil
+}

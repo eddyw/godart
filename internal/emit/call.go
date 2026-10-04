@@ -742,6 +742,10 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$fileClose(%s)", args[0]), true
 	case "NativeTruncate":
 		return fmt.Sprintf("$nativeTruncate(%s, %s)", args[0], args[1]), true
+	case "NativeRead":
+		return fmt.Sprintf("$nativeRead(%s, %s)", args[0], args[1]), true
+	case "NativeWrite":
+		return fmt.Sprintf("$nativeWrite(%s, %s)", args[0], args[1]), true
 	case "NativePread":
 		return fmt.Sprintf("$nativePread(%s, %s, %s)", args[0], args[1], args[2]), true
 	case "NativePwrite":

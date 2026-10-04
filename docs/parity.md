@@ -337,3 +337,9 @@ ENFILE temporary-error contract. Native VM/AOT preserve their SDK errors.
 Unix datagram listeners accept an empty address and preserve the native
 kernel result. Linux supplies an actual abstract autobind address. Darwin
 returns EINVAL. A nil listener address retains the missing-address error.
+
+`syscall.Read` and `syscall.Write` execute 1 actual native descriptor call on
+Linux/macOS 64-bit targets. They preserve byte counts, file offsets and native
+errors. The caller owns each descriptor. A blocking descriptor can stop the
+scheduler. These calls provide no polling, deadlines or inheritance. The
+existing non-atomic errno limitation also applies to these calls.

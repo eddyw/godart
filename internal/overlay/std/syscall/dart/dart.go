@@ -2147,3 +2147,11 @@ func UnixgramShutdown(handle int, direction int) (string, int) {
 func SyscallUnixSendto(fd int, data []byte, flags int, destination string, hasDestination bool) int {
 	panic("syscall/dart needs the gart compiler")
 }
+
+func NativeRead(fd int, p []byte) (int, int) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+func NativeWrite(fd int, p []byte) (int, int) {
+	panic("syscall/dart needs the gart compiler")
+}
