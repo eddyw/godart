@@ -678,3 +678,8 @@ NUL validation, native node permissions, typed errors and caller ownership
 follow the SDK. Actual FIFO bytes and duplicate descriptor lifetimes have
 coverage. This API does not establish scheduler progress or process inheritance.
 Darwin does not export `syscall.Mknodat`.
+
+Linux 64-bit programs support `syscall.Sync` through the actual native sync
+call. The Linux SDK returns no value. Real file bytes, positions and duplicate
+descriptor ownership have coverage. This API does not establish crash durability
+or scheduler progress. Web targets reject the unsupported native call.

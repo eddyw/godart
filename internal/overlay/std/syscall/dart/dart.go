@@ -2333,6 +2333,10 @@ func SyscallSendfile(outfd, infd int, offset []byte, count int) (int, int) {
 	panic("syscall/dart needs the gart compiler")
 }
 
+func SyscallSync() {
+	panic("syscall/dart needs the gart compiler")
+}
+
 func SyscallSyncFileRange(fd int, off, n int64, flags int) int {
 	panic("syscall/dart needs the gart compiler")
 }

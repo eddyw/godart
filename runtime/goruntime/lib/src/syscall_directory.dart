@@ -23,6 +23,10 @@ final _mknodat = _libc.lookupFunction<
   Int Function(Int, Pointer<Uint8>, UnsignedInt, Uint64),
   int Function(int, Pointer<Uint8>, int, int)
 >('mknodat');
+final _sync = _libc.lookupFunction<Void Function(), void Function()>('sync');
+
+void $syscallSync() => _sync();
+
 final _open = _libc
     .lookupFunction<
       Int Function(Pointer<Uint8>, Int, VarArgs<(UnsignedInt,)>),

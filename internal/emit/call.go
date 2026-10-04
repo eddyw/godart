@@ -704,6 +704,8 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$syscallTee(%s, %s, %s, %s)", args[0], args[1], args[2], args[3]), true
 	case "SyscallSendfile":
 		return fmt.Sprintf("$syscallSendfile(%s, %s, %s, %s)", args[0], args[1], args[2], args[3]), true
+	case "SyscallSync":
+		return "$syscallSync()", true
 	case "SyscallSyncFileRange":
 		return fmt.Sprintf("$syscallSyncFileRange(%s, %s, %s, %s)", args[0], args[1], args[2], args[3]), true
 	case "SyscallFallocate":

@@ -672,3 +672,7 @@ actual kernel datagrams, copy ownership and typed errors.
 The macOS node-creation differential follows the selected Go SDK
 `src/syscall/zsyscall_darwin_arm64.go` contract under the Go BSD license.
 It preserves raw paths, mode/device arguments, actual FIFO bytes and ownership.
+
+The Linux filesystem-sync differential follows the selected Go SDK
+`src/syscall/zsyscall_linux_amd64.go` void Sync contract under the Go BSD
+license. It preserves real file bytes, positions and descriptor ownership.
