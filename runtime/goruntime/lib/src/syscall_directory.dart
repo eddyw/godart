@@ -33,6 +33,12 @@ final _socketpair = _libc
       Int Function(Int, Int, Int, Pointer<Int32>),
       int Function(int, int, int, Pointer<Int32>)
     >('socketpair');
+final _unixBind = _libc
+    .lookupFunction<Int Function(Int, Pointer<Uint8>, Uint32), int Function(int, Pointer<Uint8>, int)>('bind');
+final _unixConnect = _libc
+    .lookupFunction<Int Function(Int, Pointer<Uint8>, Uint32), int Function(int, Pointer<Uint8>, int)>('connect');
+final _unixSendto = _libc
+    .lookupFunction<IntPtr Function(Int, Pointer<Uint8>, Size, Int, Pointer<Uint8>, Uint32), int Function(int, Pointer<Uint8>, int, int, Pointer<Uint8>, int)>('sendto');
 final _select = _libc
     .lookupFunction<
       Int Function(Int, Pointer<Uint8>, Pointer<Uint8>, Pointer<Uint8>, Pointer<Uint8>),
@@ -586,5 +592,51 @@ int $syscallFallocate(int fd, int mode, int offset, int length) {
     for (final buffer in buffers.values) {
       _free(buffer);
     }
+  }
+}
+
+int _unixAddressCall(
+  int Function(int, Pointer<Uint8>, int) call,
+  int fd,
+  Slice<int> address,
+) {
+  final buffer = _malloc(address.len);
+  if (buffer == nullptr) return 12;
+  try {
+    buffer.asTypedList(address.len).setRange(0, address.len, address.array, address.off);
+    final errorAddress = _errno();
+    return call(fd, buffer, address.len) < 0 ? errorAddress.value : 0;
+  } finally {
+    _free(buffer);
+  }
+}
+
+int $syscallUnixBind(int fd, Slice<int> address) =>
+    _unixAddressCall(_unixBind, fd, address);
+
+int $syscallUnixConnect(int fd, Slice<int> address) =>
+    _unixAddressCall(_unixConnect, fd, address);
+
+int $syscallUnixSendto(int fd, Slice<int> data, int flags, Slice<int> address) {
+  final destination = address.isNil ? nullptr.cast<Uint8>() : _malloc(address.len);
+  if (!address.isNil && destination == nullptr) return 12;
+  try {
+    final payload = data.len == 0 ? nullptr.cast<Uint8>() : _malloc(data.len);
+    if (data.len != 0 && payload == nullptr) return 12;
+    try {
+      if (!address.isNil) {
+        destination.asTypedList(address.len).setRange(0, address.len, address.array, address.off);
+      }
+      if (data.len != 0) {
+        payload.asTypedList(data.len).setRange(0, data.len, data.array, data.off);
+      }
+      final sendto = _unixSendto;
+      final errorAddress = _errno();
+      return sendto(fd, payload, data.len, flags, destination, address.len) < 0 ? errorAddress.value : 0;
+    } finally {
+      if (payload != nullptr) _free(payload);
+    }
+  } finally {
+    if (destination != nullptr) _free(destination);
   }
 }

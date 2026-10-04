@@ -175,18 +175,3 @@ UnixDatagram _at(int handle) {
     return (cause, code);
   }
 }
-
-int $syscallUnixSendto(
-  int descriptor,
-  Slice<int> data,
-  int flags,
-  GoString destination,
-  bool hasDestination,
-) => unixDatagramSendto(
-  descriptor,
-  data.array,
-  data.off,
-  data.off + data.len,
-  flags,
-  hasDestination ? destination : null,
-);

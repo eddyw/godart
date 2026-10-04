@@ -472,3 +472,7 @@ int $syscallFallocate(int fd, int mode, int offset, int length) => 38;
   Slice<int> except,
   Slice<int> timeout,
 ) => (-1, 38);
+
+int $syscallUnixBind(int fd, Slice<int> address) => 38;
+int $syscallUnixConnect(int fd, Slice<int> address) => 38;
+int $syscallUnixSendto(int fd, Slice<int> data, int flags, Slice<int> address) => 38;

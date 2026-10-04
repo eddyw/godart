@@ -2148,7 +2148,7 @@ func UnixgramShutdown(handle int, direction int) (string, int) {
 	panic("syscall/dart needs the gart compiler")
 }
 
-func SyscallUnixSendto(fd int, data []byte, flags int, destination string, hasDestination bool) int {
+func SyscallUnixSendto(fd int, data []byte, flags int, destination []byte) int {
 	panic("syscall/dart needs the gart compiler")
 }
 
@@ -2259,5 +2259,14 @@ func SyscallFallocate(fd int, mode uint32, off, length int64) int {
 // SyscallSelect requires nil or full native FD sets and a nil or native timeval.
 // Shared FD-set backing storage retains native pointer aliases.
 func SyscallSelect(nfd int, read, write, except, timeout []byte) (int, int) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// SyscallUnixBind and SyscallUnixConnect require a complete native Unix address.
+func SyscallUnixBind(fd int, address []byte) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
+func SyscallUnixConnect(fd int, address []byte) int {
 	panic("syscall/dart needs the gart compiler")
 }

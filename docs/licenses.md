@@ -556,3 +556,9 @@ The adapter preserves each native FdSet word width and Select return type.
 
 The separate descriptor bound fixture validates the Dart native buffer
 contract. It does not execute unsafe oversized FD sets in native Go.
+
+The raw Unix socket address differential follows the selected Go SDK
+`src/syscall/syscall_unix.go`, `src/syscall/syscall_linux.go` and
+`src/syscall/syscall_bsd.go` contracts under the Go BSD license.
+The fixture preserves actual kernel address bytes, mutable SDK caches,
+error precedence, packets and descriptor ownership.

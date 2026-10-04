@@ -25,21 +25,46 @@ func Socket(domain, typ, proto int) (fd int, err error) {
 }
 
 type Sockaddr interface {
-	sockaddrUnix() string
+	sockaddrBytes() ([]byte, error)
 }
 
 type SockaddrUnix struct {
 	Name string
+	raw  RawSockaddrUnix
 }
 
-func (a *SockaddrUnix) sockaddrUnix() string { return a.Name }
+func Bind(fd int, sa Sockaddr) error {
+	address, err := sa.sockaddrBytes()
+	if err != nil {
+		return err
+	}
+	if code := dart.SyscallUnixBind(fd, address); code != 0 {
+		return Errno(code)
+	}
+	return nil
+}
+
+func Connect(fd int, sa Sockaddr) error {
+	address, err := sa.sockaddrBytes()
+	if err != nil {
+		return err
+	}
+	if code := dart.SyscallUnixConnect(fd, address); code != 0 {
+		return Errno(code)
+	}
+	return nil
+}
 
 func Sendto(fd int, data []byte, flags int, destination Sockaddr) error {
-	name := ""
+	var address []byte
 	if destination != nil {
-		name = destination.sockaddrUnix()
+		var err error
+		address, err = destination.sockaddrBytes()
+		if err != nil {
+			return err
+		}
 	}
-	if code := dart.SyscallUnixSendto(fd, data, flags, name, destination != nil); code != 0 {
+	if code := dart.SyscallUnixSendto(fd, data, flags, address); code != 0 {
 		return Errno(code)
 	}
 	return nil

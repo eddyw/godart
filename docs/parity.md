@@ -390,6 +390,16 @@ These calls preserve the exact 4-byte SDK value and option length
 through the same native integer socket-option calls. Returned arrays
 are independent values. Typed errors and descriptor ownership remain.
 
+Native 64-bit Linux and macOS programs support raw `syscall.Bind`,
+`syscall.Connect` and `syscall.Sendto` for `SockaddrUnix` through Dart FFI.
+The calls preserve exact SDK address lengths, native header bytes,
+mutable cached path bytes, name validation and error precedence.
+Actual local datagram bytes and duplicate connection state remain.
+The caller owns all descriptors. Web targets return `ENOSYS`.
+Raw Internet addresses, ancillary data and process inheritance remain
+unsupported. A blocking connect can stop the Dart scheduler.
+The non-atomic errno limit applies.
+
 Native 64-bit Linux and macOS programs support `syscall.Select` through
 Dart FFI. The call preserves actual descriptor readiness, native FD sets,
 shared FD-set pointer aliases, nil pointers and native timeval fields.

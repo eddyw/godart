@@ -51,11 +51,6 @@ final _sendmsg = _libc
       IntPtr Function(Int, Pointer<Void>, Int),
       int Function(int, Pointer<Void>, int)
     >('sendmsg');
-final _sendto = _libc
-    .lookupFunction<
-      IntPtr Function(Int, Pointer<Void>, Size, Int, Pointer<Void>, Uint32),
-      int Function(int, Pointer<Void>, int, int, Pointer<Void>, int)
-    >('sendto');
 final _shutdown = _libc
     .lookupFunction<Int Function(Int, Int), int Function(int, int)>('shutdown');
 final _setsockopt = _libc
@@ -521,37 +516,5 @@ final class UnixDatagram {
     _wake();
     final code = $syscallClose(descriptor);
     if (code != 0) throw _error(code);
-  }
-}
-
-int unixDatagramSendto(
-  int descriptor,
-  List<int> data,
-  int start,
-  int end,
-  int flags,
-  GoString? destination,
-) {
-  final memory = _malloc(128 + end - start + 1);
-  if (memory == nullptr) return 12;
-  try {
-    final length = destination == null ? 0 : _address(memory, destination);
-    final payload = memory + 128;
-    payload.asTypedList(end - start).setRange(0, end - start, data, start);
-    final send = _sendto;
-    final error = _errno();
-    final n = send(
-      descriptor,
-      payload.cast<Void>(),
-      end - start,
-      flags,
-      destination == null ? nullptr : memory.cast<Void>(),
-      length,
-    );
-    return n < 0 ? error.value : 0;
-  } on SocketException catch (error) {
-    return error.osError!.errorCode;
-  } finally {
-    _free(memory);
   }
 }
