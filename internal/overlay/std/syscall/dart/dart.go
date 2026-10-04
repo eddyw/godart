@@ -2252,6 +2252,11 @@ func SyscallListen(fd, how int) int {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// SyscallSysinfo requires nil or a 112-byte native sysinfo structure.
+func SyscallSysinfo(data []byte) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
 func SyscallGettid() int {
 	panic("syscall/dart needs the gart compiler")
 }

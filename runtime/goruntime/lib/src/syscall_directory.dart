@@ -64,6 +64,10 @@ final _select = _libc
       Int Function(Int, Pointer<Uint8>, Pointer<Uint8>, Pointer<Uint8>, Pointer<Uint8>),
       int Function(int, Pointer<Uint8>, Pointer<Uint8>, Pointer<Uint8>, Pointer<Uint8>)
     >('select');
+final _sysinfo = _libc.lookupFunction<
+  Int Function(Pointer<Uint8>),
+  int Function(Pointer<Uint8>)
+>('sysinfo');
 final _gettid = _libc.lookupFunction<Int Function(), int Function()>('gettid');
 final _times = _libc.lookupFunction<
   Int64 Function(Pointer<Uint8>),
@@ -613,6 +617,22 @@ int $syscallListen(int fd, int how) {
   final listen = _listen;
   final errorAddress = _errno();
   return listen(fd, how) < 0 ? errorAddress.value : 0;
+}
+
+int $syscallSysinfo(Slice<int> data) {
+  final buffer = data.isNil ? nullptr.cast<Uint8>() : _malloc(112);
+  if (!data.isNil && buffer == nullptr) return 12;
+  try {
+    if (!data.isNil) buffer.asTypedList(112).setRange(0, 112, data.array, data.off);
+    final sysinfo = _sysinfo;
+    final errorAddress = _errno();
+    final result = sysinfo(buffer);
+    final code = result < 0 ? errorAddress.value : 0;
+    if (!data.isNil) data.array.setRange(data.off, data.off + 112, buffer.asTypedList(112));
+    return code;
+  } finally {
+    if (buffer != nullptr) _free(buffer);
+  }
 }
 
 int $syscallGettid() => _gettid();

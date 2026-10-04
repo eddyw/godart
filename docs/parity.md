@@ -630,3 +630,9 @@ the native pipe call. Both preserve transport bytes, duplicate lifetimes, EOF,
 errors and caller ownership. Linux `syscall.Creat` delegates to native `Open`
 with the SDK creation, write-only and truncation flags. These APIs do not
 establish scheduler progress or descriptor inheritance.
+
+Linux 64-bit programs support `syscall.Sysinfo` through the actual native call.
+The 112-byte SDK structure preserves uptime, loads, memory counters, process
+counts, units and raw padding. Nil pointers retain actual EFAULT. Independent
+caller values retain their ownership. These kernel observations do not describe
+Go GC state or runtime instrumentation.
