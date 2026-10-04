@@ -2286,6 +2286,6 @@ func SyscallRecvfrom(fd int, data []byte, flags int, address []byte) (int, int) 
 }
 
 // SyscallAccept requires SizeofSockaddrAny bytes in address.
-func SyscallAccept(fd int, address []byte) (int, int, int) {
+func SyscallAccept(fd int, flags int, address []byte) (int, int, int) {
 	panic("syscall/dart needs the gart compiler")
 }

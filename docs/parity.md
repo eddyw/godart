@@ -431,9 +431,17 @@ bytes, duplicate lifetimes, EOF and caller ownership match native Go.
 Linux uses native `accept4` with flags 0. Darwin retains the SDK
 zero-address-length cleanup and `ECONNABORTED` result. Address conversion
 errors close the accepted descriptor and preserve the SDK return value.
-Other address families and public `Accept4` remain unsupported.
+Other address families remain unsupported.
 Web targets return `ENOSYS`. Raw blocking calls can stop the Dart
 scheduler. The non-atomic errno limit applies.
+
+Linux `syscall.Accept4` preserves actual `SOCK_NONBLOCK` and
+`SOCK_CLOEXEC` flags on accepted descriptors. SDK flag names and native
+flag validation remain. Real `/proc/self/fdinfo` observations confirm
+nonblocking and close-on-exec state. Actual duplicates retain the SDK
+close-on-exec behavior. The caller owns the accepted descriptors.
+Portable `Accept` retains flags 0. Descriptor inheritance remains limited.
+The raw blocking and non-atomic errno limits still apply.
 
 Native 64-bit Linux and macOS programs support `syscall.Select` through
 Dart FFI. The call preserves actual descriptor readiness, native FD sets,

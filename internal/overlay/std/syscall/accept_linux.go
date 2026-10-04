@@ -9,8 +9,12 @@ package syscall
 import "syscall/dart"
 
 func Accept(fd int) (nfd int, sa Sockaddr, err error) {
+	return Accept4(fd, 0)
+}
+
+func Accept4(fd int, flags int) (nfd int, sa Sockaddr, err error) {
 	address := make([]byte, SizeofSockaddrAny)
-	nfd, length, code := dart.SyscallAccept(fd, address)
+	nfd, length, code := dart.SyscallAccept(fd, flags, address)
 	if code != 0 {
 		return nfd, nil, Errno(code)
 	}

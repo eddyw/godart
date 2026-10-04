@@ -722,7 +722,7 @@ int $syscallGetpeername(int fd, Slice<int> data) =>
   }
 }
 
-(int, int, int) $syscallAccept(int fd, Slice<int> address) {
+(int, int, int) $syscallAccept(int fd, int flags, Slice<int> address) {
   final nativeAddress = _malloc(address.len + 4);
   if (nativeAddress == nullptr) return (-1, 0, 12);
   try {
@@ -734,7 +734,7 @@ int $syscallGetpeername(int fd, Slice<int> data) =>
     final darwinAccept = Platform.isLinux ? null : _accept;
     final errorAddress = _errno();
     final accepted = linuxAccept != null
-        ? linuxAccept(fd, nativeAddress, length, 0)
+        ? linuxAccept(fd, nativeAddress, length, flags)
         : darwinAccept!(fd, nativeAddress, length);
     final code = accepted < 0 ? errorAddress.value : 0;
     if (accepted >= 0) {
