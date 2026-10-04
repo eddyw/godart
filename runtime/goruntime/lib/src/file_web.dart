@@ -460,3 +460,5 @@ int $syscallMunmap(Slice<int> data) => 38;
 int $syscallShutdown(int fd, int how) => 38;
 
 int $syscallFlock(int fd, int how) => 38;
+
+int $syscallListen(int fd, int how) => 38;

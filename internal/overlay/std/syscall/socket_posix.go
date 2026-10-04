@@ -95,3 +95,10 @@ func Shutdown(fd, how int) error {
 	}
 	return nil
 }
+
+func Listen(fd, how int) error {
+	if code := dart.SyscallListen(fd, how); code != 0 {
+		return Errno(code)
+	}
+	return nil
+}

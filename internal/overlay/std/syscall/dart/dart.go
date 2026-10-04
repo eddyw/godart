@@ -2247,3 +2247,7 @@ func SyscallShutdown(fd, how int) int {
 func SyscallFlock(fd, how int) int {
 	panic("syscall/dart needs the gart compiler")
 }
+
+func SyscallListen(fd, how int) int {
+	panic("syscall/dart needs the gart compiler")
+}

@@ -536,3 +536,9 @@ The native file lock differential follows the selected Go SDK
 `src/syscall/zsyscall_darwin_arm64.go` contracts under the Go BSD license.
 The SDK has no standalone Flock assertion. The fixture uses actual
 nonblocking kernel locks and retains descriptor ownership.
+
+The native socket listen differential follows the selected Go SDK
+`src/syscall/zsyscall_linux_amd64.go` and
+`src/syscall/zsyscall_darwin_arm64.go` contracts under the Go BSD license.
+The SDK has no standalone raw Listen assertion. The fixture uses
+actual kernel listen calls and retains descriptor ownership.

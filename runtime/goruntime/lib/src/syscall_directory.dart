@@ -35,6 +35,8 @@ final _socketpair = _libc
     >('socketpair');
 final _flock = _libc
     .lookupFunction<Int Function(Int, Int), int Function(int, int)>('flock');
+final _listen = _libc
+    .lookupFunction<Int Function(Int, Int), int Function(int, int)>('listen');
 final _shutdown = _libc
     .lookupFunction<Int Function(Int, Int), int Function(int, int)>('shutdown');
 final _getsockopt = _libc
@@ -525,4 +527,10 @@ int $syscallFlock(int fd, int how) {
   final flock = _flock;
   final errorAddress = _errno();
   return flock(fd, how) < 0 ? errorAddress.value : 0;
+}
+
+int $syscallListen(int fd, int how) {
+  final listen = _listen;
+  final errorAddress = _errno();
+  return listen(fd, how) < 0 ? errorAddress.value : 0;
 }

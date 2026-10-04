@@ -398,6 +398,13 @@ A blocking lock can stop the Dart scheduler. This API does not establish
 `FcntlFlock`, process inheritance or blocking scheduler progress parity.
 The non-atomic errno limit applies.
 
+Native 64-bit Linux and macOS programs support `syscall.Listen` through
+Dart FFI. The call forwards the backlog to the actual kernel and retains
+caller descriptor ownership. Repeated calls, duplicates and typed errors
+follow the native SDK. Web targets return `ENOSYS`.
+This API does not establish raw Bind, Accept or readiness parity.
+The non-atomic errno limit applies.
+
 Native 64-bit Linux and macOS programs support `syscall.Shutdown` through
 Dart FFI. The call applies the actual kernel shutdown direction and retains
 caller descriptor ownership. Kernel queued bytes, peer EOF and duplicate
