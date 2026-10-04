@@ -2252,6 +2252,20 @@ func SyscallListen(fd, how int) int {
 	panic("syscall/dart needs the gart compiler")
 }
 
+func SyscallEpollCreate1(flag int) (int, int) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// SyscallEpollCtl requires nil or 1 complete native epoll event.
+func SyscallEpollCtl(epfd, op, fd int, data []byte) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// SyscallEpollWait requires count complete native epoll events.
+func SyscallEpollWait(epfd int, data []byte, count, msec int) (int, int) {
+	panic("syscall/dart needs the gart compiler")
+}
+
 func SyscallPipe2(flags int) (int, int, int) {
 	panic("syscall/dart needs the gart compiler")
 }

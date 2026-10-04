@@ -463,6 +463,12 @@ int $syscallFlock(int fd, int how) => 38;
 
 int $syscallListen(int fd, int how) => 38;
 
+(int, int) $syscallEpollCreate1(int flag) => (-1, 38);
+
+int $syscallEpollCtl(int epfd, int op, int fd, Slice<int> data) => 38;
+
+(int, int) $syscallEpollWait(int epfd, Slice<int> data, int count, int msec) => (-1, 38);
+
 (int, int, int) $syscallPipe2(int flags) => (0, 0, 38);
 
 (int, int) $syscallSplice(int rfd, Slice<int> read, int wfd, Slice<int> write, int length, int flags) => (-1, 38);

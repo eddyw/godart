@@ -604,3 +604,9 @@ establish asynchronous readiness or process descriptor inheritance.
 
 `Pipe2` preserves actual nonblocking and close-on-exec flags. The caller slice
 requires exactly 2 elements. Errors retain the caller values.
+
+Linux 64-bit programs support `syscall.EpollCreate`, `EpollCreate1`, `EpollCtl`
+and `EpollWait` through actual native calls. Event layouts use 12 bytes on AMD64
+and 16 bytes on ARM64. Registrations, readiness, masks, user data, caller slice
+offsets, untouched entries, errors and descriptor ownership follow the SDK.
+These raw APIs do not establish Dart scheduler integration or RawConn support.

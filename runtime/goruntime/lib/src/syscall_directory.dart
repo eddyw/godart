@@ -64,6 +64,15 @@ final _select = _libc
       Int Function(Int, Pointer<Uint8>, Pointer<Uint8>, Pointer<Uint8>, Pointer<Uint8>),
       int Function(int, Pointer<Uint8>, Pointer<Uint8>, Pointer<Uint8>, Pointer<Uint8>)
     >('select');
+final _epollCreate1 = _libc.lookupFunction<Int Function(Int), int Function(int)>('epoll_create1');
+final _epollCtl = _libc.lookupFunction<
+  Int Function(Int, Int, Int, Pointer<Uint8>),
+  int Function(int, int, int, Pointer<Uint8>)
+>('epoll_ctl');
+final _epollWait = _libc.lookupFunction<
+  Int Function(Int, Pointer<Uint8>, Int, Int),
+  int Function(int, Pointer<Uint8>, int, int)
+>('epoll_wait');
 final _pipe2 = _libc.lookupFunction<
   Int Function(Pointer<Int32>, Int),
   int Function(Pointer<Int32>, int)
@@ -585,6 +594,42 @@ int $syscallListen(int fd, int how) {
   final listen = _listen;
   final errorAddress = _errno();
   return listen(fd, how) < 0 ? errorAddress.value : 0;
+}
+
+(int, int) $syscallEpollCreate1(int flag) {
+  final create = _epollCreate1;
+  final errorAddress = _errno();
+  final fd = create(flag);
+  return (fd, fd < 0 ? errorAddress.value : 0);
+}
+
+int $syscallEpollCtl(int epfd, int op, int fd, Slice<int> data) {
+  final buffer = data.isNil ? nullptr.cast<Uint8>() : _malloc(data.len);
+  if (!data.isNil && buffer == nullptr) return 12;
+  try {
+    if (!data.isNil) buffer.asTypedList(data.len).setRange(0, data.len, data.array, data.off);
+    final control = _epollCtl;
+    final errorAddress = _errno();
+    return control(epfd, op, fd, buffer) < 0 ? errorAddress.value : 0;
+  } finally {
+    if (buffer != nullptr) _free(buffer);
+  }
+}
+
+(int, int) $syscallEpollWait(int epfd, Slice<int> data, int count, int msec) {
+  final buffer = _malloc(data.len == 0 ? 1 : data.len);
+  if (buffer == nullptr) return (-1, 12);
+  try {
+    buffer.asTypedList(data.len).setRange(0, data.len, data.array, data.off);
+    final wait = _epollWait;
+    final errorAddress = _errno();
+    final n = wait(epfd, buffer, count, msec);
+    final code = n < 0 ? errorAddress.value : 0;
+    data.array.setRange(data.off, data.off + data.len, buffer.asTypedList(data.len));
+    return (n, code);
+  } finally {
+    _free(buffer);
+  }
 }
 
 (int, int, int) $syscallPipe2(int flags) {
