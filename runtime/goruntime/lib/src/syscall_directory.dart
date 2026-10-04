@@ -64,6 +64,10 @@ final _select = _libc
       Int Function(Int, Pointer<Uint8>, Pointer<Uint8>, Pointer<Uint8>, Pointer<Uint8>),
       int Function(int, Pointer<Uint8>, Pointer<Uint8>, Pointer<Uint8>, Pointer<Uint8>)
     >('select');
+final _sendfile = _libc.lookupFunction<
+  IntPtr Function(Int, Int, Pointer<Int64>, Size),
+  int Function(int, int, Pointer<Int64>, int)
+>('sendfile');
 final _fallocate = _libc
     .lookupFunction<
       Int Function(Int, Int, Int64, Int64),
@@ -569,6 +573,31 @@ int $syscallListen(int fd, int how) {
   final listen = _listen;
   final errorAddress = _errno();
   return listen(fd, how) < 0 ? errorAddress.value : 0;
+}
+
+(int, int) $syscallSendfile(int outfd, int infd, Slice<int> offset, int count) {
+  final sendfile = _sendfile;
+  Pointer<Uint8> storage = nullptr;
+  if (!offset.isNil) {
+    storage = _malloc(8);
+    if (storage == nullptr) return (-1, 12);
+    for (var i = 0; i < 8; i++) {
+      storage[i] = offset[i];
+    }
+  }
+  try {
+    final errorAddress = _errno();
+    final written = sendfile(outfd, infd, storage.cast<Int64>(), count);
+    final code = written < 0 ? errorAddress.value : 0;
+    if (!offset.isNil) {
+      for (var i = 0; i < 8; i++) {
+        offset[i] = storage[i];
+      }
+    }
+    return (written, code);
+  } finally {
+    if (storage != nullptr) _free(storage);
+  }
 }
 
 int $syscallFallocate(int fd, int mode, int offset, int length) {

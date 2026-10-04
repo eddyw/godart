@@ -605,3 +605,8 @@ The Linux netlink differential follows the selected Go SDK
 `src/syscall/syscall_linux.go` and `src/syscall/netlink_linux.go`
 contracts under the Go BSD license. It preserves actual kernel port IDs,
 socket names, multipart messages, route attributes and buffer ownership.
+
+The Linux sendfile differential follows the selected Go SDK
+`src/syscall/syscall_unix.go` and `src/syscall/zsyscall_linux_amd64.go`
+contracts under the Go BSD license. It preserves actual transferred bytes, counts,
+nil and explicit offsets, source positions and descriptor ownership.

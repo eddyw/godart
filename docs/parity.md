@@ -589,3 +589,9 @@ through actual native netlink sockets. Serialization uses the SDK family and
 values. RIB requests retain the SDK sequence, page-sized receive bound, multipart
 validation, binary error handling and caller-owned result bytes. Kernel queries
 use the actual bound socket port ID. They do not assume the process ID.
+
+Linux 64-bit programs support `syscall.Sendfile` through the actual native call.
+Nil offsets advance the source position. Explicit offsets preserve the source
+position and retain the actual kernel offset update. Counts, EOF, transferred
+bytes, duplicate lifetimes and typed errors match the selected SDK. Blocking
+calls can stop the Dart scheduler. BSD sendfile semantics remain unsupported.

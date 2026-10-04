@@ -463,6 +463,8 @@ int $syscallFlock(int fd, int how) => 38;
 
 int $syscallListen(int fd, int how) => 38;
 
+(int, int) $syscallSendfile(int outfd, int infd, Slice<int> offset, int count) => (-1, 38);
+
 int $syscallFallocate(int fd, int mode, int offset, int length) => 38;
 
 (int, int) $syscallSelect(
