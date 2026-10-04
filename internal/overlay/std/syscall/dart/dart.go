@@ -2214,3 +2214,8 @@ func SyscallGetsockoptIPv6Mreq(fd, level, opt int, data []byte) int {
 func SyscallSetsockoptIPv6Mreq(fd, level, opt int, data []byte) int {
 	panic("syscall/dart needs the gart compiler")
 }
+
+// SyscallSetsockoptTimeval accepts a nil slice for a nil pointer. Other slices must contain 16 bytes.
+func SyscallSetsockoptTimeval(fd, level, opt int, data []byte) int {
+	panic("syscall/dart needs the gart compiler")
+}

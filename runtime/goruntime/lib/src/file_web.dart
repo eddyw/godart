@@ -425,3 +425,10 @@ int $syscallSetsockoptIPv6Mreq(
   int option,
   Slice<int> data,
 ) => 38;
+
+int $syscallSetsockoptTimeval(
+  int fd,
+  int level,
+  int option,
+  Slice<int> data,
+) => 38;

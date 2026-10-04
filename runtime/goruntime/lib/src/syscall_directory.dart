@@ -458,3 +458,20 @@ int $syscallSetsockoptIPv6Mreq(int fd, int level, int option, Slice<int> data) {
     _free(buffer);
   }
 }
+
+int $syscallSetsockoptTimeval(int fd, int level, int option, Slice<int> data) {
+  final buffer = data.isNil ? nullptr.cast<Uint8>() : _malloc(16);
+  if (!data.isNil && buffer == nullptr) return 12;
+  try {
+    if (!data.isNil) {
+      buffer.asTypedList(16).setRange(0, 16, data.array, data.off);
+    }
+    final setsockopt = _setsockopt;
+    final errorAddress = _errno();
+    return setsockopt(fd, level, option, buffer, 16) < 0
+        ? errorAddress.value
+        : 0;
+  } finally {
+    _free(buffer);
+  }
+}
