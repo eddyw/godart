@@ -744,6 +744,10 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return "$syscallCapDacOverride()", true
 	case "SyscallExchangedata":
 		return fmt.Sprintf("$syscallExchangedata(%s, %s, %s)", args[0], args[1], args[2]), true
+	case "SyscallRevoke":
+		return fmt.Sprintf("$syscallRevoke(%s)", args[0]), true
+	case "SyscallUndelete":
+		return fmt.Sprintf("$syscallUndelete(%s)", args[0]), true
 	case "SyscallKqueue":
 		return "$syscallKqueue()", true
 	case "SyscallGetdtablesize":

@@ -728,3 +728,11 @@ Queue descriptors retain kernel metadata, duplication, close ownership,
 and actual descriptor-exhaustion errors. Web targets return selected SDK ENOSYS.
 Kevent records and pointer metadata remain unsupported.
 Process inheritance and scheduler readiness retain their existing limits.
+
+macOS 64-bit programs support actual `syscall.Revoke` and `syscall.Undelete`
+error results with raw path bytes and Go embedded-NUL validation.
+The native fixture uses only its own files and directories.
+It preserves their bytes, metadata, and open descriptor after kernel errors.
+Web targets return selected SDK ENOSYS after Go path validation.
+Privileged success, device revocation, and administrative state changes
+remain unverified.

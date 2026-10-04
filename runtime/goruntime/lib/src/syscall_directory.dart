@@ -31,6 +31,40 @@ final _exchangedata = _libc.lookupFunction<
   Int Function(Pointer<Uint8>, Pointer<Uint8>, UnsignedInt),
   int Function(Pointer<Uint8>, Pointer<Uint8>, int)
 >('exchangedata');
+final _revoke = _libc.lookupFunction<Int Function(Pointer<Uint8>), int Function(Pointer<Uint8>)>('revoke');
+
+int $syscallRevoke(GoString path) {
+  final text = _malloc(path.length + 1);
+  if (text == nullptr) return 12;
+  try {
+    text.asTypedList(path.length + 1)
+      ..setRange(0, path.length, path.bytes)
+      ..[path.length] = 0;
+    final control = _revoke;
+    final errorAddress = _errno();
+    return control(text) < 0 ? errorAddress.value : 0;
+  } finally {
+    _free(text);
+  }
+}
+
+final _undelete = _libc.lookupFunction<Int Function(Pointer<Uint8>), int Function(Pointer<Uint8>)>('undelete');
+
+int $syscallUndelete(GoString path) {
+  final text = _malloc(path.length + 1);
+  if (text == nullptr) return 12;
+  try {
+    text.asTypedList(path.length + 1)
+      ..setRange(0, path.length, path.bytes)
+      ..[path.length] = 0;
+    final control = _undelete;
+    final errorAddress = _errno();
+    return control(text) < 0 ? errorAddress.value : 0;
+  } finally {
+    _free(text);
+  }
+}
+
 final _kqueue = _libc.lookupFunction<Int Function(), int Function()>('kqueue');
 
 (int, int) $syscallKqueue() {

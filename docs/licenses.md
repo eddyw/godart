@@ -697,3 +697,7 @@ BSD license. It preserves raw paths, options, file bytes and native errors.
 The macOS queue descriptor overlay follows the selected Go SDK
 `src/syscall/zsyscall_darwin_arm64.go` Kqueue contract under the Go BSD license.
 The descriptor fixture preserves actual ownership and native errors.
+
+The macOS path control overlay follows the selected Go SDK
+`src/syscall/zsyscall_darwin_arm64.go` Revoke and Undelete contracts
+under the Go BSD license. It retains the BytePtrFromString validation.

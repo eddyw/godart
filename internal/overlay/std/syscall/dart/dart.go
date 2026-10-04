@@ -2085,6 +2085,16 @@ func SyscallExchangedata(first, second string, options int) int {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// SyscallRevoke requires a path without NUL bytes.
+func SyscallRevoke(path string) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// SyscallUndelete requires a path without NUL bytes.
+func SyscallUndelete(path string) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
 func SyscallKqueue() (int, int) {
 	panic("syscall/dart needs the gart compiler")
 }
