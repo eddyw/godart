@@ -435,6 +435,15 @@ Nil setter pointers retain the SDK length and actual kernel errors.
 The caller owns the descriptor. Kernel socket permissions remain.
 Web targets return `ENOSYS`. The non-atomic errno limit applies.
 
+Native 64-bit Linux and macOS programs support `syscall.GetsockoptIPv6MTUInfo`.
+The call preserves the SDK 32-byte value through the existing native
+fixed-size getter. Native address field widths, raw port bytes, flow,
+address, scope and unsigned MTU fields remain. Returned pointers hold
+independent values with initialized partial/error results.
+The caller owns the descriptor. Web targets return `ENOSYS`.
+The non-atomic errno limit applies. The getter differential verifies
+native memory through socket options. It does not verify IPv6 route queries.
+
 Native 64-bit Linux programs support `syscall.GetsockoptUcred` through Dart FFI.
 The call preserves the SDK 12-byte value, signed PID and unsigned UID/GID.
 The kernel supplies the fields. Returned pointers hold independent values

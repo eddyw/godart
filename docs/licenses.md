@@ -513,3 +513,9 @@ Go SDK `src/syscall/syscall_unix.go`, `src/syscall/syscall_linux.go` and
 `src/syscall/syscall_bsd.go` contracts under the Go BSD license.
 The adapter uses each native SDK filter field and option name.
 The selected SDK has no standalone ICMPv6 filter option test.
+
+The native IPv6 MTU getter differential adapter follows the selected
+Go SDK `src/syscall/syscall_linux.go`, `src/syscall/syscall_bsd.go` and
+native `src/syscall/ztypes_*` contracts under the Go BSD license.
+The adapter uses each native SDK address field and filter name.
+The selected SDK has no standalone IPv6 MTU getter test.
