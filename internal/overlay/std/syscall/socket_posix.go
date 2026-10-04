@@ -84,3 +84,7 @@ func Socketpair(domain, typ, proto int) (fd [2]int, err error) {
 	}
 	return [2]int{first, second}, nil
 }
+
+func SetsockoptByte(fd, level, opt int, value byte) error {
+	return SetsockoptString(fd, level, opt, string([]byte{value}))
+}

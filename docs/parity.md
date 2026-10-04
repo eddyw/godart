@@ -390,6 +390,11 @@ These calls preserve the exact 4-byte SDK value and option length
 through the same native integer socket-option calls. Returned arrays
 are independent values. Typed errors and descriptor ownership remain.
 
+Native 64-bit Linux and macOS programs support `syscall.SetsockoptByte`.
+The call preserves the exact byte and SDK 1-byte option length through
+the same native string socket-option call. NUL and high bytes remain
+actual byte values. Typed errors and descriptor ownership remain.
+
 `syscall.SetsockoptString` passes the exact string bytes and length to the
 native Linux/macOS `setsockopt` call. An empty value uses a null pointer and
 0 length. The caller retains descriptor ownership. The documented
