@@ -2184,3 +2184,13 @@ func SyscallGetsockoptByte(fd, level, opt int) (int, int) {
 func SyscallGetsockoptUcred(fd, level, opt int) (int, int, int, int) {
 	panic("syscall/dart needs the gart compiler")
 }
+
+// SyscallGetsockoptIPMreq requires an 8-byte output slice.
+func SyscallGetsockoptIPMreq(fd, level, opt int, data []byte) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// SyscallSetsockoptIPMreq accepts a nil slice for a nil pointer. Other slices must contain 8 bytes.
+func SyscallSetsockoptIPMreq(fd, level, opt int, data []byte) int {
+	panic("syscall/dart needs the gart compiler")
+}

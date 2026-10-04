@@ -353,3 +353,38 @@ int $syscallSetsockoptInt(int fd, int level, int option, int value) {
     _free(buffer);
   }
 }
+
+int $syscallGetsockoptIPMreq(int fd, int level, int option, Slice<int> data) {
+  final buffer = _malloc(12);
+  if (buffer == nullptr) return 12;
+  try {
+    buffer.asTypedList(8).fillRange(0, 8, 0);
+    final length = (buffer + 8).cast<Uint32>();
+    length.value = 8;
+    final getsockopt = _getsockopt;
+    final errorAddress = _errno();
+    final result = getsockopt(fd, level, option, buffer, length);
+    final code = result < 0 ? errorAddress.value : 0;
+    data.array.setRange(data.off, data.off + 8, buffer.asTypedList(8));
+    return code;
+  } finally {
+    _free(buffer);
+  }
+}
+
+int $syscallSetsockoptIPMreq(int fd, int level, int option, Slice<int> data) {
+  final buffer = data.isNil ? nullptr.cast<Uint8>() : _malloc(8);
+  if (!data.isNil && buffer == nullptr) return 12;
+  try {
+    if (!data.isNil) {
+      buffer.asTypedList(8).setRange(0, 8, data.array, data.off);
+    }
+    final setsockopt = _setsockopt;
+    final errorAddress = _errno();
+    return setsockopt(fd, level, option, buffer, 8) < 0
+        ? errorAddress.value
+        : 0;
+  } finally {
+    _free(buffer);
+  }
+}
