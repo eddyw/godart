@@ -28,6 +28,11 @@ final _socket = _libc
     .lookupFunction<Int Function(Int, Int, Int), int Function(int, int, int)>(
       'socket',
     );
+final _setsockopt = _libc
+    .lookupFunction<
+      Int Function(Int, Int, Int, Pointer<Uint8>, Uint32),
+      int Function(int, int, int, Pointer<Uint8>, int)
+    >('setsockopt');
 final _close = _libc.lookupFunction<Int Function(Int), int Function(int)>(
   'close',
 );
@@ -212,4 +217,23 @@ final _readdir = _libc
   // Darwin device files can return a negative offset without an error.
   final position = seek(fd, offset, whence);
   return (position, position == -1 ? errno().value : 0);
+}
+
+int $syscallSetsockoptString(int fd, int level, int option, GoString value) {
+  final buffer = value.length == 0
+      ? nullptr.cast<Uint8>()
+      : _malloc(value.length);
+  if (value.length != 0 && buffer == nullptr) return 12;
+  try {
+    if (value.length != 0) {
+      buffer.asTypedList(value.length).setRange(0, value.length, value.bytes);
+    }
+    final setsockopt = _setsockopt;
+    final errorAddress = _errno();
+    return setsockopt(fd, level, option, buffer, value.length) < 0
+        ? errorAddress.value
+        : 0;
+  } finally {
+    _free(buffer);
+  }
 }

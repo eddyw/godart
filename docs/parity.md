@@ -347,3 +347,8 @@ existing non-atomic errno limitation also applies to these calls.
 Unix datagram dials treat empty local and remote addresses as wildcards.
 An empty local address remains unbound. A named local address can dial
 without a peer. Dial errors retain the caller address metadata.
+
+`syscall.SetsockoptString` passes the exact string bytes and length to the
+native Linux/macOS `setsockopt` call. An empty value uses a null pointer and
+0 length. The caller retains descriptor ownership. The documented
+non-atomic errno limit also applies to this call.

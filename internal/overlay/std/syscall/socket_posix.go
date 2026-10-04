@@ -41,3 +41,10 @@ func Sendto(fd int, data []byte, flags int, destination Sockaddr) error {
 	}
 	return nil
 }
+
+func SetsockoptString(fd, level, opt int, value string) error {
+	if code := dart.SyscallSetsockoptString(fd, level, opt, value); code != 0 {
+		return Errno(code)
+	}
+	return nil
+}
