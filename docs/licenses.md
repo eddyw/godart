@@ -663,3 +663,8 @@ The Linux node-creation differential follows the selected Go SDK
 `src/syscall/syscall_linux.go` and `src/syscall/zsyscall_linux_amd64.go`
 contracts under the Go BSD license. It preserves raw paths, native modes,
 device arguments, actual relative descriptors, FIFO transport and errors.
+
+The Linux socket-filter differential follows the selected Go SDK
+`src/syscall/lsf_linux.go` contracts under the Go BSD license. It preserves
+helper fields, empty-slice panics, native filter programs, raw slice offsets,
+actual kernel datagrams, copy ownership and typed errors.

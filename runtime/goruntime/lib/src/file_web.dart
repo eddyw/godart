@@ -369,6 +369,8 @@ int $syscallRemovexattr(GoString path, GoString attr) => -1;
 
 (int, int) $nativeWrite(int fd, Slice<GoInt> bytes) => (-1, 38);
 
+int $syscallAttachLsf(int fd, Slice<GoInt> data) => 38;
+
 int $syscallSetsockoptString(int fd, int level, int option, GoString value) =>
     38;
 

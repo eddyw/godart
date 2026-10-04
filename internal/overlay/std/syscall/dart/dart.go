@@ -2165,6 +2165,11 @@ func NativeWrite(fd int, p []byte) (int, int) {
 }
 
 
+// SyscallAttachLsf requires complete 8-byte Linux SockFilter entries.
+func SyscallAttachLsf(fd int, data []byte) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
 func SyscallSetsockoptString(fd, level, opt int, value string) int {
 	panic("syscall/dart needs the gart compiler")
 }

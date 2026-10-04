@@ -362,6 +362,23 @@ final _readdir = _libc
   return (position, position == -1 ? errno().value : 0);
 }
 
+int $syscallAttachLsf(int fd, Slice<int> data) {
+  final storage = _malloc(16 + data.len);
+  if (storage == nullptr) return 12;
+  try {
+    storage.asTypedList(16).fillRange(0, 16, 0);
+    final filters = storage + 16;
+    filters.asTypedList(data.len).setRange(0, data.len, data.array, data.off);
+    storage.cast<Uint16>().value = (data.len ~/ 8) & 0xffff;
+    (storage + 8).cast<Pointer<Uint8>>().value = filters;
+    final setsockopt = _setsockopt;
+    final errorAddress = _errno();
+    return setsockopt(fd, 1, 26, storage, 16) < 0 ? errorAddress.value : 0;
+  } finally {
+    _free(storage);
+  }
+}
+
 int $syscallSetsockoptString(int fd, int level, int option, GoString value) {
   final buffer = value.length == 0
       ? nullptr.cast<Uint8>()

@@ -664,3 +664,10 @@ The [kernel interface](https://raw.githubusercontent.com/torvalds/linux/master/f
 uses a 32-bit device value. The
 [libc interface](https://raw.githubusercontent.com/bminor/glibc/master/sysdeps/unix/sysv/linux/mknodat.c)
 accepts a 64-bit value. The runtime preserves the kernel device bits before libc.
+
+Linux 64-bit programs support `syscall.LsfStmt`, `LsfJump`, `AttachLsf`
+and `DetachLsf`. Helper fields retain the SDK integer conversions. Actual
+kernel filters preserve packet selection, truncation, replacement, caller
+subviews, copied filter ownership, empty-slice panics and typed errors. The
+16-byte native program points to actual 8-byte filter entries. These APIs do
+not establish packet capture or promiscuous-mode support.
