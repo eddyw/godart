@@ -343,3 +343,7 @@ Linux/macOS 64-bit targets. They preserve byte counts, file offsets and native
 errors. The caller owns each descriptor. A blocking descriptor can stop the
 scheduler. These calls provide no polling, deadlines or inheritance. The
 existing non-atomic errno limitation also applies to these calls.
+
+Unix datagram dials treat empty local and remote addresses as wildcards.
+An empty local address remains unbound. A named local address can dial
+without a peer. Dial errors retain the caller address metadata.

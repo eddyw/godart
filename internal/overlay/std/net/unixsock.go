@@ -175,10 +175,23 @@ func (u *UnixConn) ReadFrom(b []byte) (int, Addr, error) {
 // Unix streams do not support a local dial address.
 func DialUnix(network string, laddr, raddr *UnixAddr) (*UnixConn, error) {
 	if network == "unixgram" {
-		if laddr == nil && raddr == nil {
-			return nil, &OpError{Op: "dial", Net: network, Err: errMissingAddress}
+		local, remote := laddr, raddr
+		if local != nil && local.Name == "" {
+			local = nil
 		}
-		return openUnixgram("dial", laddr, raddr)
+		if remote != nil && remote.Name == "" {
+			remote = nil
+		}
+		if local == nil && remote == nil {
+			return nil, &OpError{Op: "dial", Net: network, Source: laddr.opAddr(), Addr: raddr.opAddr(), Err: errMissingAddress}
+		}
+		c, err := openUnixgram("dial", local, remote)
+		if err != nil {
+			op := err.(*OpError)
+			op.Source = laddr.opAddr()
+			op.Addr = raddr.opAddr()
+		}
+		return c, err
 	}
 	switch network {
 	case "unix":
