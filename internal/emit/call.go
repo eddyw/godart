@@ -672,6 +672,14 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$syscallSetsockoptString(%s, %s, %s, %s)", args[0], args[1], args[2], args[3]), true
 	case "SyscallSelect":
 		return fmt.Sprintf("$syscallSelect(%s, %s, %s, %s, %s)", args[0], args[1], args[2], args[3], args[4]), true
+	case "SyscallInotifyInit":
+		return "$syscallInotifyInit()", true
+	case "SyscallInotifyInit1":
+		return fmt.Sprintf("$syscallInotifyInit1(%s)", args[0]), true
+	case "SyscallInotifyAddWatch":
+		return fmt.Sprintf("$syscallInotifyAddWatch(%s, %s, %s)", args[0], args[1], args[2]), true
+	case "SyscallInotifyRmWatch":
+		return fmt.Sprintf("$syscallInotifyRmWatch(%s, %s)", args[0], args[1]), true
 	case "SyscallEpollCreate1":
 		return fmt.Sprintf("$syscallEpollCreate1(%s)", args[0]), true
 	case "SyscallEpollCtl":

@@ -610,3 +610,10 @@ and `EpollWait` through actual native calls. Event layouts use 12 bytes on AMD64
 and 16 bytes on ARM64. Registrations, readiness, masks, user data, caller slice
 offsets, untouched entries, errors and descriptor ownership follow the SDK.
 These raw APIs do not establish Dart scheduler integration or RawConn support.
+
+Linux 64-bit programs support `syscall.InotifyInit`, `InotifyInit1`,
+`InotifyAddWatch` and `InotifyRmWatch` through actual native calls. Descriptors,
+creation flags, path bytes, watch IDs, filesystem events, mask updates, duplicate
+lifetimes, nonblocking errors and ownership follow the SDK. A path with NUL
+returns watch ID 0 and EINVAL before descriptor validation. These raw APIs do
+not establish Dart scheduler integration.

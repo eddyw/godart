@@ -64,6 +64,16 @@ final _select = _libc
       Int Function(Int, Pointer<Uint8>, Pointer<Uint8>, Pointer<Uint8>, Pointer<Uint8>),
       int Function(int, Pointer<Uint8>, Pointer<Uint8>, Pointer<Uint8>, Pointer<Uint8>)
     >('select');
+final _inotifyInit = _libc.lookupFunction<Int Function(), int Function()>('inotify_init');
+final _inotifyInit1 = _libc.lookupFunction<Int Function(Int), int Function(int)>('inotify_init1');
+final _inotifyAddWatch = _libc.lookupFunction<
+  Int Function(Int, Pointer<Uint8>, Uint32),
+  int Function(int, Pointer<Uint8>, int)
+>('inotify_add_watch');
+final _inotifyRmWatch = _libc.lookupFunction<
+  Int Function(Int, Uint32),
+  int Function(int, int)
+>('inotify_rm_watch');
 final _epollCreate1 = _libc.lookupFunction<Int Function(Int), int Function(int)>('epoll_create1');
 final _epollCtl = _libc.lookupFunction<
   Int Function(Int, Int, Int, Pointer<Uint8>),
@@ -594,6 +604,43 @@ int $syscallListen(int fd, int how) {
   final listen = _listen;
   final errorAddress = _errno();
   return listen(fd, how) < 0 ? errorAddress.value : 0;
+}
+
+(int, int) $syscallInotifyInit() {
+  final init = _inotifyInit;
+  final errorAddress = _errno();
+  final fd = init();
+  return (fd, fd < 0 ? errorAddress.value : 0);
+}
+
+(int, int) $syscallInotifyInit1(int flags) {
+  final init = _inotifyInit1;
+  final errorAddress = _errno();
+  final fd = init(flags);
+  return (fd, fd < 0 ? errorAddress.value : 0);
+}
+
+(int, int) $syscallInotifyAddWatch(int fd, GoString path, int mask) {
+  final name = _malloc(path.length + 1);
+  if (name == nullptr) return (-1, 12);
+  try {
+    name.asTypedList(path.length + 1)
+      ..setRange(0, path.length, path.bytes)
+      ..[path.length] = 0;
+    final add = _inotifyAddWatch;
+    final errorAddress = _errno();
+    final wd = add(fd, name, mask);
+    return (wd, wd < 0 ? errorAddress.value : 0);
+  } finally {
+    _free(name);
+  }
+}
+
+(int, int) $syscallInotifyRmWatch(int fd, int watchdesc) {
+  final remove = _inotifyRmWatch;
+  final errorAddress = _errno();
+  final success = remove(fd, watchdesc);
+  return (success, success < 0 ? errorAddress.value : 0);
 }
 
 (int, int) $syscallEpollCreate1(int flag) {

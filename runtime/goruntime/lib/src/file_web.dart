@@ -463,6 +463,14 @@ int $syscallFlock(int fd, int how) => 38;
 
 int $syscallListen(int fd, int how) => 38;
 
+(int, int) $syscallInotifyInit() => (-1, 38);
+
+(int, int) $syscallInotifyInit1(int flags) => (-1, 38);
+
+(int, int) $syscallInotifyAddWatch(int fd, GoString path, int mask) => (-1, 38);
+
+(int, int) $syscallInotifyRmWatch(int fd, int watchdesc) => (-1, 38);
+
 (int, int) $syscallEpollCreate1(int flag) => (-1, 38);
 
 int $syscallEpollCtl(int epfd, int op, int fd, Slice<int> data) => 38;

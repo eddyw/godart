@@ -2252,6 +2252,23 @@ func SyscallListen(fd, how int) int {
 	panic("syscall/dart needs the gart compiler")
 }
 
+func SyscallInotifyInit() (int, int) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+func SyscallInotifyInit1(flags int) (int, int) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// SyscallInotifyAddWatch requires a path without NUL.
+func SyscallInotifyAddWatch(fd int, path string, mask uint32) (int, int) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+func SyscallInotifyRmWatch(fd int, watchdesc uint32) (int, int) {
+	panic("syscall/dart needs the gart compiler")
+}
+
 func SyscallEpollCreate1(flag int) (int, int) {
 	panic("syscall/dart needs the gart compiler")
 }

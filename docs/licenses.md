@@ -620,3 +620,8 @@ The Linux epoll differential follows the selected Go SDK
 `src/syscall/syscall_unix.go` and `src/syscall/zsyscall_linux_amd64.go`
 contracts under the Go BSD license. It preserves actual readiness, event masks,
 caller event slices, errors and descriptor ownership.
+
+The Linux inotify differential follows the selected Go SDK
+`src/syscall/syscall_unix.go` and `src/syscall/zsyscall_linux_amd64.go`
+contracts under the Go BSD license. It preserves actual watch IDs, masks, paths,
+filesystem events, errors and descriptor ownership.
