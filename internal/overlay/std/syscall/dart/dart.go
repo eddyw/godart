@@ -2252,6 +2252,20 @@ func SyscallListen(fd, how int) int {
 	panic("syscall/dart needs the gart compiler")
 }
 
+func SyscallPipe2(flags int) (int, int, int) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// SyscallSplice requires nil offsets or exactly 8 native-endian bytes.
+// Shared offset storage retains the native pointer alias.
+func SyscallSplice(rfd int, read []byte, wfd int, write []byte, length, flags int) (int64, int) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+func SyscallTee(rfd, wfd, length, flags int) (int64, int) {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // SyscallSendfile requires a nil offset or exactly 8 native-endian bytes.
 func SyscallSendfile(outfd, infd int, offset []byte, count int) (int, int) {
 	panic("syscall/dart needs the gart compiler")

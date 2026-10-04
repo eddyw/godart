@@ -595,3 +595,12 @@ Nil offsets advance the source position. Explicit offsets preserve the source
 position and retain the actual kernel offset update. Counts, EOF, transferred
 bytes, duplicate lifetimes and typed errors match the selected SDK. Blocking
 calls can stop the Dart scheduler. BSD sendfile semantics remain unsupported.
+
+Linux 64-bit programs support `syscall.Pipe2`, `syscall.Splice` and `syscall.Tee` through actual
+native pipe transfers. They preserve transferred or duplicated bytes, counts,
+optional offsets, pointer aliases, source positions, EOF, nonblocking errors and
+descriptor ownership. Blocking calls can stop the Dart scheduler. They do not
+establish asynchronous readiness or process descriptor inheritance.
+
+`Pipe2` preserves actual nonblocking and close-on-exec flags. The caller slice
+requires exactly 2 elements. Errors retain the caller values.

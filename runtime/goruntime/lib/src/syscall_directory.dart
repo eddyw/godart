@@ -64,6 +64,18 @@ final _select = _libc
       Int Function(Int, Pointer<Uint8>, Pointer<Uint8>, Pointer<Uint8>, Pointer<Uint8>),
       int Function(int, Pointer<Uint8>, Pointer<Uint8>, Pointer<Uint8>, Pointer<Uint8>)
     >('select');
+final _pipe2 = _libc.lookupFunction<
+  Int Function(Pointer<Int32>, Int),
+  int Function(Pointer<Int32>, int)
+>('pipe2');
+final _splice = _libc.lookupFunction<
+  IntPtr Function(Int, Pointer<Int64>, Int, Pointer<Int64>, Size, UnsignedInt),
+  int Function(int, Pointer<Int64>, int, Pointer<Int64>, int, int)
+>('splice');
+final _tee = _libc.lookupFunction<
+  IntPtr Function(Int, Int, Size, UnsignedInt),
+  int Function(int, int, int, int)
+>('tee');
 final _sendfile = _libc.lookupFunction<
   IntPtr Function(Int, Int, Pointer<Int64>, Size),
   int Function(int, int, Pointer<Int64>, int)
@@ -573,6 +585,65 @@ int $syscallListen(int fd, int how) {
   final listen = _listen;
   final errorAddress = _errno();
   return listen(fd, how) < 0 ? errorAddress.value : 0;
+}
+
+(int, int, int) $syscallPipe2(int flags) {
+  final buffer = _malloc(8);
+  if (buffer == nullptr) return (0, 0, 12);
+  try {
+    final pipe2 = _pipe2;
+    final errorAddress = _errno();
+    final result = pipe2(buffer.cast<Int32>(), flags);
+    if (result < 0) return (0, 0, errorAddress.value);
+    final pair = buffer.cast<Int32>();
+    return (pair[0], pair[1], 0);
+  } finally {
+    _free(buffer);
+  }
+}
+
+(int, int) $syscallSplice(int rfd, Slice<int> read, int wfd, Slice<int> write, int length, int flags) {
+  final splice = _splice;
+  Pointer<Uint8> storage = nullptr;
+  Pointer<Int64> readPointer = nullptr;
+  Pointer<Int64> writePointer = nullptr;
+  if (!read.isNil || !write.isNil) {
+    storage = _malloc(16);
+    if (storage == nullptr) return (-1, 12);
+    if (!read.isNil) {
+      readPointer = storage.cast<Int64>();
+      for (var i = 0; i < 8; i++) { storage[i] = read[i]; }
+    }
+    if (!write.isNil) {
+      writePointer = !read.isNil && identical(read.array, write.array) && read.off == write.off
+          ? readPointer : (storage + 8).cast<Int64>();
+      final bytes = writePointer.cast<Uint8>();
+      for (var i = 0; i < 8; i++) { bytes[i] = write[i]; }
+    }
+  }
+  try {
+    final errorAddress = _errno();
+    final n = splice(rfd, readPointer, wfd, writePointer, length, flags);
+    final code = n < 0 ? errorAddress.value : 0;
+    if (!read.isNil) {
+      final bytes = readPointer.cast<Uint8>();
+      for (var i = 0; i < 8; i++) { read[i] = bytes[i]; }
+    }
+    if (!write.isNil) {
+      final bytes = writePointer.cast<Uint8>();
+      for (var i = 0; i < 8; i++) { write[i] = bytes[i]; }
+    }
+    return (n, code);
+  } finally {
+    if (storage != nullptr) _free(storage);
+  }
+}
+
+(int, int) $syscallTee(int rfd, int wfd, int length, int flags) {
+  final tee = _tee;
+  final errorAddress = _errno();
+  final n = tee(rfd, wfd, length, flags);
+  return (n, n < 0 ? errorAddress.value : 0);
 }
 
 (int, int) $syscallSendfile(int outfd, int infd, Slice<int> offset, int count) {

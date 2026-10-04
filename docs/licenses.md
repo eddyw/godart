@@ -610,3 +610,8 @@ The Linux sendfile differential follows the selected Go SDK
 `src/syscall/syscall_unix.go` and `src/syscall/zsyscall_linux_amd64.go`
 contracts under the Go BSD license. It preserves actual transferred bytes, counts,
 nil and explicit offsets, source positions and descriptor ownership.
+
+The Linux pipe transfer differential follows the selected Go SDK
+`src/syscall/syscall_unix.go` and `src/syscall/zsyscall_linux_amd64.go`
+contracts under the Go BSD license. It preserves actual transferred bytes, counts,
+nil and explicit offsets, source positions and descriptor ownership.

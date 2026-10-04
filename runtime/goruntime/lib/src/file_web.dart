@@ -463,6 +463,12 @@ int $syscallFlock(int fd, int how) => 38;
 
 int $syscallListen(int fd, int how) => 38;
 
+(int, int, int) $syscallPipe2(int flags) => (0, 0, 38);
+
+(int, int) $syscallSplice(int rfd, Slice<int> read, int wfd, Slice<int> write, int length, int flags) => (-1, 38);
+
+(int, int) $syscallTee(int rfd, int wfd, int length, int flags) => (-1, 38);
+
 (int, int) $syscallSendfile(int outfd, int infd, Slice<int> offset, int count) => (-1, 38);
 
 int $syscallFallocate(int fd, int mode, int offset, int length) => 38;
