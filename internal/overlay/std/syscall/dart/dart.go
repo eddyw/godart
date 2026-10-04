@@ -2239,3 +2239,7 @@ func SyscallMmap(fd int, offset int64, length int, prot, flags int) ([]byte, int
 func SyscallMunmap(data []byte) int {
 	panic("syscall/dart needs the gart compiler")
 }
+
+func SyscallShutdown(fd, how int) int {
+	panic("syscall/dart needs the gart compiler")
+}

@@ -654,6 +654,8 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$syscallSetsockoptInt(%s, %s, %s, %s)", args[0], args[1], args[2], args[3]), true
 	case "SyscallSetsockoptString":
 		return fmt.Sprintf("$syscallSetsockoptString(%s, %s, %s, %s)", args[0], args[1], args[2], args[3]), true
+	case "SyscallShutdown":
+		return fmt.Sprintf("$syscallShutdown(%s, %s)", args[0], args[1]), true
 	case "SyscallSocketpair":
 		return fmt.Sprintf("$syscallSocketpair(%s, %s, %s)", args[0], args[1], args[2]), true
 	case "SyscallSocket":

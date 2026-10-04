@@ -524,3 +524,9 @@ The native memory map adapter preserves the selected Go SDK
 `src/syscall/mmap_unix_test.go` original assertion under the Go BSD license.
 The memory map differential follows the SDK `src/syscall/syscall_unix.go`
 mapping, slice validation and ownership contracts under the same license.
+
+The native socket shutdown differential follows the selected Go SDK
+`src/syscall/zsyscall_linux_amd64.go` and
+`src/syscall/zsyscall_darwin_arm64.go` contracts under the Go BSD license.
+The SDK has no standalone raw Shutdown assertion. The fixture uses actual
+local socket pairs and retains descriptor ownership.

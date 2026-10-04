@@ -88,3 +88,10 @@ func Socketpair(domain, typ, proto int) (fd [2]int, err error) {
 func SetsockoptByte(fd, level, opt int, value byte) error {
 	return SetsockoptString(fd, level, opt, string([]byte{value}))
 }
+
+func Shutdown(fd, how int) error {
+	if code := dart.SyscallShutdown(fd, how); code != 0 {
+		return Errno(code)
+	}
+	return nil
+}

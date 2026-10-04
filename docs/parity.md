@@ -390,6 +390,12 @@ These calls preserve the exact 4-byte SDK value and option length
 through the same native integer socket-option calls. Returned arrays
 are independent values. Typed errors and descriptor ownership remain.
 
+Native 64-bit Linux and macOS programs support `syscall.Shutdown` through
+Dart FFI. The call applies the actual kernel shutdown direction and retains
+caller descriptor ownership. Kernel queued bytes, peer EOF and duplicate
+socket state remain. Web targets return `ENOSYS`.
+The non-atomic errno limit applies.
+
 Native 64-bit Linux and macOS programs support `syscall.Mmap` and
 `syscall.Munmap` through Dart FFI. Returned byte slices view actual native
 memory. Slice aliases share that memory. Shared file mappings update

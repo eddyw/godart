@@ -33,6 +33,8 @@ final _socketpair = _libc
       Int Function(Int, Int, Int, Pointer<Int32>),
       int Function(int, int, int, Pointer<Int32>)
     >('socketpair');
+final _shutdown = _libc
+    .lookupFunction<Int Function(Int, Int), int Function(int, int)>('shutdown');
 final _getsockopt = _libc
     .lookupFunction<
       Int Function(Int, Int, Int, Pointer<Uint8>, Pointer<Uint32>),
@@ -509,4 +511,10 @@ int $syscallSetsockoptICMPv6Filter(int fd, int level, int option, Slice<int> dat
   } finally {
     _free(buffer);
   }
+}
+
+int $syscallShutdown(int fd, int how) {
+  final shutdown = _shutdown;
+  final errorAddress = _errno();
+  return shutdown(fd, how) < 0 ? errorAddress.value : 0;
 }
