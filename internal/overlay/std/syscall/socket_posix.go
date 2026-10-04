@@ -76,3 +76,11 @@ func GetsockoptInet4Addr(fd, level, opt int) (value [4]byte, err error) {
 func SetsockoptInet4Addr(fd, level, opt int, value [4]byte) error {
 	return SetsockoptInt(fd, level, opt, int(int32(binary.NativeEndian.Uint32(value[:]))))
 }
+
+func Socketpair(domain, typ, proto int) (fd [2]int, err error) {
+	first, second, code := dart.SyscallSocketpair(domain, typ, proto)
+	if code != 0 {
+		return fd, Errno(code)
+	}
+	return [2]int{first, second}, nil
+}

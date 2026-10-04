@@ -463,3 +463,9 @@ The native IPv4 socket-option differential adapter follows the selected
 Go SDK `src/syscall/syscall_unix.go`, `src/syscall/syscall_linux.go` and
 `src/syscall/syscall_bsd.go` contracts under the Go BSD license.
 The selected SDK has no standalone IPv4 socket-option test in `src/syscall`.
+
+The native socket-pair differential adapter follows the selected
+Go SDK `src/syscall/syscall_unix.go` contracts under the Go BSD license.
+The original TestPassFD and TestSCMCredentials require process and ancillary
+facilities outside this API fixture. Linux flag inputs follow the same SDK
+`src/syscall/zerrors_linux_amd64.go` constants.

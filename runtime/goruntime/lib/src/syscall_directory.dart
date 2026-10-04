@@ -28,6 +28,11 @@ final _socket = _libc
     .lookupFunction<Int Function(Int, Int, Int), int Function(int, int, int)>(
       'socket',
     );
+final _socketpair = _libc
+    .lookupFunction<
+      Int Function(Int, Int, Int, Pointer<Int32>),
+      int Function(int, int, int, Pointer<Int32>)
+    >('socketpair');
 final _getsockopt = _libc
     .lookupFunction<
       Int Function(Int, Int, Int, Pointer<Uint8>, Pointer<Uint32>),
@@ -288,6 +293,23 @@ int $syscallSetsockoptInt(int fd, int level, int option, int value) {
     return setsockopt(fd, level, option, buffer, 4) < 0
         ? errorAddress.value
         : 0;
+  } finally {
+    _free(buffer);
+  }
+}
+
+(int, int, int) $syscallSocketpair(int domain, int type, int protocol) {
+  final buffer = _malloc(8);
+  if (buffer == nullptr) return (0, 0, 12);
+  try {
+    final descriptors = buffer.cast<Int32>();
+    descriptors[0] = 0;
+    descriptors[1] = 0;
+    final socketpair = _socketpair;
+    final errorAddress = _errno();
+    final result = socketpair(domain, type, protocol, descriptors);
+    final code = result < 0 ? errorAddress.value : 0;
+    return (descriptors[0], descriptors[1], code);
   } finally {
     _free(buffer);
   }

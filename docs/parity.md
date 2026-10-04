@@ -370,6 +370,14 @@ Unix datagram dials treat empty local and remote addresses as wildcards.
 An empty local address remains unbound. A named local address can dial
 without a peer. Dial errors retain the caller address metadata.
 
+Native 64-bit Linux and macOS programs support `syscall.Socketpair`
+through Dart FFI. The kernel creates independent caller-owned descriptors
+with the actual socket type, protocol and flags. Error results retain the
+SDK zero descriptor array. Web targets return `ENOSYS`.
+These descriptors do not supply raw polling or process inheritance.
+Blocking raw descriptors can stop the scheduler. The non-atomic errno
+limit also applies.
+
 Native 64-bit Linux and macOS programs support `syscall.GetsockoptInt`
 and `syscall.SetsockoptInt` through Dart FFI. Both calls use the SDK
 signed 32-bit value and 4-byte option length. The kernel supplies the
