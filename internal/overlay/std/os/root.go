@@ -10,7 +10,6 @@ import (
 	"errors"
 	"io"
 	"io/fs"
-	"syscall"
 	"syscall/dart"
 	"time"
 )
@@ -27,7 +26,7 @@ type Root struct {
 func OpenRoot(name string) (*Root, error) {
 	fd, code := dart.RootOpen(name)
 	if code != 0 {
-		return nil, &PathError{Op: "open", Path: name, Err: syscall.Errno(code)}
+		return nil, &PathError{Op: "open", Path: name, Err: nativeErrno(code)}
 	}
 	return newRoot(fd, name)
 }

@@ -207,7 +207,7 @@ var (
 func Pipe() (*File, *File, error) {
 	r, w, code := dart.FilePipe()
 	if code != 0 {
-		return nil, nil, &PathError{Op: "pipe", Err: syscall.Errno(code)}
+		return nil, nil, &PathError{Op: "pipe", Err: nativeErrno(code)}
 	}
 	return fileWithCleanup(&file{handle: r, name: "|0"}), fileWithCleanup(&file{handle: w, name: "|1"}), nil
 }
@@ -338,7 +338,7 @@ func (f *File) ReadAt(p []byte, off int64) (int, error) {
 		for read < len(p) {
 			n, code := dart.NativePread(int(f.Fd()), p[read:], off+int64(read))
 			if code != 0 {
-				return read, &PathError{Op: "read", Path: f.name, Err: syscall.Errno(code)}
+				return read, &PathError{Op: "read", Path: f.name, Err: nativeErrno(code)}
 			}
 			if n == 0 {
 				return read, io.EOF
@@ -404,7 +404,7 @@ func (f *File) WriteAt(p []byte, off int64) (int, error) {
 		for written < len(p) {
 			n, code := dart.NativePwrite(int(f.Fd()), p[written:], off+int64(written))
 			if code != 0 {
-				return 0, &PathError{Op: "write", Path: f.name, Err: syscall.Errno(code)}
+				return 0, &PathError{Op: "write", Path: f.name, Err: nativeErrno(code)}
 			}
 			if n == 0 {
 				return 0, &PathError{Op: "write", Path: f.name, Err: io.ErrUnexpectedEOF}
@@ -801,7 +801,7 @@ func Symlink(oldname, newname string) error {
 	}
 	if dart.HasNativeStat() {
 		if errno := dart.NativeSymlink(oldname, newname); errno != 0 {
-			return &LinkError{Op: "symlink", Old: oldname, New: newname, Err: syscall.Errno(errno)}
+			return &LinkError{Op: "symlink", Old: oldname, New: newname, Err: nativeErrno(errno)}
 		}
 		return nil
 	}
@@ -999,7 +999,7 @@ func Mkdir(name string, perm FileMode) error {
 	}
 	if system := dart.OS(); system == "linux" || system == "darwin" {
 		if errno := dart.DirectoryCreate(name, syscallMode(perm)); errno != 0 {
-			return &PathError{Op: "mkdir", Path: name, Err: syscall.Errno(errno)}
+			return &PathError{Op: "mkdir", Path: name, Err: nativeErrno(errno)}
 		}
 		// Darwin requires a separate sticky-bit operation.
 		if system == "darwin" && perm&ModeSticky != 0 {
@@ -1081,7 +1081,7 @@ func Rename(from, to string) error {
 	}
 	if dart.HasNativeStat() {
 		if errno := dart.NativeRename(from, to); errno != 0 {
-			return &LinkError{Op: "rename", Old: from, New: to, Err: syscall.Errno(errno)}
+			return &LinkError{Op: "rename", Old: from, New: to, Err: nativeErrno(errno)}
 		}
 		return nil
 	}
@@ -1164,7 +1164,7 @@ func Chdir(path string) error {
 	}
 	if dart.HasNativeStat() {
 		if errno := dart.NativeChdir(path); errno != 0 {
-			return &PathError{Op: "chdir", Path: path, Err: syscall.Errno(errno)}
+			return &PathError{Op: "chdir", Path: path, Err: nativeErrno(errno)}
 		}
 		return nil
 	}

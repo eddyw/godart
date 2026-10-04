@@ -28,7 +28,7 @@ GoString $goos() => GoString.fromString('js');
 int $fileFd(int handle, int std) =>
     throw UnsupportedError('native file descriptors');
 
-(int, int, int) $filePipe() => (-1, -1, 38);
+(int, int, int) $filePipe() => (-1, -1, -1);
 
 (int, int, int) $fileFromFD(int fd) =>
     throw UnsupportedError('native file descriptors');
@@ -40,13 +40,13 @@ int $directoryFd(int fd) =>
 
 int $directoryClose(int fd) => 38;
 
-int $directoryChdir(int fd) => 38;
+int $directoryChdir(int fd) => -1;
 
-int $nativeChdir(GoString path) => 38;
+int $nativeChdir(GoString path) => -1;
 
 (GoString, int) $nativeGetwd() => (GoString.empty, 38);
 
-int $directoryCreate(GoString path, int mode) => 38;
+int $directoryCreate(GoString path, int mode) => -1;
 
 (int, GoString, int, bool) $fileRead(int handle, Slice<GoInt> p) =>
     (0, _noSys, 0, false);
@@ -72,12 +72,12 @@ const bool $hasNativeStat = false;
 int $nativeExecutableAccess(GoString path) =>
     throw UnsupportedError('native executable access');
 
-int $nativeRename(GoString from, GoString to) => 38;
+int $nativeRename(GoString from, GoString to) => -1;
 
 (Slice<int>, int) $nativeStat(GoString path, bool follow) =>
-    (Slice<int>.nil(), 38);
+    (Slice<int>.nil(), -1);
 
-(Slice<int>, int) $nativeFstat(int fd) => (Slice<int>.nil(), 38);
+(Slice<int>, int) $nativeFstat(int fd) => (Slice<int>.nil(), -1);
 
 (int, bool, int, GoString) $stat(GoString path) => (0, false, 0, _noSys);
 
@@ -88,23 +88,23 @@ GoString $symlink(GoString target, GoString link) => _noSys;
 
 GoString $link(GoString target, GoString link) => _noSys;
 
-int $nativeTruncate(GoString path, int size) => 38;
+int $nativeTruncate(GoString path, int size) => -1;
 
-(int, int) $nativePread(int fd, Slice<GoInt> bytes, int offset) => (0, 38);
+(int, int) $nativePread(int fd, Slice<GoInt> bytes, int offset) => (0, -1);
 
-(int, int) $nativePwrite(int fd, Slice<GoInt> bytes, int offset) => (0, 38);
+(int, int) $nativePwrite(int fd, Slice<GoInt> bytes, int offset) => (0, -1);
 
-int $nativeFtruncate(int fd, int size) => 38;
+int $nativeFtruncate(int fd, int size) => -1;
 
 int $nativeFsync(int fd) => 38;
 
-int $fileChmod(int fd, int mode) => 38;
+int $fileChmod(int fd, int mode) => -1;
 
-int $fileChown(int fd, int uid, int gid) => 38;
+int $fileChown(int fd, int uid, int gid) => -1;
 
-int $nativeChmod(GoString path, int mode) => 38;
+int $nativeChmod(GoString path, int mode) => -1;
 
-int $nativeChown(GoString path, int uid, int gid, bool follow) => 38;
+int $nativeChown(GoString path, int uid, int gid, bool follow) => -1;
 
 GoString $chmod(GoString path, int mode) => _noSys;
 
@@ -193,8 +193,8 @@ int $nativeChtimes(
 
 (GoString, int) $nativeReadlink(GoString path) => (GoString.empty, 38);
 
-int $nativeLink(GoString from, GoString to) => 38;
-int $nativeSymlink(GoString from, GoString to) => 38;
+int $nativeLink(GoString from, GoString to) => -1;
+int $nativeSymlink(GoString from, GoString to) => -1;
 
 (int, int) $syscallSocket(int domain, int type, int protocol) => (-1, -1);
 
@@ -304,7 +304,7 @@ int $syscallUnlink(GoString path, bool directory) => -1;
 
 (int, int) $syscallReadlink(GoString path, Slice<GoInt> bytes) => (-1, -1);
 
-(int, int) $rootOpen(GoString path) => (-1, 38);
+(int, int) $rootOpen(GoString path) => (-1, -1);
 (int, int) $rootOpenAt(int parent, GoString path) => (-1, 38);
 (int, int) $rootOpenDir(int parent, GoString path) => (-1, 38);
 (int, int, int) $rootOpenFile(int parent, GoString path, int flags, int mode) =>
@@ -365,9 +365,9 @@ int $syscallSetxattr(
 ) => -1;
 int $syscallRemovexattr(GoString path, GoString attr) => -1;
 
-(int, int) $nativeRead(int fd, Slice<GoInt> bytes) => (-1, 38);
+(int, int) $nativeRead(int fd, Slice<GoInt> bytes) => (-1, -1);
 
-(int, int) $nativeWrite(int fd, Slice<GoInt> bytes) => (-1, 38);
+(int, int) $nativeWrite(int fd, Slice<GoInt> bytes) => (-1, -1);
 
 int $syscallAttachLsf(int fd, Slice<GoInt> data) => 38;
 

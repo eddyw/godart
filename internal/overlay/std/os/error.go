@@ -8,6 +8,14 @@ package os
 
 import "syscall"
 
+// The unavailable backend returns -1. Native backends return positive errno values.
+func nativeErrno(code int) syscall.Errno {
+	if code == -1 {
+		return syscall.ENOSYS
+	}
+	return syscall.Errno(code)
+}
+
 func underlyingErrorIs(err, target error) bool {
 	err = underlyingError(err)
 	if err == target {

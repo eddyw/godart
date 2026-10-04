@@ -74,7 +74,7 @@ func Chmod(name string, mode FileMode) error {
 	}
 	if system := dart.OS(); system == "linux" || system == "darwin" {
 		if errno := dart.NativeChmod(name, syscallMode(mode)); errno != 0 {
-			return &PathError{Op: "chmod", Path: name, Err: syscall.Errno(errno)}
+			return &PathError{Op: "chmod", Path: name, Err: nativeErrno(errno)}
 		}
 		return nil
 	}
@@ -89,7 +89,7 @@ func (f *File) Chmod(mode FileMode) error {
 			return err
 		}
 		if errno := dart.FileChmod(int(f.Fd()), syscallMode(mode)); errno != 0 {
-			return &PathError{Op: "chmod", Path: f.name, Err: syscall.Errno(errno)}
+			return &PathError{Op: "chmod", Path: f.name, Err: nativeErrno(errno)}
 		}
 		return nil
 	}
@@ -107,7 +107,7 @@ func Chown(name string, uid, gid int) error {
 	}
 	if system := dart.OS(); system == "linux" || system == "darwin" {
 		if errno := dart.NativeChown(name, uid, gid, true); errno != 0 {
-			return &PathError{Op: "chown", Path: name, Err: syscall.Errno(errno)}
+			return &PathError{Op: "chown", Path: name, Err: nativeErrno(errno)}
 		}
 		return nil
 	}
@@ -122,7 +122,7 @@ func Lchown(name string, uid, gid int) error {
 	}
 	if system := dart.OS(); system == "linux" || system == "darwin" {
 		if errno := dart.NativeChown(name, uid, gid, false); errno != 0 {
-			return &PathError{Op: "lchown", Path: name, Err: syscall.Errno(errno)}
+			return &PathError{Op: "lchown", Path: name, Err: nativeErrno(errno)}
 		}
 		return nil
 	}
@@ -137,7 +137,7 @@ func (f *File) Chown(uid, gid int) error {
 			return err
 		}
 		if errno := dart.FileChown(int(f.Fd()), uid, gid); errno != 0 {
-			return &PathError{Op: "chown", Path: f.name, Err: syscall.Errno(errno)}
+			return &PathError{Op: "chown", Path: f.name, Err: nativeErrno(errno)}
 		}
 		return nil
 	}
@@ -170,7 +170,7 @@ func Chtimes(name string, atime time.Time, mtime time.Time) error {
 func Truncate(name string, size int64) error {
 	if system := dart.OS(); system == "linux" || system == "darwin" {
 		if code := dart.NativeTruncate(name, size); code != 0 {
-			return &PathError{Op: "truncate", Path: name, Err: syscall.Errno(code)}
+			return &PathError{Op: "truncate", Path: name, Err: nativeErrno(code)}
 		}
 		return nil
 	}
@@ -196,7 +196,7 @@ func (f *File) Truncate(size int64) error {
 			return err
 		}
 		if code := dart.NativeFtruncate(int(f.Fd()), size); code != 0 {
-			return &PathError{Op: "truncate", Path: f.name, Err: syscall.Errno(code)}
+			return &PathError{Op: "truncate", Path: f.name, Err: nativeErrno(code)}
 		}
 		return nil
 	}
@@ -215,7 +215,7 @@ func (f *File) Chdir() error {
 	}
 	if system := dart.OS(); system == "linux" || system == "darwin" {
 		if errno := dart.DirectoryChdir(int(f.Fd())); errno != 0 {
-			return &PathError{Op: "chdir", Path: f.name, Err: syscall.Errno(errno)}
+			return &PathError{Op: "chdir", Path: f.name, Err: nativeErrno(errno)}
 		}
 		return nil
 	}
@@ -229,7 +229,7 @@ func Link(oldname, newname string) error {
 	}
 	if dart.HasNativeStat() {
 		if errno := dart.NativeLink(oldname, newname); errno != 0 {
-			return &LinkError{Op: "link", Old: oldname, New: newname, Err: syscall.Errno(errno)}
+			return &LinkError{Op: "link", Old: oldname, New: newname, Err: nativeErrno(errno)}
 		}
 		return nil
 	}

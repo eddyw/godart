@@ -718,3 +718,7 @@ The private unavailable sentinel does not change public Errno semantics.
 Darwin returns ENOSYS 78. Linux returns ENOSYS 38.
 Native helpers retain actual positive errno values, counts, and buffers.
 Web targets still have no native syscall backend.
+
+Raw file syscalls, `os.Pipe`, and `os.OpenRoot` report the selected Go SDK
+ENOSYS when a web target has no native file backend.
+The private error conversion preserves native errno values and caller data.

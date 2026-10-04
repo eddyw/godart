@@ -25,7 +25,7 @@ func Fstat(fd int, stat *Stat_t) (err error) {
 
 func storeStat(data []int64, errno int, stat *Stat_t) error {
 	if errno != 0 {
-		return Errno(errno)
+		return syscallErrno(errno)
 	}
 	if stat == nil {
 		return EFAULT

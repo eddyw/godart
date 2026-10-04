@@ -32,7 +32,7 @@ func newRoot(fd int, name string) (*Root, error) {
 	data, code := dart.NativeFstat(fd)
 	if code != 0 {
 		closeRootFD(fd)
-		return nil, &PathError{Op: "open", Path: name, Err: syscall.Errno(code)}
+		return nil, &PathError{Op: "open", Path: name, Err: nativeErrno(code)}
 	}
 	if nativeFileMode(uint32(data[1]))&ModeDir == 0 {
 		closeRootFD(fd)
