@@ -34,6 +34,28 @@ final _mknod = _libc
       int Function(Pointer<Uint8>, int, int)
     >('mknod');
 
+final _darwinMknod = _libc
+    .lookupFunction<
+      Int Function(Pointer<Uint8>, Uint16, Int32),
+      int Function(Pointer<Uint8>, int, int)
+    >('mknod');
+
+int $syscallDarwinMknod(GoString path, int mode, int dev) {
+  if (path.bytes.contains(0)) return 22;
+  final text = _malloc(path.length + 1);
+  if (text == nullptr) return 12;
+  try {
+    text.asTypedList(path.length + 1)
+      ..setRange(0, path.length, path.bytes)
+      ..[path.length] = 0;
+    final create = _darwinMknod;
+    final errorAddress = _errno();
+    return create(text, mode, dev) == 0 ? 0 : errorAddress.value;
+  } finally {
+    _free(text);
+  }
+}
+
 int $syscallMkfifo(GoString path, int mode) {
   if (path.bytes.contains(0)) return 22;
   final text = _malloc(path.length + 1);

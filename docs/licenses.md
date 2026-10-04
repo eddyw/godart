@@ -668,3 +668,7 @@ The Linux socket-filter differential follows the selected Go SDK
 `src/syscall/lsf_linux.go` contracts under the Go BSD license. It preserves
 helper fields, empty-slice panics, native filter programs, raw slice offsets,
 actual kernel datagrams, copy ownership and typed errors.
+
+The macOS node-creation differential follows the selected Go SDK
+`src/syscall/zsyscall_darwin_arm64.go` contract under the Go BSD license.
+It preserves raw paths, mode/device arguments, actual FIFO bytes and ownership.

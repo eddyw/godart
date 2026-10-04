@@ -671,3 +671,10 @@ kernel filters preserve packet selection, truncation, replacement, caller
 subviews, copied filter ownership, empty-slice panics and typed errors. The
 16-byte native program points to actual 8-byte filter entries. These APIs do
 not establish packet capture or promiscuous-mode support.
+
+macOS 64-bit programs support `syscall.Mknod` through the actual native call.
+The macOS ABI uses 16-bit modes and signed 32-bit device arguments. Raw paths,
+NUL validation, native node permissions, typed errors and caller ownership
+follow the SDK. Actual FIFO bytes and duplicate descriptor lifetimes have
+coverage. This API does not establish scheduler progress or process inheritance.
+Darwin does not export `syscall.Mknodat`.
