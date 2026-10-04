@@ -726,7 +726,7 @@ The private error conversion preserves native errno values and caller data.
 macOS 64-bit programs support `syscall.Kqueue` through the actual native call.
 Queue descriptors retain kernel metadata, duplication, close ownership,
 and actual descriptor-exhaustion errors. Web targets return selected SDK ENOSYS.
-Kevent records and pointer metadata remain unsupported.
+Native Kevent buffers and C pointer metadata remain unsupported.
 Process inheritance and scheduler readiness retain their existing limits.
 
 macOS 64-bit programs support actual `syscall.Revoke` and `syscall.Undelete`
@@ -736,3 +736,10 @@ It preserves their bytes, metadata, and open descriptor after kernel errors.
 Web targets return selected SDK ENOSYS after Go path validation.
 Privileged success, device revocation, and administrative state changes
 remain unverified.
+
+macOS 64-bit programs support the original SDK `syscall.SetKevent` setter.
+Its field conversions preserve uint64 Ident, int16 Filter and uint16 Flags.
+Fflags, Data and Go Udata pointer aliases retain their original values.
+The original typed nil panic remains intact on VM, AOT, JS and Wasm.
+Selected amd64 and arm64 SDK declarations have native Go reference coverage.
+This value support does not establish native Kevent buffers or registration.

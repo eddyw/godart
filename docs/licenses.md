@@ -701,3 +701,8 @@ The descriptor fixture preserves actual ownership and native errors.
 The macOS path control overlay follows the selected Go SDK
 `src/syscall/zsyscall_darwin_arm64.go` Revoke and Undelete contracts
 under the Go BSD license. It retains the BytePtrFromString validation.
+
+The macOS event value overlay follows the original Go SDK
+`src/syscall/syscall_darwin_arm64.go` SetKevent function under the Go BSD license.
+Its reference adapter extracts unchanged selected SDK setter and Kevent_t
+source for native Go value assertions on the host.
