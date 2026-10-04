@@ -2081,6 +2081,10 @@ func SyscallCapDacOverride() bool {
 	panic("syscall/dart needs the gart compiler")
 }
 
+func SyscallMknodat(dirfd int, path string, mode uint32, dev int) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
 func SyscallMkdirat(dirfd int, path string, mode uint32) int {
 	panic("syscall/dart needs the gart compiler")
 }

@@ -658,3 +658,8 @@ The Linux credential codec differential follows the selected Go SDK
 `src/syscall/sockcmsg_linux.go` contracts under the Go BSD license. It retains
 raw fields, validation order, nil panics, independent copies and actual local
 SO_PASSCRED datagrams. It does not adapt the process-inheritance upstream test.
+
+The Linux node-creation differential follows the selected Go SDK
+`src/syscall/syscall_linux.go` and `src/syscall/zsyscall_linux_amd64.go`
+contracts under the Go BSD license. It preserves raw paths, native modes,
+device arguments, actual relative descriptors, FIFO transport and errors.

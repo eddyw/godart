@@ -19,6 +19,10 @@ final _free = _libc
       Void Function(Pointer<Uint8>),
       void Function(Pointer<Uint8>)
     >('free');
+final _mknodat = _libc.lookupFunction<
+  Int Function(Int, Pointer<Uint8>, UnsignedInt, Uint64),
+  int Function(int, Pointer<Uint8>, int, int)
+>('mknodat');
 final _open = _libc
     .lookupFunction<
       Int Function(Pointer<Uint8>, Int, VarArgs<(UnsignedInt,)>),
@@ -170,6 +174,24 @@ final _errno = _libc
     final errorAddress = _errno();
     final fd = open(name, flags, mode);
     return (fd, fd < 0 ? errorAddress.value : 0);
+  } finally {
+    _free(name);
+  }
+}
+
+int $syscallMknodat(int parent, GoString path, int mode, int dev) {
+  if (path.bytes.contains(0)) return 22;
+  final name = _malloc(path.length + 1);
+  if (name == nullptr) return 12;
+  try {
+    name.asTypedList(path.length + 1)
+      ..setRange(0, path.length, path.bytes)
+      ..[path.length] = 0;
+    final mknodat = _mknodat;
+    final errorAddress = _errno();
+    // The Linux syscall consumes the low 32 bits of the device argument.
+    final result = mknodat(parent, name, mode, dev & 0xffffffff);
+    return result < 0 ? errorAddress.value : 0;
   } finally {
     _free(name);
   }

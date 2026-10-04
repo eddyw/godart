@@ -652,3 +652,15 @@ Linux 64-bit programs support `syscall.UnixCredentials` and
 headers, all raw credential fields, validation order, nil panics and independent
 value copies. Actual `SO_PASSCRED` local datagrams preserve kernel identities.
 These APIs do not establish process inheritance or high-level stream transport.
+
+Linux 64-bit programs support `syscall.Mknod` and `syscall.Mknodat` through
+actual native node creation. Raw path bytes, NUL validation order, relative
+descriptors, modes, device arguments, typed errors and ownership follow the SDK.
+Actual FIFO descriptors retain transport bytes and duplicate lifetimes. Kernel
+permissions apply to device nodes. These APIs do not establish scheduler
+progress or process descriptor inheritance.
+
+The [kernel interface](https://raw.githubusercontent.com/torvalds/linux/master/fs/namei.c)
+uses a 32-bit device value. The
+[libc interface](https://raw.githubusercontent.com/bminor/glibc/master/sysdeps/unix/sysv/linux/mknodat.c)
+accepts a 64-bit value. The runtime preserves the kernel device bits before libc.
