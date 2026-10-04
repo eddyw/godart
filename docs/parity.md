@@ -427,6 +427,14 @@ retain the SDK length and actual kernel errors. The caller owns
 the descriptor. Web targets return `ENOSYS`.
 The non-atomic errno limit applies.
 
+Native 64-bit Linux and macOS programs support `syscall.GetsockoptICMPv6Filter`
+and `syscall.SetsockoptICMPv6Filter` through Dart FFI. Both calls preserve
+the SDK 32-byte filter and 8 unsigned words with native field names.
+Getters return independent values with initialized partial/error results.
+Nil setter pointers retain the SDK length and actual kernel errors.
+The caller owns the descriptor. Kernel socket permissions remain.
+Web targets return `ENOSYS`. The non-atomic errno limit applies.
+
 Native 64-bit Linux programs support `syscall.GetsockoptUcred` through Dart FFI.
 The call preserves the SDK 12-byte value, signed PID and unsigned UID/GID.
 The kernel supplies the fields. Returned pointers hold independent values

@@ -475,3 +475,38 @@ int $syscallSetsockoptTimeval(int fd, int level, int option, Slice<int> data) {
     _free(buffer);
   }
 }
+
+int $syscallGetsockoptICMPv6Filter(int fd, int level, int option, Slice<int> data) {
+  final buffer = _malloc(36);
+  if (buffer == nullptr) return 12;
+  try {
+    buffer.asTypedList(32).fillRange(0, 32, 0);
+    final length = (buffer + 32).cast<Uint32>();
+    length.value = 32;
+    final getsockopt = _getsockopt;
+    final errorAddress = _errno();
+    final result = getsockopt(fd, level, option, buffer, length);
+    final code = result < 0 ? errorAddress.value : 0;
+    data.array.setRange(data.off, data.off + 32, buffer.asTypedList(32));
+    return code;
+  } finally {
+    _free(buffer);
+  }
+}
+
+int $syscallSetsockoptICMPv6Filter(int fd, int level, int option, Slice<int> data) {
+  final buffer = data.isNil ? nullptr.cast<Uint8>() : _malloc(32);
+  if (!data.isNil && buffer == nullptr) return 12;
+  try {
+    if (!data.isNil) {
+      buffer.asTypedList(32).setRange(0, 32, data.array, data.off);
+    }
+    final setsockopt = _setsockopt;
+    final errorAddress = _errno();
+    return setsockopt(fd, level, option, buffer, 32) < 0
+        ? errorAddress.value
+        : 0;
+  } finally {
+    _free(buffer);
+  }
+}

@@ -507,3 +507,9 @@ The native socket timeval differential adapter follows the selected
 Go SDK `src/syscall/syscall_unix.go` and native `src/syscall/ztypes_*`
 contracts under the Go BSD license. The selected SDK has no standalone
 socket timeval option test in `src/syscall`.
+
+The native ICMPv6 filter differential adapter follows the selected
+Go SDK `src/syscall/syscall_unix.go`, `src/syscall/syscall_linux.go` and
+`src/syscall/syscall_bsd.go` contracts under the Go BSD license.
+The adapter uses each native SDK filter field and option name.
+The selected SDK has no standalone ICMPv6 filter option test.

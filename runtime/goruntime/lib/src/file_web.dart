@@ -432,3 +432,17 @@ int $syscallSetsockoptTimeval(
   int option,
   Slice<int> data,
 ) => 38;
+
+int $syscallGetsockoptICMPv6Filter(
+  int fd,
+  int level,
+  int option,
+  Slice<int> data,
+) => 38;
+
+int $syscallSetsockoptICMPv6Filter(
+  int fd,
+  int level,
+  int option,
+  Slice<int> data,
+) => 38;

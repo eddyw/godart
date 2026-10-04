@@ -2219,3 +2219,13 @@ func SyscallSetsockoptIPv6Mreq(fd, level, opt int, data []byte) int {
 func SyscallSetsockoptTimeval(fd, level, opt int, data []byte) int {
 	panic("syscall/dart needs the gart compiler")
 }
+
+// SyscallGetsockoptICMPv6Filter requires a 32-byte output slice.
+func SyscallGetsockoptICMPv6Filter(fd, level, opt int, data []byte) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// SyscallSetsockoptICMPv6Filter accepts a nil slice for a nil pointer. Other slices must contain 32 bytes.
+func SyscallSetsockoptICMPv6Filter(fd, level, opt int, data []byte) int {
+	panic("syscall/dart needs the gart compiler")
+}
