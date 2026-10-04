@@ -376,6 +376,12 @@ signed 32-bit value and 4-byte option length. The kernel supplies the
 actual option state and typed errors. The caller owns the descriptor.
 Web targets return `ENOSYS`. The non-atomic errno limit also applies.
 
+Native 64-bit Linux and macOS programs also support
+`syscall.GetsockoptInet4Addr` and `syscall.SetsockoptInet4Addr`.
+These calls preserve the exact 4-byte SDK value and option length
+through the same native integer socket-option calls. Returned arrays
+are independent values. Typed errors and descriptor ownership remain.
+
 `syscall.SetsockoptString` passes the exact string bytes and length to the
 native Linux/macOS `setsockopt` call. An empty value uses a null pointer and
 0 length. The caller retains descriptor ownership. The documented

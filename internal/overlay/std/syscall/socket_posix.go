@@ -6,7 +6,10 @@
 
 package syscall
 
-import "syscall/dart"
+import (
+	"encoding/binary"
+	"syscall/dart"
+)
 
 var SocketDisableIPv6 bool
 
@@ -62,4 +65,14 @@ func SetsockoptInt(fd, level, opt, value int) error {
 		return Errno(code)
 	}
 	return nil
+}
+
+func GetsockoptInet4Addr(fd, level, opt int) (value [4]byte, err error) {
+	n, err := GetsockoptInt(fd, level, opt)
+	binary.NativeEndian.PutUint32(value[:], uint32(n))
+	return value, err
+}
+
+func SetsockoptInet4Addr(fd, level, opt int, value [4]byte) error {
+	return SetsockoptInt(fd, level, opt, int(int32(binary.NativeEndian.Uint32(value[:]))))
 }
