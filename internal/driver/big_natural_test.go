@@ -5,7 +5,6 @@ import (
 	"go/token"
 	"path/filepath"
 	"runtime"
-	"strings"
 	"testing"
 
 	"github.com/eddyw/godart/internal/driver"
@@ -30,8 +29,6 @@ func TestBigNatural(t *testing.T) {
 	{
 		path := filepath.Join(dir, "nat_test.go")
 		source := selectedUpstreamSource(t, path, []string{"TestAdd", "TestBit", "TestCmp", "TestExpNN", "TestFibo", "TestIssue37499", "TestIssue42552", "TestModW", "TestMontgomery", "TestMulRangeN", "TestNLZ", "TestNatMul", "TestNatSqr", "TestNatSubMod2N", "TestSet", "TestShiftLeft", "TestShiftRight", "TestSticky", "TestSub", "argNN", "bitTests", "cmpTests", "expNNTests", "fibo", "fiboNums", "funNN", "funSNN", "leftShiftTests", "modWTest", "modWTests32", "modWTests64", "montgomeryTests", "mulRangesN", "natFromString", "permute", "prodNN", "prodNNExtra", "prodTests", "rightShiftTests", "runModWTests", "setDuringTest", "shiftTest", "stickyTests", "subMod2NTests", "sumNN", "testFunNN", "testFunSNN", "testMul", "testSqr"})
-		// The original versioned import has the package name rand.
-		source = strings.Replace(source, "import (\n", "import (\nrand \"math/rand/v2\"\n", 1)
 		sources[path] = []byte(source)
 	}
 

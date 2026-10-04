@@ -5,7 +5,6 @@ import (
 	"go/token"
 	"path/filepath"
 	"runtime"
-	"strings"
 	"testing"
 
 	"github.com/eddyw/godart/internal/driver"
@@ -29,8 +28,6 @@ func TestBigIntText(t *testing.T) {
 	}
 	path := filepath.Join(dir, "intconv_test.go")
 	source := selectedUpstreamSource(t, path, []string{"TestIntText", "TestAppendText", "TestGetString", "TestSetString", "TestFormat", "TestScan", "stringTests", "format", "formatTests", "testFormat", "scanTest", "scanTests", "init"})
-	// The original versioned import has the package name rand.
-	source = strings.Replace(source, "import (\n", "import (\nrand \"math/rand/v2\"\n", 1)
 	sources[path] = []byte(source)
 	path = filepath.Join(dir, "int_test.go")
 	sources[path] = []byte(selectedUpstreamSource(t, path, []string{"isNormalized"}))

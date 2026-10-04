@@ -5,7 +5,6 @@ import (
 	"go/token"
 	"path/filepath"
 	"runtime"
-	"strings"
 	"testing"
 
 	"github.com/eddyw/godart/internal/driver"
@@ -29,8 +28,6 @@ func TestBigWordScalar(t *testing.T) {
 	}
 	path := filepath.Join(dir, "arith_test.go")
 	source := selectedUpstreamSource(t, path, []string{"TestDivWW", "TestFunVWW", "TestIssue31084", "TestIssue42838", "TestMulAddWWW", "TestMulWW", "TestShiftOverlap", "argVU", "argVWW", "argWVW", "arglshVU", "arglshVUIn", "arglshVUr1", "arglshVUrWm1", "argrshVU", "argrshVUIn", "argrshVUr1", "argrshVUrWm1", "divWWTests", "funVWW", "funWVW", "issue42838Value", "mulAddWWWTests", "mulWWTests", "prodVWW", "rnd", "rndW", "testFunVWW", "testFunWVW", "testShiftFunc", "testsNumber"})
-	// The original versioned import has the package name rand.
-	source = strings.Replace(source, "import (\n", "import (\nrand \"math/rand/v2\"\n", 1)
 	sources[path] = []byte(source)
 
 	out := t.TempDir()
