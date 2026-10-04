@@ -493,6 +493,8 @@ int $syscallEpollCtl(int epfd, int op, int fd, Slice<int> data) => 38;
 
 (int, int) $syscallSendfile(int outfd, int infd, Slice<int> offset, int count) => (-1, 38);
 
+int $syscallSyncFileRange(int fd, int offset, int length, int flags) => 38;
+
 int $syscallFallocate(int fd, int mode, int offset, int length) => 38;
 
 (int, int) $syscallSelect(

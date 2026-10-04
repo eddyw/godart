@@ -648,3 +648,8 @@ loopback transport, typed errors and descriptor ownership.
 
 The Linux BindToDevice overlay preserves the selected Go SDK
 `src/syscall/syscall_linux.go` implementation under the Go BSD license.
+
+The Linux SyncFileRange differential follows the selected Go SDK
+`src/syscall/zsyscall_linux_amd64.go` contract under the Go BSD license.
+It preserves native flags, signed ranges, file bytes, positions, errors and
+descriptor ownership.

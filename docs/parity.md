@@ -641,3 +641,8 @@ Linux 64-bit programs support `syscall.BindToDevice` through the SDK
 `SetsockoptString` wrapper. The kernel receives the exact device bytes and
 length. Device options, loopback datagrams, typed errors and descriptor
 ownership follow the native calls. Kernel permissions apply to device changes.
+
+Linux 64-bit programs support `syscall.SyncFileRange` through the actual
+native call. Signed 64-bit offsets and lengths, flags, typed errors, file
+positions and descriptor ownership follow the SDK. This API does not guarantee
+metadata durability. The raw call can stop the Dart scheduler.

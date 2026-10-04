@@ -112,6 +112,10 @@ final _sendfile = _libc.lookupFunction<
   IntPtr Function(Int, Int, Pointer<Int64>, Size),
   int Function(int, int, Pointer<Int64>, int)
 >('sendfile');
+final _syncFileRange = _libc.lookupFunction<
+  Int Function(Int, Int64, Int64, UnsignedInt),
+  int Function(int, int, int, int)
+>('sync_file_range');
 final _fallocate = _libc
     .lookupFunction<
       Int Function(Int, Int, Int64, Int64),
@@ -823,6 +827,12 @@ int $syscallEpollCtl(int epfd, int op, int fd, Slice<int> data) {
   } finally {
     if (storage != nullptr) _free(storage);
   }
+}
+
+int $syscallSyncFileRange(int fd, int offset, int length, int flags) {
+  final syncFileRange = _syncFileRange;
+  final errorAddress = _errno();
+  return syncFileRange(fd, offset, length, flags) < 0 ? errorAddress.value : 0;
 }
 
 int $syscallFallocate(int fd, int mode, int offset, int length) {
