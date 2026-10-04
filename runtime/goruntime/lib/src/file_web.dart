@@ -411,3 +411,17 @@ int $syscallSetsockoptIPMreqn(
   int option,
   Slice<int> data,
 ) => 38;
+
+int $syscallGetsockoptIPv6Mreq(
+  int fd,
+  int level,
+  int option,
+  Slice<int> data,
+) => 38;
+
+int $syscallSetsockoptIPv6Mreq(
+  int fd,
+  int level,
+  int option,
+  Slice<int> data,
+) => 38;

@@ -497,3 +497,8 @@ The native linger option differential adapter follows the selected
 Go SDK `src/syscall/syscall_unix.go` and native `src/syscall/ztypes_*`
 contracts under the Go BSD license. The selected SDK has no standalone
 linger option test in `src/syscall`.
+
+The native IPv6 multicast request differential adapter follows the selected
+Go SDK `src/syscall/syscall_unix.go`, `src/syscall/syscall_linux.go` and
+`src/syscall/syscall_bsd.go` contracts under the Go BSD license.
+The selected SDK has no standalone IPv6 multicast request option test.

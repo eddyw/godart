@@ -423,3 +423,38 @@ int $syscallSetsockoptIPMreqn(int fd, int level, int option, Slice<int> data) {
     _free(buffer);
   }
 }
+
+int $syscallGetsockoptIPv6Mreq(int fd, int level, int option, Slice<int> data) {
+  final buffer = _malloc(24);
+  if (buffer == nullptr) return 12;
+  try {
+    buffer.asTypedList(20).fillRange(0, 20, 0);
+    final length = (buffer + 20).cast<Uint32>();
+    length.value = 20;
+    final getsockopt = _getsockopt;
+    final errorAddress = _errno();
+    final result = getsockopt(fd, level, option, buffer, length);
+    final code = result < 0 ? errorAddress.value : 0;
+    data.array.setRange(data.off, data.off + 20, buffer.asTypedList(20));
+    return code;
+  } finally {
+    _free(buffer);
+  }
+}
+
+int $syscallSetsockoptIPv6Mreq(int fd, int level, int option, Slice<int> data) {
+  final buffer = data.isNil ? nullptr.cast<Uint8>() : _malloc(20);
+  if (!data.isNil && buffer == nullptr) return 12;
+  try {
+    if (!data.isNil) {
+      buffer.asTypedList(20).setRange(0, 20, data.array, data.off);
+    }
+    final setsockopt = _setsockopt;
+    final errorAddress = _errno();
+    return setsockopt(fd, level, option, buffer, 20) < 0
+        ? errorAddress.value
+        : 0;
+  } finally {
+    _free(buffer);
+  }
+}
