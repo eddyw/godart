@@ -8,6 +8,15 @@ package syscall
 
 import "syscall/dart"
 
+// Openat opens a path relative to dirfd. The caller owns the descriptor.
+func Openat(dirfd int, path string, flags int, mode uint32) (int, error) {
+	fd, code := dart.SyscallOpenat(dirfd, path, flags|O_LARGEFILE, mode)
+	if code != 0 {
+		return fd, Errno(code)
+	}
+	return fd, nil
+}
+
 func Mkdirat(dirfd int, path string, mode uint32) error {
 	if code := dart.SyscallMkdirat(dirfd, path, mode); code != 0 {
 		return Errno(code)

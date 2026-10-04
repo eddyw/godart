@@ -346,6 +346,13 @@ The caller owns the raw descriptor. These calls do not supply raw polling,
 deadlines or descriptor inheritance. A blocking raw descriptor can stop the
 Dart scheduler. Other socket address types remain unsupported.
 
+Linux 64-bit programs support raw `syscall.Openat` through Dart FFI.
+The caller owns the descriptor. Relative paths retain the directory
+descriptor identity after a rename. Native flags, modes, raw path bytes,
+and typed errors follow the selected SDK. Web targets return `ENOSYS`.
+The documented non-atomic errno limit also applies to this call.
+This API does not supply polling or automatic nonblocking changes.
+
 The original syscall error assertions retain the invalid Seek descriptor and
 ENFILE temporary-error contract. Native VM/AOT preserve their SDK errors.
 

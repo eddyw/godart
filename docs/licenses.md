@@ -447,3 +447,10 @@ in `src/syscall/netlink_linux.go` under the same BSD license.
 The Linux netlink route-attribute differential adapter follows the selected
 Go SDK `src/syscall/netlink_linux.go` contract under the Go BSD license.
 The selected SDK has no original route-attribute test in `src/syscall`.
+
+The native Linux Openat differential adapter follows the selected Go SDK
+`src/syscall/syscall_linux.go` and `src/syscall/zsyscall_linux_amd64.go`
+contracts under the Go BSD license. The selected SDK has no original Openat
+test in `src/syscall`.
+The O_PATH input follows `src/internal/syscall/unix/at_sysnum_linux.go`.
+The amd64 `syscall` package does not expose this selected SDK constant.

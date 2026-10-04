@@ -199,6 +199,9 @@ int $nativeSymlink(GoString from, GoString to) => 38;
 (int, int) $syscallSocket(int domain, int type, int protocol) => (-1, 38);
 
 (int, int) $syscallOpen(GoString path, int flags, int mode) => (-1, 38);
+
+(int, int) $syscallOpenat(int parent, GoString path, int flags, int mode) =>
+    (-1, 38);
 (int, int) $syscallSeek(int fd, int offset, int whence) => (-1, 38);
 
 int $syscallClose(int fd) => 38;

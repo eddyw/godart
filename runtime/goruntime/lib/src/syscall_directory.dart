@@ -71,6 +71,23 @@ final _errno = _libc
   }
 }
 
+(int, int) $syscallOpenat(int parent, GoString path, int flags, int mode) {
+  if (path.bytes.contains(0)) return (0, 22);
+  final name = _malloc(path.length + 1);
+  if (name == nullptr) return (-1, 12);
+  try {
+    name.asTypedList(path.length + 1)
+      ..setRange(0, path.length, path.bytes)
+      ..[path.length] = 0;
+    final openat = _openat;
+    final errorAddress = _errno();
+    final fd = openat(parent, name, flags, mode);
+    return (fd, fd < 0 ? errorAddress.value : 0);
+  } finally {
+    _free(name);
+  }
+}
+
 (int, int) $syscallSocket(int domain, int type, int protocol) {
   final socket = _socket;
   final errorAddress = _errno();
@@ -139,8 +156,8 @@ final _seek = _libc
     >('lseek');
 final _openat = _libc
     .lookupFunction<
-      Int Function(Int, Pointer<Uint8>, Int, VarArgs<()>),
-      int Function(int, Pointer<Uint8>, int)
+      Int Function(Int, Pointer<Uint8>, Int, VarArgs<(UnsignedInt,)>),
+      int Function(int, Pointer<Uint8>, int, int)
     >('openat');
 final _fdopendir = _libc
     .lookupFunction<Pointer<Void> Function(Int), Pointer<Void> Function(int)>(
@@ -167,7 +184,7 @@ final _readdir = _libc
   try {
     dot[0] = 46;
     dot[1] = 0;
-    copy = _openat(fd, dot, 0);
+    copy = _openat(fd, dot, 0, 0);
     if (copy < 0) return (0, _errno().value);
   } finally {
     _free(dot);

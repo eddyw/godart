@@ -1949,6 +1949,10 @@ func SyscallOpen(path string, flags int, mode uint32) (int, int) {
 	panic("syscall/dart needs the gart compiler")
 }
 
+func SyscallOpenat(dirfd int, path string, flags int, mode uint32) (int, int) {
+	panic("syscall/dart needs the gart compiler")
+}
+
 func SyscallSeek(fd int, offset int64, whence int) (int64, int) {
 	panic("syscall/dart needs the gart compiler")
 }
