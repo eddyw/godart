@@ -2284,3 +2284,8 @@ func SyscallGetpeername(fd int, data []byte) int {
 func SyscallRecvfrom(fd int, data []byte, flags int, address []byte) (int, int) {
 	panic("syscall/dart needs the gart compiler")
 }
+
+// SyscallAccept requires SizeofSockaddrAny bytes in address.
+func SyscallAccept(fd int, address []byte) (int, int, int) {
+	panic("syscall/dart needs the gart compiler")
+}

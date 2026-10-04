@@ -425,6 +425,16 @@ Other address families remain unsupported. Web targets return `ENOSYS`.
 Raw blocking calls can stop the Dart scheduler. The non-atomic errno
 limit applies.
 
+Native `syscall.Accept` supports Unix, IPv4 and IPv6 stream sockets.
+Actual accepted descriptors, peer addresses, local identity, transport
+bytes, duplicate lifetimes, EOF and caller ownership match native Go.
+Linux uses native `accept4` with flags 0. Darwin retains the SDK
+zero-address-length cleanup and `ECONNABORTED` result. Address conversion
+errors close the accepted descriptor and preserve the SDK return value.
+Other address families and public `Accept4` remain unsupported.
+Web targets return `ENOSYS`. Raw blocking calls can stop the Dart
+scheduler. The non-atomic errno limit applies.
+
 Native 64-bit Linux and macOS programs support `syscall.Select` through
 Dart FFI. The call preserves actual descriptor readiness, native FD sets,
 shared FD-set pointer aliases, nil pointers and native timeval fields.

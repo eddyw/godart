@@ -33,6 +33,14 @@ final _socketpair = _libc
       Int Function(Int, Int, Int, Pointer<Int32>),
       int Function(int, int, int, Pointer<Int32>)
     >('socketpair');
+final _accept = _libc.lookupFunction<
+  Int Function(Int, Pointer<Uint8>, Pointer<Uint32>),
+  int Function(int, Pointer<Uint8>, Pointer<Uint32>)
+>('accept');
+final _accept4 = _libc.lookupFunction<
+  Int Function(Int, Pointer<Uint8>, Pointer<Uint32>, Int),
+  int Function(int, Pointer<Uint8>, Pointer<Uint32>, int)
+>('accept4');
 final _recvfrom = _libc.lookupFunction<
   IntPtr Function(Int, Pointer<Uint8>, Size, Int, Pointer<Uint8>, Pointer<Uint32>),
   int Function(int, Pointer<Uint8>, int, int, Pointer<Uint8>, Pointer<Uint32>)
@@ -709,6 +717,30 @@ int $syscallGetpeername(int fd, Slice<int> data) =>
     } finally {
       _free(payload);
     }
+  } finally {
+    _free(nativeAddress);
+  }
+}
+
+(int, int, int) $syscallAccept(int fd, Slice<int> address) {
+  final nativeAddress = _malloc(address.len + 4);
+  if (nativeAddress == nullptr) return (-1, 0, 12);
+  try {
+    final bytes = nativeAddress.asTypedList(address.len);
+    bytes.fillRange(0, bytes.length, 0);
+    final length = Pointer<Uint32>.fromAddress(nativeAddress.address + address.len);
+    length.value = address.len;
+    final linuxAccept = Platform.isLinux ? _accept4 : null;
+    final darwinAccept = Platform.isLinux ? null : _accept;
+    final errorAddress = _errno();
+    final accepted = linuxAccept != null
+        ? linuxAccept(fd, nativeAddress, length, 0)
+        : darwinAccept!(fd, nativeAddress, length);
+    final code = accepted < 0 ? errorAddress.value : 0;
+    if (accepted >= 0) {
+      address.array.setRange(address.off, address.off + address.len, bytes);
+    }
+    return (accepted, length.value, code);
   } finally {
     _free(nativeAddress);
   }
