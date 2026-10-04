@@ -23,6 +23,10 @@ final _mknodat = _libc.lookupFunction<
   Int Function(Int, Pointer<Uint8>, UnsignedInt, Uint64),
   int Function(int, Pointer<Uint8>, int, int)
 >('mknodat');
+final _nanosleep = _libc.lookupFunction<
+  Int Function(Pointer<Uint8>, Pointer<Uint8>),
+  int Function(Pointer<Uint8>, Pointer<Uint8>)
+>('nanosleep');
 final _sync = _libc.lookupFunction<Void Function(), void Function()>('sync');
 
 void $syscallSync() => _sync();
@@ -869,6 +873,36 @@ int $syscallEpollCtl(int epfd, int op, int fd, Slice<int> data) {
     return (written, code);
   } finally {
     if (storage != nullptr) _free(storage);
+  }
+}
+
+int $syscallNanosleep(Slice<int> request, Slice<int> leftover) {
+  final buffers = Map<List<int>, Pointer<Uint8>>.identity();
+  try {
+    for (final data in [request, leftover]) {
+      if (data.isNil || buffers.containsKey(data.array)) continue;
+      final buffer = _malloc(data.len);
+      if (buffer == nullptr) return 12;
+      buffers[data.array] = buffer;
+      buffer.asTypedList(data.len).setRange(0, data.len, data.array);
+    }
+    final nanosleep = _nanosleep;
+    final errorAddress = _errno();
+    final result = nanosleep(
+      buffers[request.array] ?? nullptr,
+      buffers[leftover.array] ?? nullptr,
+    );
+    final code = result < 0 ? errorAddress.value : 0;
+    if (!leftover.isNil) {
+      leftover.array.setRange(
+        0, leftover.len, buffers[leftover.array]!.asTypedList(leftover.len),
+      );
+    }
+    return code;
+  } finally {
+    for (final buffer in buffers.values) {
+      _free(buffer);
+    }
   }
 }
 

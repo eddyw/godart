@@ -2333,6 +2333,11 @@ func SyscallSendfile(outfd, infd int, offset []byte, count int) (int, int) {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// SyscallNanosleep requires nil or complete native 16-byte Timespec buffers.
+func SyscallNanosleep(request, leftover []byte) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
 func SyscallSync() {
 	panic("syscall/dart needs the gart compiler")
 }

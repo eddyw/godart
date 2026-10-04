@@ -689,3 +689,10 @@ process-exit intrinsic. The code conversion follows the Go runtime's signed
 32-bit contract. Actual exit status, defer/recover bypass and goroutine process
 termination have coverage on VM, AOT, Node JS and Node Wasm. A browser retains
 the established process-exit exception because it has no native process.
+
+Linux 64-bit programs support `syscall.Nanosleep` through the actual native
+call. Native Timespec buffers preserve signed fields, nil pointers, alias
+ownership and typed errors. Zero/submillisecond waits, invalid requests and
+caller retention have coverage. Signal-interruption assertions remain
+unverified under the current signal/thread limits. The native call blocks
+the Dart scheduler and does not establish scheduler progress.
