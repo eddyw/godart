@@ -388,63 +388,63 @@ int $syscallGetsockoptIPMreq(
   int fd,
   int level,
   int option,
-  Slice<int> data,
+  Slice<GoInt> data,
 ) => 38;
 
 int $syscallSetsockoptIPMreq(
   int fd,
   int level,
   int option,
-  Slice<int> data,
+  Slice<GoInt> data,
 ) => 38;
 
 int $syscallGetsockoptIPMreqn(
   int fd,
   int level,
   int option,
-  Slice<int> data,
+  Slice<GoInt> data,
 ) => 38;
 
 int $syscallSetsockoptIPMreqn(
   int fd,
   int level,
   int option,
-  Slice<int> data,
+  Slice<GoInt> data,
 ) => 38;
 
 int $syscallGetsockoptIPv6Mreq(
   int fd,
   int level,
   int option,
-  Slice<int> data,
+  Slice<GoInt> data,
 ) => 38;
 
 int $syscallSetsockoptIPv6Mreq(
   int fd,
   int level,
   int option,
-  Slice<int> data,
+  Slice<GoInt> data,
 ) => 38;
 
 int $syscallSetsockoptTimeval(
   int fd,
   int level,
   int option,
-  Slice<int> data,
+  Slice<GoInt> data,
 ) => 38;
 
 int $syscallGetsockoptICMPv6Filter(
   int fd,
   int level,
   int option,
-  Slice<int> data,
+  Slice<GoInt> data,
 ) => 38;
 
 int $syscallSetsockoptICMPv6Filter(
   int fd,
   int level,
   int option,
-  Slice<int> data,
+  Slice<GoInt> data,
 ) => 38;
 
 (Slice<int>, int) $syscallMmap(
@@ -455,7 +455,7 @@ int $syscallSetsockoptICMPv6Filter(
   int flags,
 ) => (Slice<int>.nil(), 38);
 
-int $syscallMunmap(Slice<int> data) => 38;
+int $syscallMunmap(Slice<GoInt> data) => 38;
 
 int $syscallShutdown(int fd, int how) => 38;
 
@@ -463,11 +463,11 @@ int $syscallFlock(int fd, int how) => 38;
 
 int $syscallListen(int fd, int how) => 38;
 
-int $syscallSysinfo(Slice<int> data) => 38;
+int $syscallSysinfo(Slice<GoInt> data) => 38;
 
 int $syscallGettid() => throw UnsupportedError('syscall.Gettid requires native Linux');
 
-(int, int) $syscallTimes(Slice<int> data) => (-1, 38);
+(int, int) $syscallTimes(Slice<GoInt> data) => (-1, 38);
 
 (int, int) $syscallInotifyInit() => (-1, 38);
 
@@ -479,19 +479,19 @@ int $syscallGettid() => throw UnsupportedError('syscall.Gettid requires native L
 
 (int, int) $syscallEpollCreate1(int flag) => (-1, 38);
 
-int $syscallEpollCtl(int epfd, int op, int fd, Slice<int> data) => 38;
+int $syscallEpollCtl(int epfd, int op, int fd, Slice<GoInt> data) => 38;
 
-(int, int) $syscallEpollWait(int epfd, Slice<int> data, int count, int msec) => (-1, 38);
+(int, int) $syscallEpollWait(int epfd, Slice<GoInt> data, int count, int msec) => (-1, 38);
 
 (int, int, int) $syscallPipe() => (0, 0, 38);
 
 (int, int, int) $syscallPipe2(int flags) => (0, 0, 38);
 
-(int, int) $syscallSplice(int rfd, Slice<int> read, int wfd, Slice<int> write, int length, int flags) => (-1, 38);
+(int, int) $syscallSplice(int rfd, Slice<GoInt> read, int wfd, Slice<GoInt> write, int length, int flags) => (-1, 38);
 
 (int, int) $syscallTee(int rfd, int wfd, int length, int flags) => (-1, 38);
 
-(int, int) $syscallSendfile(int outfd, int infd, Slice<int> offset, int count) => (-1, 38);
+(int, int) $syscallSendfile(int outfd, int infd, Slice<GoInt> offset, int count) => (-1, 38);
 
 int $syscallSyncFileRange(int fd, int offset, int length, int flags) => 38;
 
@@ -499,22 +499,22 @@ int $syscallFallocate(int fd, int mode, int offset, int length) => 38;
 
 (int, int) $syscallSelect(
   int nfd,
-  Slice<int> read,
-  Slice<int> write,
-  Slice<int> except,
-  Slice<int> timeout,
+  Slice<GoInt> read,
+  Slice<GoInt> write,
+  Slice<GoInt> except,
+  Slice<GoInt> timeout,
 ) => (-1, 38);
 
-int $syscallBind(int fd, Slice<int> address) => 38;
-int $syscallConnect(int fd, Slice<int> address) => 38;
-int $syscallSendto(int fd, Slice<int> data, int flags, Slice<int> address) => 38;
+int $syscallBind(int fd, Slice<GoInt> address) => 38;
+int $syscallConnect(int fd, Slice<GoInt> address) => 38;
+int $syscallSendto(int fd, Slice<GoInt> data, int flags, Slice<GoInt> address) => 38;
 
-int $syscallGetsockname(int fd, Slice<int> data) => 38;
-int $syscallGetpeername(int fd, Slice<int> data) => 38;
+int $syscallGetsockname(int fd, Slice<GoInt> data) => 38;
+int $syscallGetpeername(int fd, Slice<GoInt> data) => 38;
 
-(int, int) $syscallRecvfrom(int fd, Slice<int> data, int flags, Slice<int> address) => (-1, 38);
+(int, int) $syscallRecvfrom(int fd, Slice<GoInt> data, int flags, Slice<GoInt> address) => (-1, 38);
 
-(int, int, int) $syscallAccept(int fd, int flags, Slice<int> address) => (-1, 0, 38);
+(int, int, int) $syscallAccept(int fd, int flags, Slice<GoInt> address) => (-1, 0, 38);
 
-(int, int) $syscallSendmsgN(int fd, Slice<int> data, Slice<int> control, int flags, Slice<int> address) => (0, 38);
-(int, int, int, int) $syscallRecvmsg(int fd, Slice<int> data, Slice<int> control, int flags, Slice<int> address) => (0, 0, 0, 38);
+(int, int) $syscallSendmsgN(int fd, Slice<GoInt> data, Slice<GoInt> control, int flags, Slice<GoInt> address) => (0, 38);
+(int, int, int, int) $syscallRecvmsg(int fd, Slice<GoInt> data, Slice<GoInt> control, int flags, Slice<GoInt> address) => (0, 0, 0, 38);
