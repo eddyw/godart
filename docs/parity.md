@@ -397,6 +397,13 @@ values with initialized partial/error results. Nil setter pointers retain
 the SDK length and actual kernel errors. The caller owns the descriptor.
 Web targets return `ENOSYS`. The non-atomic errno limit applies.
 
+Native 64-bit Linux and macOS programs support `syscall.SetsockoptLinger`.
+The call preserves both signed 32-bit SDK fields and the 8-byte option
+length through the existing native fixed-size socket-option call.
+Nil pointers retain the SDK length and actual kernel errors.
+The caller owns the descriptor. Web targets return `ENOSYS`.
+The non-atomic errno limit applies.
+
 Native 64-bit Linux programs support `syscall.GetsockoptIPMreqn`
 and `syscall.SetsockoptIPMreqn` through Dart FFI. Both calls preserve
 the SDK 12-byte request, exact address arrays and signed interface index.

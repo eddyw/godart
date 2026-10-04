@@ -492,3 +492,8 @@ The Linux interface-index multicast request differential adapter follows
 the selected Go SDK `src/syscall/syscall_linux.go` and
 `src/syscall/ztypes_linux_amd64.go` contracts under the Go BSD license.
 The selected SDK has no standalone interface-index multicast option test.
+
+The native linger option differential adapter follows the selected
+Go SDK `src/syscall/syscall_unix.go` and native `src/syscall/ztypes_*`
+contracts under the Go BSD license. The selected SDK has no standalone
+linger option test in `src/syscall`.
