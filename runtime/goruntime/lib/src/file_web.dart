@@ -464,3 +464,11 @@ int $syscallFlock(int fd, int how) => 38;
 int $syscallListen(int fd, int how) => 38;
 
 int $syscallFallocate(int fd, int mode, int offset, int length) => 38;
+
+(int, int) $syscallSelect(
+  int nfd,
+  Slice<int> read,
+  Slice<int> write,
+  Slice<int> except,
+  Slice<int> timeout,
+) => (-1, 38);

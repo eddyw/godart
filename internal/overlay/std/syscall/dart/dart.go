@@ -2255,3 +2255,9 @@ func SyscallListen(fd, how int) int {
 func SyscallFallocate(fd int, mode uint32, off, length int64) int {
 	panic("syscall/dart needs the gart compiler")
 }
+
+// SyscallSelect requires nil or full native FD sets and a nil or native timeval.
+// Shared FD-set backing storage retains native pointer aliases.
+func SyscallSelect(nfd int, read, write, except, timeout []byte) (int, int) {
+	panic("syscall/dart needs the gart compiler")
+}

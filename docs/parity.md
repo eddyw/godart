@@ -390,6 +390,18 @@ These calls preserve the exact 4-byte SDK value and option length
 through the same native integer socket-option calls. Returned arrays
 are independent values. Typed errors and descriptor ownership remain.
 
+Native 64-bit Linux and macOS programs support `syscall.Select` through
+Dart FFI. The call preserves actual descriptor readiness, native FD sets,
+shared FD-set pointer aliases, nil pointers and native timeval fields.
+FD-set calls support bounds up to 1024 descriptors. Larger bounds return
+`EINVAL` before the native call and retain the original sets and timeout.
+Linux returns the actual ready count. macOS retains its error-only SDK
+signature. The caller owns all descriptors. Web targets return `ENOSYS`.
+The differential uses zero timeouts and an already-ready nil-timeout call.
+A blocking call can stop the Dart scheduler. This API does not establish
+RawConn, asynchronous readiness or scheduler progress parity.
+The non-atomic errno limit applies.
+
 Native 64-bit Linux programs support `syscall.Fallocate` through Dart FFI.
 The call forwards the uint32 mode and signed 64-bit offset and length to
 the actual kernel. File bytes, size, sparse offsets, duplicate descriptors

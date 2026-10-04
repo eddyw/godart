@@ -33,6 +33,11 @@ final _socketpair = _libc
       Int Function(Int, Int, Int, Pointer<Int32>),
       int Function(int, int, int, Pointer<Int32>)
     >('socketpair');
+final _select = _libc
+    .lookupFunction<
+      Int Function(Int, Pointer<Uint8>, Pointer<Uint8>, Pointer<Uint8>, Pointer<Uint8>),
+      int Function(int, Pointer<Uint8>, Pointer<Uint8>, Pointer<Uint8>, Pointer<Uint8>)
+    >('select');
 final _fallocate = _libc
     .lookupFunction<
       Int Function(Int, Int, Int64, Int64),
@@ -544,4 +549,42 @@ int $syscallFallocate(int fd, int mode, int offset, int length) {
   final fallocate = _fallocate;
   final errorAddress = _errno();
   return fallocate(fd, mode, offset, length) < 0 ? errorAddress.value : 0;
+}
+
+(int, int) $syscallSelect(
+  int nfd,
+  Slice<int> read,
+  Slice<int> write,
+  Slice<int> except,
+  Slice<int> timeout,
+) {
+  final buffers = Map<List<int>, Pointer<Uint8>>.identity();
+  try {
+    for (final data in [read, write, except, timeout]) {
+      if (data.isNil || buffers.containsKey(data.array)) continue;
+      final buffer = _malloc(data.len);
+      if (buffer == nullptr) return (-1, 12);
+      buffers[data.array] = buffer;
+      buffer.asTypedList(data.len).setRange(0, data.len, data.array);
+    }
+    final select = _select;
+    final errorAddress = _errno();
+    final count = select(
+      nfd,
+      buffers[read.array] ?? nullptr,
+      buffers[write.array] ?? nullptr,
+      buffers[except.array] ?? nullptr,
+      buffers[timeout.array] ?? nullptr,
+    );
+    final code = count < 0 ? errorAddress.value : 0;
+    for (final entry in buffers.entries) {
+      final data = entry.key;
+      data.setRange(0, data.length, entry.value.asTypedList(data.length));
+    }
+    return (count, code);
+  } finally {
+    for (final buffer in buffers.values) {
+      _free(buffer);
+    }
+  }
 }

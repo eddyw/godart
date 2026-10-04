@@ -547,3 +547,12 @@ The Linux file allocation differential follows the selected Go SDK
 `src/syscall/zsyscall_linux_amd64.go` contract under the Go BSD license.
 The SDK has no standalone Fallocate assertion. The fixture uses actual
 file bytes, sizes and offsets without a physical block-count claim.
+
+The native descriptor selection differential follows the selected Go SDK
+`src/syscall/zsyscall_linux_amd64.go`,
+`src/syscall/zsyscall_darwin_arm64.go` and native `ztypes_*` contracts
+under the Go BSD license. The SDK has no standalone Select assertion.
+The adapter preserves each native FdSet word width and Select return type.
+
+The separate descriptor bound fixture validates the Dart native buffer
+contract. It does not execute unsafe oversized FD sets in native Go.
