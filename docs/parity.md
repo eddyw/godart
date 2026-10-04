@@ -722,3 +722,9 @@ Web targets still have no native syscall backend.
 Raw file syscalls, `os.Pipe`, and `os.OpenRoot` report the selected Go SDK
 ENOSYS when a web target has no native file backend.
 The private error conversion preserves native errno values and caller data.
+
+macOS 64-bit programs support `syscall.Kqueue` through the actual native call.
+Queue descriptors retain kernel metadata, duplication, close ownership,
+and actual descriptor-exhaustion errors. Web targets return selected SDK ENOSYS.
+Kevent records and pointer metadata remain unsupported.
+Process inheritance and scheduler readiness retain their existing limits.

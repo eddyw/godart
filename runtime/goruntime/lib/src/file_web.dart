@@ -503,6 +503,8 @@ int $syscallSyncFileRange(int fd, int offset, int length, int flags) => 38;
 
 int $syscallExchangedata(GoString first, GoString second, int options) => 78;
 
+(int, int) $syscallKqueue() => (-1, -1);
+
 int $syscallGetdtablesize() => throw UnsupportedError('syscall.Getdtablesize');
 bool $syscallIssetugid() => throw UnsupportedError('syscall.Issetugid');
 

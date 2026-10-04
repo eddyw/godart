@@ -693,3 +693,7 @@ under the Go BSD license. It uses real descriptor limits and native state.
 The macOS file-exchange differential follows the selected Go SDK
 `src/syscall/zsyscall_darwin_arm64.go` Exchangedata contract under the Go
 BSD license. It preserves raw paths, options, file bytes and native errors.
+
+The macOS queue descriptor overlay follows the selected Go SDK
+`src/syscall/zsyscall_darwin_arm64.go` Kqueue contract under the Go BSD license.
+The descriptor fixture preserves actual ownership and native errors.

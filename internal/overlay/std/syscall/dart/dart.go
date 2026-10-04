@@ -2085,6 +2085,10 @@ func SyscallExchangedata(first, second string, options int) int {
 	panic("syscall/dart needs the gart compiler")
 }
 
+func SyscallKqueue() (int, int) {
+	panic("syscall/dart needs the gart compiler")
+}
+
 func SyscallGetdtablesize() int {
 	panic("syscall/dart needs the gart compiler")
 }

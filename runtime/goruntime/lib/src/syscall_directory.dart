@@ -31,6 +31,15 @@ final _exchangedata = _libc.lookupFunction<
   Int Function(Pointer<Uint8>, Pointer<Uint8>, UnsignedInt),
   int Function(Pointer<Uint8>, Pointer<Uint8>, int)
 >('exchangedata');
+final _kqueue = _libc.lookupFunction<Int Function(), int Function()>('kqueue');
+
+(int, int) $syscallKqueue() {
+  final create = _kqueue;
+  final errorAddress = _errno();
+  final fd = create();
+  return (fd, fd < 0 ? errorAddress.value : 0);
+}
+
 final _getdtablesize = _libc.lookupFunction<Int Function(), int Function()>('getdtablesize');
 final _issetugid = _libc.lookupFunction<Int Function(), int Function()>('issetugid');
 
