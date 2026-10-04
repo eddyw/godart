@@ -326,6 +326,12 @@ The codecs validate external control-message header lengths and identities.
 They do not validate descriptor ownership. Actual sendmsg/recvmsg operations
 transfer descriptors, and the receiver owns each received descriptor.
 
+Linux 64-bit programs support `syscall.ParseNetlinkMessage` with the selected
+SDK `NlMsghdr` type and native byte order. The parser preserves payload
+aliases, slice capacity, header value copies, and 4-byte message alignment.
+Malformed lengths and missing alignment bytes return typed `EINVAL` and a
+nil result. This byte parser does not execute kernel route queries.
+
 `syscall.SockaddrUnix` and `Sendto` use actual native Unix destination bytes.
 The caller owns the raw descriptor. These calls do not supply raw polling,
 deadlines or descriptor inheritance. A blocking raw descriptor can stop the

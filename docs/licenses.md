@@ -438,3 +438,8 @@ The Linux Unix datagram address adapter retains TestUnixgramAutobind and
 TestUnixgramLinuxAbstractLongName from `src/net/unixsock_linux_test.go`.
 The selected declarations retain the SDK BSD notice, kernel address
 assertions, original 108-byte address and 100-millisecond read deadline.
+
+The Linux netlink message adapter selects unchanged `TestParseNetlinkMessage`
+from the selected Go SDK `src/syscall/syscall_linux_test.go`.
+The selected source retains its Go BSD notice. The codec contract originates
+in `src/syscall/netlink_linux.go` under the same BSD license.
