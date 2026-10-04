@@ -27,6 +27,12 @@ final _nanosleep = _libc.lookupFunction<
   Int Function(Pointer<Uint8>, Pointer<Uint8>),
   int Function(Pointer<Uint8>, Pointer<Uint8>)
 >('nanosleep');
+final _getdtablesize = _libc.lookupFunction<Int Function(), int Function()>('getdtablesize');
+final _issetugid = _libc.lookupFunction<Int Function(), int Function()>('issetugid');
+
+int $syscallGetdtablesize() => _getdtablesize();
+bool $syscallIssetugid() => _issetugid() != 0;
+
 final _sync = _libc.lookupFunction<Void Function(), void Function()>('sync');
 
 void $syscallSync() => _sync();

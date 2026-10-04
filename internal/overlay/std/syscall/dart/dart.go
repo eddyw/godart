@@ -2081,6 +2081,14 @@ func SyscallCapDacOverride() bool {
 	panic("syscall/dart needs the gart compiler")
 }
 
+func SyscallGetdtablesize() int {
+	panic("syscall/dart needs the gart compiler")
+}
+
+func SyscallIssetugid() bool {
+	panic("syscall/dart needs the gart compiler")
+}
+
 func SyscallDarwinMknod(path string, mode uint32, dev int) int {
 	panic("syscall/dart needs the gart compiler")
 }

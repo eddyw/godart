@@ -501,6 +501,9 @@ void $syscallSync() => throw UnsupportedError('syscall.Sync');
 
 int $syscallSyncFileRange(int fd, int offset, int length, int flags) => 38;
 
+int $syscallGetdtablesize() => throw UnsupportedError('syscall.Getdtablesize');
+bool $syscallIssetugid() => throw UnsupportedError('syscall.Issetugid');
+
 int $syscallDarwinMknod(GoString path, int mode, int dev) => 38;
 
 int $syscallMknodat(int parent, GoString path, int mode, int dev) => 38;

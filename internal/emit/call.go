@@ -742,6 +742,10 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$syscallFaccessatStat(%s, %s, %s)", args[0], args[1], args[2]), true
 	case "SyscallCapDacOverride":
 		return "$syscallCapDacOverride()", true
+	case "SyscallGetdtablesize":
+		return "$syscallGetdtablesize()", true
+	case "SyscallIssetugid":
+		return "$syscallIssetugid()", true
 	case "SyscallDarwinMknod":
 		return fmt.Sprintf("$syscallDarwinMknod(%s, %s, %s)", args[0], args[1], args[2]), true
 	case "SyscallMknodat":

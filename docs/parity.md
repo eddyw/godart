@@ -696,3 +696,9 @@ ownership and typed errors. Zero/submillisecond waits, invalid requests and
 caller retention have coverage. Signal-interruption assertions remain
 unverified under the current signal/thread limits. The native call blocks
 the Dart scheduler and does not establish scheduler progress.
+
+macOS 64-bit programs support `syscall.Getdtablesize` and `syscall.Issetugid`
+through actual native observations. Descriptor table values follow real
+child-local soft-limit changes. The privilege-history result comes from the
+native process, without an inferred value. Credential mutation and set-ID
+execution retain existing limits. Web targets reject these native observations.
