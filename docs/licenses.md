@@ -676,3 +676,7 @@ It preserves raw paths, mode/device arguments, actual FIFO bytes and ownership.
 The Linux filesystem-sync differential follows the selected Go SDK
 `src/syscall/zsyscall_linux_amd64.go` void Sync contract under the Go BSD
 license. It preserves real file bytes, positions and descriptor ownership.
+
+The process-exit differential follows the selected Go SDK
+`src/runtime/runtime.go` syscall_Exit contract under the Go BSD license.
+It preserves actual exit status, integer width, and defer/recover behavior.

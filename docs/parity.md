@@ -683,3 +683,9 @@ Linux 64-bit programs support `syscall.Sync` through the actual native sync
 call. The Linux SDK returns no value. Real file bytes, positions and duplicate
 descriptor ownership have coverage. This API does not establish crash durability
 or scheduler progress. Web targets reject the unsupported native call.
+
+macOS and Linux 64-bit programs support `syscall.Exit` through the established
+process-exit intrinsic. The code conversion follows the Go runtime's signed
+32-bit contract. Actual exit status, defer/recover bypass and goroutine process
+termination have coverage on VM, AOT, Node JS and Node Wasm. A browser retains
+the established process-exit exception because it has no native process.
