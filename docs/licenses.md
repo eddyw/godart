@@ -454,3 +454,7 @@ contracts under the Go BSD license. The selected SDK has no original Openat
 test in `src/syscall`.
 The O_PATH input follows `src/internal/syscall/unix/at_sysnum_linux.go`.
 The amd64 `syscall` package does not expose this selected SDK constant.
+
+The native integer socket-option differential adapter follows the selected
+Go SDK `src/syscall/syscall_unix.go` contracts under the Go BSD license.
+The selected SDK has no standalone integer socket-option test in `src/syscall`.

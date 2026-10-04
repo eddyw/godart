@@ -370,6 +370,12 @@ Unix datagram dials treat empty local and remote addresses as wildcards.
 An empty local address remains unbound. A named local address can dial
 without a peer. Dial errors retain the caller address metadata.
 
+Native 64-bit Linux and macOS programs support `syscall.GetsockoptInt`
+and `syscall.SetsockoptInt` through Dart FFI. Both calls use the SDK
+signed 32-bit value and 4-byte option length. The kernel supplies the
+actual option state and typed errors. The caller owns the descriptor.
+Web targets return `ENOSYS`. The non-atomic errno limit also applies.
+
 `syscall.SetsockoptString` passes the exact string bytes and length to the
 native Linux/macOS `setsockopt` call. An empty value uses a null pointer and
 0 length. The caller retains descriptor ownership. The documented

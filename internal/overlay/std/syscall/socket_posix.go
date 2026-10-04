@@ -48,3 +48,18 @@ func SetsockoptString(fd, level, opt int, value string) error {
 	}
 	return nil
 }
+
+func GetsockoptInt(fd, level, opt int) (int, error) {
+	value, code := dart.SyscallGetsockoptInt(fd, level, opt)
+	if code != 0 {
+		return value, Errno(code)
+	}
+	return value, nil
+}
+
+func SetsockoptInt(fd, level, opt, value int) error {
+	if code := dart.SyscallSetsockoptInt(fd, level, opt, value); code != 0 {
+		return Errno(code)
+	}
+	return nil
+}

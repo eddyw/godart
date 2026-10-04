@@ -28,6 +28,11 @@ final _socket = _libc
     .lookupFunction<Int Function(Int, Int, Int), int Function(int, int, int)>(
       'socket',
     );
+final _getsockopt = _libc
+    .lookupFunction<
+      Int Function(Int, Int, Int, Pointer<Uint8>, Pointer<Uint32>),
+      int Function(int, int, int, Pointer<Uint8>, Pointer<Uint32>)
+    >('getsockopt');
 final _setsockopt = _libc
     .lookupFunction<
       Int Function(Int, Int, Int, Pointer<Uint8>, Uint32),
@@ -248,6 +253,39 @@ int $syscallSetsockoptString(int fd, int level, int option, GoString value) {
     final setsockopt = _setsockopt;
     final errorAddress = _errno();
     return setsockopt(fd, level, option, buffer, value.length) < 0
+        ? errorAddress.value
+        : 0;
+  } finally {
+    _free(buffer);
+  }
+}
+
+(int, int) $syscallGetsockoptInt(int fd, int level, int option) {
+  final buffer = _malloc(8);
+  if (buffer == nullptr) return (0, 12);
+  try {
+    final value = buffer.cast<Int32>();
+    final length = (buffer + 4).cast<Uint32>();
+    value.value = 0;
+    length.value = 4;
+    final getsockopt = _getsockopt;
+    final errorAddress = _errno();
+    final result = getsockopt(fd, level, option, buffer, length);
+    final code = result < 0 ? errorAddress.value : 0;
+    return (value.value, code);
+  } finally {
+    _free(buffer);
+  }
+}
+
+int $syscallSetsockoptInt(int fd, int level, int option, int value) {
+  final buffer = _malloc(4);
+  if (buffer == nullptr) return 12;
+  try {
+    buffer.cast<Int32>().value = value;
+    final setsockopt = _setsockopt;
+    final errorAddress = _errno();
+    return setsockopt(fd, level, option, buffer, 4) < 0
         ? errorAddress.value
         : 0;
   } finally {

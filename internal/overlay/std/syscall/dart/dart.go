@@ -2164,3 +2164,11 @@ func NativeWrite(fd int, p []byte) (int, int) {
 func SyscallSetsockoptString(fd, level, opt int, value string) int {
 	panic("syscall/dart needs the gart compiler")
 }
+
+func SyscallGetsockoptInt(fd, level, opt int) (int, int) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+func SyscallSetsockoptInt(fd, level, opt, value int) int {
+	panic("syscall/dart needs the gart compiler")
+}

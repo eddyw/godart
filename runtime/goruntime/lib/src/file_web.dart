@@ -371,3 +371,7 @@ int $syscallRemovexattr(GoString path, GoString attr) => -1;
 
 int $syscallSetsockoptString(int fd, int level, int option, GoString value) =>
     38;
+
+(int, int) $syscallGetsockoptInt(int fd, int level, int option) => (0, 38);
+
+int $syscallSetsockoptInt(int fd, int level, int option, int value) => 38;
