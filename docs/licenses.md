@@ -487,3 +487,8 @@ The native multicast request differential adapter follows the selected
 Go SDK `src/syscall/syscall_unix.go`, `src/syscall/syscall_linux.go` and
 `src/syscall/syscall_bsd.go` contracts under the Go BSD license.
 The selected SDK has no standalone multicast request option test in `src/syscall`.
+
+The Linux interface-index multicast request differential adapter follows
+the selected Go SDK `src/syscall/syscall_linux.go` and
+`src/syscall/ztypes_linux_amd64.go` contracts under the Go BSD license.
+The selected SDK has no standalone interface-index multicast option test.

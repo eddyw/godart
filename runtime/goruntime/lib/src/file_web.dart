@@ -397,3 +397,17 @@ int $syscallSetsockoptIPMreq(
   int option,
   Slice<int> data,
 ) => 38;
+
+int $syscallGetsockoptIPMreqn(
+  int fd,
+  int level,
+  int option,
+  Slice<int> data,
+) => 38;
+
+int $syscallSetsockoptIPMreqn(
+  int fd,
+  int level,
+  int option,
+  Slice<int> data,
+) => 38;
