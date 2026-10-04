@@ -443,3 +443,7 @@ The Linux netlink message adapter selects unchanged `TestParseNetlinkMessage`
 from the selected Go SDK `src/syscall/syscall_linux_test.go`.
 The selected source retains its Go BSD notice. The codec contract originates
 in `src/syscall/netlink_linux.go` under the same BSD license.
+
+The Linux netlink route-attribute differential adapter follows the selected
+Go SDK `src/syscall/netlink_linux.go` contract under the Go BSD license.
+The selected SDK has no original route-attribute test in `src/syscall`.

@@ -335,6 +335,12 @@ aliases, slice capacity, header value copies, and 4-byte message alignment.
 Malformed lengths and missing alignment bytes return typed `EINVAL` and a
 nil result. This byte parser does not execute kernel route queries.
 
+`syscall.ParseNetlinkRouteAttr` supports the 6 SDK link, address, and route
+message types on 64-bit Linux. It preserves native byte order, payload
+aliases, slice capacity, and attribute header copies. Short message prefixes
+and incomplete attribute alignment retain SDK slice panics. Other malformed
+attribute lengths return typed `EINVAL` and a nil result.
+
 `syscall.SockaddrUnix` and `Sendto` use actual native Unix destination bytes.
 The caller owns the raw descriptor. These calls do not supply raw polling,
 deadlines or descriptor inheritance. A blocking raw descriptor can stop the

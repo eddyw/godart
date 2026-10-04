@@ -35,3 +35,40 @@ func ParseNetlinkMessage(data []byte) ([]NetlinkMessage, error) {
 	}
 	return messages, nil
 }
+
+type NetlinkRouteAttr struct {
+	Attr  RtAttr
+	Value []byte
+}
+
+func ParseNetlinkRouteAttr(message *NetlinkMessage) ([]NetlinkRouteAttr, error) {
+	var data []byte
+	switch message.Header.Type {
+	case RTM_NEWLINK, RTM_DELLINK:
+		data = message.Data[SizeofIfInfomsg:]
+	case RTM_NEWADDR, RTM_DELADDR:
+		data = message.Data[SizeofIfAddrmsg:]
+	case RTM_NEWROUTE, RTM_DELROUTE:
+		data = message.Data[SizeofRtMsg:]
+	default:
+		return nil, EINVAL
+	}
+	var attributes []NetlinkRouteAttr
+	for len(data) >= SizeofRtAttr {
+		header := RtAttr{
+			Len:  binary.NativeEndian.Uint16(data),
+			Type: binary.NativeEndian.Uint16(data[2:]),
+		}
+		if int(header.Len) < SizeofRtAttr || int(header.Len) > len(data) {
+			return nil, EINVAL
+		}
+		attributes = append(attributes, NetlinkRouteAttr{
+			Attr:  header,
+			Value: data[SizeofRtAttr:int(header.Len)],
+		})
+		length := (int(header.Len) + RTA_ALIGNTO - 1) & ^(RTA_ALIGNTO - 1)
+		// The SDK preserves a slice panic when the aligned length exceeds len(data).
+		data = data[length:]
+	}
+	return attributes, nil
+}
