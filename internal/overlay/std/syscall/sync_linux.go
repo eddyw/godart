@@ -8,4 +8,11 @@ package syscall
 
 import "syscall/dart"
 
+func Fdatasync(fd int) error {
+	if code := dart.SyscallFdatasync(fd); code != 0 {
+		return Errno(code)
+	}
+	return nil
+}
+
 func Sync() { dart.SyscallSync() }
