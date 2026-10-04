@@ -458,3 +458,5 @@ int $syscallSetsockoptICMPv6Filter(
 int $syscallMunmap(Slice<int> data) => 38;
 
 int $syscallShutdown(int fd, int how) => 38;
+
+int $syscallFlock(int fd, int how) => 38;

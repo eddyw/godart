@@ -198,3 +198,10 @@ func Write(fd int, p []byte) (int, error) {
 	}
 	return n, nil
 }
+
+func Flock(fd, how int) error {
+	if code := dart.SyscallFlock(fd, how); code != 0 {
+		return Errno(code)
+	}
+	return nil
+}

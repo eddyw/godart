@@ -33,6 +33,8 @@ final _socketpair = _libc
       Int Function(Int, Int, Int, Pointer<Int32>),
       int Function(int, int, int, Pointer<Int32>)
     >('socketpair');
+final _flock = _libc
+    .lookupFunction<Int Function(Int, Int), int Function(int, int)>('flock');
 final _shutdown = _libc
     .lookupFunction<Int Function(Int, Int), int Function(int, int)>('shutdown');
 final _getsockopt = _libc
@@ -517,4 +519,10 @@ int $syscallShutdown(int fd, int how) {
   final shutdown = _shutdown;
   final errorAddress = _errno();
   return shutdown(fd, how) < 0 ? errorAddress.value : 0;
+}
+
+int $syscallFlock(int fd, int how) {
+  final flock = _flock;
+  final errorAddress = _errno();
+  return flock(fd, how) < 0 ? errorAddress.value : 0;
 }

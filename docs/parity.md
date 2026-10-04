@@ -390,6 +390,14 @@ These calls preserve the exact 4-byte SDK value and option length
 through the same native integer socket-option calls. Returned arrays
 are independent values. Typed errors and descriptor ownership remain.
 
+Native 64-bit Linux and macOS programs support `syscall.Flock` through
+Dart FFI. Nonblocking shared and exclusive locks, conflicts, duplicate
+lifetimes, unlock and close behavior follow the actual kernel.
+The caller owns each descriptor. Web targets return `ENOSYS`.
+A blocking lock can stop the Dart scheduler. This API does not establish
+`FcntlFlock`, process inheritance or blocking scheduler progress parity.
+The non-atomic errno limit applies.
+
 Native 64-bit Linux and macOS programs support `syscall.Shutdown` through
 Dart FFI. The call applies the actual kernel shutdown direction and retains
 caller descriptor ownership. Kernel queued bytes, peer EOF and duplicate

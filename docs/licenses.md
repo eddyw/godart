@@ -530,3 +530,9 @@ The native socket shutdown differential follows the selected Go SDK
 `src/syscall/zsyscall_darwin_arm64.go` contracts under the Go BSD license.
 The SDK has no standalone raw Shutdown assertion. The fixture uses actual
 local socket pairs and retains descriptor ownership.
+
+The native file lock differential follows the selected Go SDK
+`src/syscall/zsyscall_linux_amd64.go` and
+`src/syscall/zsyscall_darwin_arm64.go` contracts under the Go BSD license.
+The SDK has no standalone Flock assertion. The fixture uses actual
+nonblocking kernel locks and retains descriptor ownership.
