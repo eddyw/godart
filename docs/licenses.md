@@ -630,3 +630,8 @@ The Linux process differential follows the selected Go SDK
 `src/syscall/syscall_unix.go` and `src/syscall/zsyscall_linux_amd64.go`
 contracts under the Go BSD license. It preserves actual thread IDs, CPU counters,
 elapsed ticks, nil pointers and caller ownership.
+
+The native Pipe and Linux Creat differentials follow the selected Go SDK
+`src/syscall/syscall_linux.go` and `src/syscall/syscall_darwin.go` contracts
+under the Go BSD license. They preserve actual descriptors, caller slices,
+file truncation, transport bytes, errors, duplicate lifetimes and ownership.

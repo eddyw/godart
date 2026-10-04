@@ -623,3 +623,10 @@ native calls. The thread ID names the current kernel thread. CPU counters and
 elapsed ticks come from the kernel. `Times` preserves nil output pointers and
 the 32-byte native structure. These APIs do not establish thread affinity or
 parallel Go threads.
+
+Linux and macOS support `syscall.Pipe` with actual descriptors and exact SDK
+caller-slice validation. Linux delegates to `Pipe2` with flags 0. macOS uses
+the native pipe call. Both preserve transport bytes, duplicate lifetimes, EOF,
+errors and caller ownership. Linux `syscall.Creat` delegates to native `Open`
+with the SDK creation, write-only and truncation flags. These APIs do not
+establish scheduler progress or descriptor inheritance.

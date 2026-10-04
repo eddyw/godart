@@ -2292,6 +2292,10 @@ func SyscallEpollWait(epfd int, data []byte, count, msec int) (int, int) {
 	panic("syscall/dart needs the gart compiler")
 }
 
+func SyscallPipe() (int, int, int) {
+	panic("syscall/dart needs the gart compiler")
+}
+
 func SyscallPipe2(flags int) (int, int, int) {
 	panic("syscall/dart needs the gart compiler")
 }

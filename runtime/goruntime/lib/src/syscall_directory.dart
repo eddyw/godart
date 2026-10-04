@@ -88,6 +88,10 @@ final _epollWait = _libc.lookupFunction<
   Int Function(Int, Pointer<Uint8>, Int, Int),
   int Function(int, Pointer<Uint8>, int, int)
 >('epoll_wait');
+final _rawPipe = _libc.lookupFunction<
+  Int Function(Pointer<Int32>),
+  int Function(Pointer<Int32>)
+>('pipe');
 final _pipe2 = _libc.lookupFunction<
   Int Function(Pointer<Int32>, Int),
   int Function(Pointer<Int32>, int)
@@ -697,6 +701,21 @@ int $syscallEpollCtl(int epfd, int op, int fd, Slice<int> data) {
     final code = n < 0 ? errorAddress.value : 0;
     data.array.setRange(data.off, data.off + data.len, buffer.asTypedList(data.len));
     return (n, code);
+  } finally {
+    _free(buffer);
+  }
+}
+
+(int, int, int) $syscallPipe() {
+  final buffer = _malloc(8);
+  if (buffer == nullptr) return (0, 0, 12);
+  try {
+    final pipe = _rawPipe;
+    final errorAddress = _errno();
+    final result = pipe(buffer.cast<Int32>());
+    if (result < 0) return (0, 0, errorAddress.value);
+    final pair = buffer.cast<Int32>();
+    return (pair[0], pair[1], 0);
   } finally {
     _free(buffer);
   }
