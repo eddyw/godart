@@ -11,7 +11,7 @@ import "syscall/dart"
 func Getrlimit(resource int, rlim *Rlimit) error {
 	cur, max, code := dart.SyscallGetrlimit(resource, rlim != nil)
 	if code != 0 {
-		return Errno(code)
+		return syscallErrno(code)
 	}
 	if rlim != nil {
 		rlim.Cur, rlim.Max = cur, max
@@ -25,7 +25,7 @@ func Setrlimit(resource int, rlim *Rlimit) error {
 		cur, max = rlim.Cur, rlim.Max
 	}
 	if code := dart.SyscallSetrlimit(resource, rlim != nil, cur, max); code != 0 {
-		return Errno(code)
+		return syscallErrno(code)
 	}
 	return nil
 }

@@ -15,7 +15,7 @@ func Recvfrom(fd int, data []byte, flags int) (n int, from Sockaddr, err error) 
 	address := make([]byte, SizeofSockaddrAny)
 	n, code := dart.SyscallRecvfrom(fd, data, flags, address)
 	if code != 0 {
-		return n, nil, Errno(code)
+		return n, nil, syscallErrno(code)
 	}
 	if binary.NativeEndian.Uint16(address) != AF_UNSPEC {
 		from, err = sockaddrFromBytes(address)

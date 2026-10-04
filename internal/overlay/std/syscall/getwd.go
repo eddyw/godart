@@ -7,7 +7,7 @@ import "syscall/dart"
 func Getwd() (string, error) {
 	path, code := dart.SyscallGetwd()
 	if code != 0 {
-		return "", Errno(code)
+		return "", syscallErrno(code)
 	}
 	return path, nil
 }

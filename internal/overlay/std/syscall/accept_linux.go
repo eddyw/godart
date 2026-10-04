@@ -16,7 +16,7 @@ func Accept4(fd int, flags int) (nfd int, sa Sockaddr, err error) {
 	address := make([]byte, SizeofSockaddrAny)
 	nfd, length, code := dart.SyscallAccept(fd, flags, address)
 	if code != 0 {
-		return nfd, nil, Errno(code)
+		return nfd, nil, syscallErrno(code)
 	}
 	if length > SizeofSockaddrAny {
 		panic("RawSockaddrAny too small")

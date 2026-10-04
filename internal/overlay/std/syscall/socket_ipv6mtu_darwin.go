@@ -23,7 +23,7 @@ func GetsockoptIPv6MTUInfo(fd, level, opt int) (*IPv6MTUInfo, error) {
 	value.Addr.Scope_id = binary.NativeEndian.Uint32(data[24:28])
 	value.Mtu = binary.NativeEndian.Uint32(data[28:])
 	if code != 0 {
-		return &value, Errno(code)
+		return &value, syscallErrno(code)
 	}
 	return &value, nil
 }

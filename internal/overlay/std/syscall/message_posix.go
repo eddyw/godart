@@ -28,7 +28,7 @@ func SendmsgN(fd int, data, oob []byte, to Sockaddr, flags int) (int, error) {
 	}
 	n, code := dart.SyscallSendmsgN(fd, payload, oob, flags, address)
 	if code != 0 {
-		return 0, Errno(code)
+		return 0, syscallErrno(code)
 	}
 	if len(oob) > 0 && len(data) == 0 {
 		return 0, nil
@@ -44,7 +44,7 @@ func Recvmsg(fd int, data, oob []byte, flags int) (n, oobn, recvflags int, from 
 	address := make([]byte, SizeofSockaddrAny)
 	n, oobn, recvflags, code := dart.SyscallRecvmsg(fd, payload, oob, flags, address)
 	if code != 0 {
-		return n, oobn, recvflags, nil, Errno(code)
+		return n, oobn, recvflags, nil, syscallErrno(code)
 	}
 	from, err = messageSource(address)
 	return

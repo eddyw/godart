@@ -10,7 +10,7 @@ import "syscall/dart"
 
 func Fsync(fd int) error {
 	if code := dart.SyscallFsync(fd); code != 0 {
-		return Errno(code)
+		return syscallErrno(code)
 	}
 	return nil
 }

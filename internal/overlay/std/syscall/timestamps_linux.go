@@ -38,7 +38,7 @@ func Futimes(fd int, tv []Timeval) error {
 
 func utimensat(dirfd int, path string, ts []Timespec) error {
 	if code := dart.SyscallUtimensat(dirfd, path, ts[0].Sec, ts[0].Nsec, ts[1].Sec, ts[1].Nsec); code != 0 {
-		return Errno(code)
+		return syscallErrno(code)
 	}
 	return nil
 }

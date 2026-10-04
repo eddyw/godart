@@ -196,25 +196,25 @@ int $nativeChtimes(
 int $nativeLink(GoString from, GoString to) => 38;
 int $nativeSymlink(GoString from, GoString to) => 38;
 
-(int, int) $syscallSocket(int domain, int type, int protocol) => (-1, 38);
+(int, int) $syscallSocket(int domain, int type, int protocol) => (-1, -1);
 
-(int, int) $syscallOpen(GoString path, int flags, int mode) => (-1, 38);
+(int, int) $syscallOpen(GoString path, int flags, int mode) => (-1, -1);
 
 (int, int) $syscallOpenat(int parent, GoString path, int flags, int mode) =>
     (-1, 38);
-(int, int) $syscallSeek(int fd, int offset, int whence) => (-1, 38);
+(int, int) $syscallSeek(int fd, int offset, int whence) => (-1, -1);
 
-int $syscallClose(int fd) => 38;
+int $syscallClose(int fd) => -1;
 
-(int, int) $syscallDup(int fd) => (-1, 38);
+(int, int) $syscallDup(int fd) => (-1, -1);
 
-int $syscallDup2(int oldfd, int newfd) => 38;
+int $syscallDup2(int oldfd, int newfd) => -1;
 
 int $syscallDup3(int oldfd, int newfd, int flags) => 38;
 
-int $syscallFsync(int fd) => 38;
+int $syscallFsync(int fd) => -1;
 
-int $syscallAccess(GoString path, int mode) => 38;
+int $syscallAccess(GoString path, int mode) => -1;
 
 int $syscallFchmodat(int fd, GoString path, int mode, int flags) => 38;
 
@@ -247,12 +247,12 @@ int $syscallFchflags(int fd, int flags) => -1;
 
 (int, int, int) $syscallGettimeofday(bool output) => (0, 0, -1);
 
-(int, int, int) $syscallGetrlimit(int resource, bool output) => (0, 0, 38);
+(int, int, int) $syscallGetrlimit(int resource, bool output) => (0, 0, -1);
 
-int $syscallSetrlimit(int resource, bool input, int cur, int max) => 38;
+int $syscallSetrlimit(int resource, bool input, int cur, int max) => -1;
 
-(int, int) $syscallFcntl(int fd, int cmd, int arg) => (-1, 38);
-(int, int) $syscallReadDirent(int fd, Slice<GoInt> data) => (0, 38);
+(int, int) $syscallFcntl(int fd, int cmd, int arg) => (-1, -1);
+(int, int) $syscallReadDirent(int fd, Slice<GoInt> data) => (0, -1);
 
 (int, int, int) $fileOpenFlags(GoString path, int flags, int mode) =>
     (-1, -1, 38);
@@ -260,7 +260,7 @@ int $syscallSetrlimit(int resource, bool input, int cur, int max) => 38;
 (Slice<int>, int) $nativeLstatat(int fd, GoString path) =>
     (Slice<int>.nil(), 38);
 
-(GoString, int) $syscallGetwd() => (GoString.empty, 38);
+(GoString, int) $syscallGetwd() => (GoString.empty, -1);
 
 (int, int) $syscallGetcwd(Slice<GoInt> data) => (-1, 38);
 
@@ -271,7 +271,7 @@ int $syscallUtimensat(
   int atimeNsec,
   int mtimeSec,
   int mtimeNsec,
-) => 38;
+) => -1;
 
 int $syscallUtimes(
   GoString path,
@@ -279,7 +279,7 @@ int $syscallUtimes(
   int atimeUsec,
   int mtimeSec,
   int mtimeUsec,
-) => 38;
+) => -1;
 
 int $syscallFutimesat(
   int fd,
@@ -296,13 +296,13 @@ int $syscallFutimes(
   int atimeUsec,
   int mtimeSec,
   int mtimeUsec,
-) => 38;
+) => -1;
 
 int $syscallUtime(GoString path, bool hasTimes, int atime, int mtime) => 38;
 
-int $syscallUnlink(GoString path, bool directory) => 38;
+int $syscallUnlink(GoString path, bool directory) => -1;
 
-(int, int) $syscallReadlink(GoString path, Slice<GoInt> bytes) => (-1, 38);
+(int, int) $syscallReadlink(GoString path, Slice<GoInt> bytes) => (-1, -1);
 
 (int, int) $rootOpen(GoString path) => (-1, 38);
 (int, int) $rootOpenAt(int parent, GoString path) => (-1, 38);
@@ -329,7 +329,7 @@ int $rootRemove(int parent, GoString path) => 38;
 int $rootRemoveAll(int parent, GoString path) => 38;
 
 (Slice<int>, int) $syscallGetrusage(int who, bool output) =>
-    (Slice<int>.nil(), 38);
+    (Slice<int>.nil(), -1);
 
 int $syscallUmask(int mask) =>
     throw UnsupportedError('native process file creation mask');
@@ -372,16 +372,16 @@ int $syscallRemovexattr(GoString path, GoString attr) => -1;
 int $syscallAttachLsf(int fd, Slice<GoInt> data) => 38;
 
 int $syscallSetsockoptString(int fd, int level, int option, GoString value) =>
-    38;
+    -1;
 
-(int, int) $syscallGetsockoptInt(int fd, int level, int option) => (0, 38);
+(int, int) $syscallGetsockoptInt(int fd, int level, int option) => (0, -1);
 
-int $syscallSetsockoptInt(int fd, int level, int option, int value) => 38;
+int $syscallSetsockoptInt(int fd, int level, int option, int value) => -1;
 
 (int, int, int) $syscallSocketpair(int domain, int type, int protocol) =>
-    (0, 0, 38);
+    (0, 0, -1);
 
-(int, int) $syscallGetsockoptByte(int fd, int level, int option) => (0, 38);
+(int, int) $syscallGetsockoptByte(int fd, int level, int option) => (0, -1);
 
 (int, int, int, int) $syscallGetsockoptUcred(int fd, int level, int option) =>
     (0, 0, 0, 38);
@@ -391,14 +391,14 @@ int $syscallGetsockoptIPMreq(
   int level,
   int option,
   Slice<GoInt> data,
-) => 38;
+) => -1;
 
 int $syscallSetsockoptIPMreq(
   int fd,
   int level,
   int option,
   Slice<GoInt> data,
-) => 38;
+) => -1;
 
 int $syscallGetsockoptIPMreqn(
   int fd,
@@ -419,35 +419,35 @@ int $syscallGetsockoptIPv6Mreq(
   int level,
   int option,
   Slice<GoInt> data,
-) => 38;
+) => -1;
 
 int $syscallSetsockoptIPv6Mreq(
   int fd,
   int level,
   int option,
   Slice<GoInt> data,
-) => 38;
+) => -1;
 
 int $syscallSetsockoptTimeval(
   int fd,
   int level,
   int option,
   Slice<GoInt> data,
-) => 38;
+) => -1;
 
 int $syscallGetsockoptICMPv6Filter(
   int fd,
   int level,
   int option,
   Slice<GoInt> data,
-) => 38;
+) => -1;
 
 int $syscallSetsockoptICMPv6Filter(
   int fd,
   int level,
   int option,
   Slice<GoInt> data,
-) => 38;
+) => -1;
 
 (Slice<int>, int) $syscallMmap(
   int fd,
@@ -455,15 +455,15 @@ int $syscallSetsockoptICMPv6Filter(
   int length,
   int prot,
   int flags,
-) => (Slice<int>.nil(), 38);
+) => (Slice<int>.nil(), -1);
 
-int $syscallMunmap(Slice<GoInt> data) => 38;
+int $syscallMunmap(Slice<GoInt> data) => -1;
 
-int $syscallShutdown(int fd, int how) => 38;
+int $syscallShutdown(int fd, int how) => -1;
 
-int $syscallFlock(int fd, int how) => 38;
+int $syscallFlock(int fd, int how) => -1;
 
-int $syscallListen(int fd, int how) => 38;
+int $syscallListen(int fd, int how) => -1;
 
 int $syscallSysinfo(Slice<GoInt> data) => 38;
 
@@ -485,7 +485,7 @@ int $syscallEpollCtl(int epfd, int op, int fd, Slice<GoInt> data) => 38;
 
 (int, int) $syscallEpollWait(int epfd, Slice<GoInt> data, int count, int msec) => (-1, 38);
 
-(int, int, int) $syscallPipe() => (0, 0, 38);
+(int, int, int) $syscallPipe() => (0, 0, -1);
 
 (int, int, int) $syscallPipe2(int flags) => (0, 0, 38);
 
@@ -518,18 +518,18 @@ int $syscallFallocate(int fd, int mode, int offset, int length) => 38;
   Slice<GoInt> write,
   Slice<GoInt> except,
   Slice<GoInt> timeout,
-) => (-1, 38);
+) => (-1, -1);
 
-int $syscallBind(int fd, Slice<GoInt> address) => 38;
-int $syscallConnect(int fd, Slice<GoInt> address) => 38;
-int $syscallSendto(int fd, Slice<GoInt> data, int flags, Slice<GoInt> address) => 38;
+int $syscallBind(int fd, Slice<GoInt> address) => -1;
+int $syscallConnect(int fd, Slice<GoInt> address) => -1;
+int $syscallSendto(int fd, Slice<GoInt> data, int flags, Slice<GoInt> address) => -1;
 
-int $syscallGetsockname(int fd, Slice<GoInt> data) => 38;
-int $syscallGetpeername(int fd, Slice<GoInt> data) => 38;
+int $syscallGetsockname(int fd, Slice<GoInt> data) => -1;
+int $syscallGetpeername(int fd, Slice<GoInt> data) => -1;
 
-(int, int) $syscallRecvfrom(int fd, Slice<GoInt> data, int flags, Slice<GoInt> address) => (-1, 38);
+(int, int) $syscallRecvfrom(int fd, Slice<GoInt> data, int flags, Slice<GoInt> address) => (-1, -1);
 
-(int, int, int) $syscallAccept(int fd, int flags, Slice<GoInt> address) => (-1, 0, 38);
+(int, int, int) $syscallAccept(int fd, int flags, Slice<GoInt> address) => (-1, 0, -1);
 
-(int, int) $syscallSendmsgN(int fd, Slice<GoInt> data, Slice<GoInt> control, int flags, Slice<GoInt> address) => (0, 38);
-(int, int, int, int) $syscallRecvmsg(int fd, Slice<GoInt> data, Slice<GoInt> control, int flags, Slice<GoInt> address) => (0, 0, 0, 38);
+(int, int) $syscallSendmsgN(int fd, Slice<GoInt> data, Slice<GoInt> control, int flags, Slice<GoInt> address) => (0, -1);
+(int, int, int, int) $syscallRecvmsg(int fd, Slice<GoInt> data, Slice<GoInt> control, int flags, Slice<GoInt> address) => (0, 0, 0, -1);

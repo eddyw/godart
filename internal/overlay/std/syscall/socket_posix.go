@@ -19,7 +19,7 @@ func Socket(domain, typ, proto int) (fd int, err error) {
 	}
 	fd, code := dart.SyscallSocket(domain, typ, proto)
 	if code != 0 {
-		return fd, Errno(code)
+		return fd, syscallErrno(code)
 	}
 	return fd, nil
 }
@@ -52,7 +52,7 @@ func Bind(fd int, sa Sockaddr) error {
 		return err
 	}
 	if code := dart.SyscallBind(fd, address); code != 0 {
-		return Errno(code)
+		return syscallErrno(code)
 	}
 	return nil
 }
@@ -63,7 +63,7 @@ func Connect(fd int, sa Sockaddr) error {
 		return err
 	}
 	if code := dart.SyscallConnect(fd, address); code != 0 {
-		return Errno(code)
+		return syscallErrno(code)
 	}
 	return nil
 }
@@ -78,14 +78,14 @@ func Sendto(fd int, data []byte, flags int, destination Sockaddr) error {
 		}
 	}
 	if code := dart.SyscallSendto(fd, data, flags, address); code != 0 {
-		return Errno(code)
+		return syscallErrno(code)
 	}
 	return nil
 }
 
 func SetsockoptString(fd, level, opt int, value string) error {
 	if code := dart.SyscallSetsockoptString(fd, level, opt, value); code != 0 {
-		return Errno(code)
+		return syscallErrno(code)
 	}
 	return nil
 }
@@ -93,14 +93,14 @@ func SetsockoptString(fd, level, opt int, value string) error {
 func GetsockoptInt(fd, level, opt int) (int, error) {
 	value, code := dart.SyscallGetsockoptInt(fd, level, opt)
 	if code != 0 {
-		return value, Errno(code)
+		return value, syscallErrno(code)
 	}
 	return value, nil
 }
 
 func SetsockoptInt(fd, level, opt, value int) error {
 	if code := dart.SyscallSetsockoptInt(fd, level, opt, value); code != 0 {
-		return Errno(code)
+		return syscallErrno(code)
 	}
 	return nil
 }
@@ -118,7 +118,7 @@ func SetsockoptInet4Addr(fd, level, opt int, value [4]byte) error {
 func Socketpair(domain, typ, proto int) (fd [2]int, err error) {
 	first, second, code := dart.SyscallSocketpair(domain, typ, proto)
 	if code != 0 {
-		return fd, Errno(code)
+		return fd, syscallErrno(code)
 	}
 	return [2]int{first, second}, nil
 }
@@ -129,14 +129,14 @@ func SetsockoptByte(fd, level, opt int, value byte) error {
 
 func Shutdown(fd, how int) error {
 	if code := dart.SyscallShutdown(fd, how); code != 0 {
-		return Errno(code)
+		return syscallErrno(code)
 	}
 	return nil
 }
 
 func Listen(fd, how int) error {
 	if code := dart.SyscallListen(fd, how); code != 0 {
-		return Errno(code)
+		return syscallErrno(code)
 	}
 	return nil
 }
@@ -144,7 +144,7 @@ func Listen(fd, how int) error {
 func Getsockname(fd int) (Sockaddr, error) {
 	data := make([]byte, SizeofSockaddrAny)
 	if code := dart.SyscallGetsockname(fd, data); code != 0 {
-		return nil, Errno(code)
+		return nil, syscallErrno(code)
 	}
 	return sockaddrFromBytes(data)
 }
@@ -152,7 +152,7 @@ func Getsockname(fd int) (Sockaddr, error) {
 func Getpeername(fd int) (Sockaddr, error) {
 	data := make([]byte, SizeofSockaddrAny)
 	if code := dart.SyscallGetpeername(fd, data); code != 0 {
-		return nil, Errno(code)
+		return nil, syscallErrno(code)
 	}
 	return sockaddrFromBytes(data)
 }

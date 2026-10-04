@@ -510,9 +510,9 @@ func (f *File) Seek(offset int64, whence int) (int64, error) {
 		f.dirBuf = nil
 		f.dirBufPos = 0
 		f.dirPos = 0
-		pos, code := dart.SyscallSeek(f.dirFD, offset, whence)
-		if code != 0 {
-			return 0, &PathError{Op: "seek", Path: f.name, Err: syscall.Errno(code)}
+		pos, err := syscall.Seek(f.dirFD, offset, whence)
+		if err != nil {
+			return 0, &PathError{Op: "seek", Path: f.name, Err: err}
 		}
 		return pos, nil
 	}

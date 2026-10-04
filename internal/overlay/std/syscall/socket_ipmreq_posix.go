@@ -15,7 +15,7 @@ func GetsockoptIPMreq(fd, level, opt int) (*IPMreq, error) {
 	copy(value.Multiaddr[:], data[:4])
 	copy(value.Interface[:], data[4:])
 	if code != 0 {
-		return &value, Errno(code)
+		return &value, syscallErrno(code)
 	}
 	return &value, nil
 }
@@ -28,7 +28,7 @@ func SetsockoptIPMreq(fd, level, opt int, value *IPMreq) error {
 		copy(data[4:], value.Interface[:])
 	}
 	if code := dart.SyscallSetsockoptIPMreq(fd, level, opt, data); code != 0 {
-		return Errno(code)
+		return syscallErrno(code)
 	}
 	return nil
 }

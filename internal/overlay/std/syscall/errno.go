@@ -15,6 +15,14 @@ import (
 // Errno holds an operating system error number.
 type Errno uintptr
 
+// The unavailable backend returns -1. Native backends return positive errno values.
+func syscallErrno(code int) Errno {
+	if code == -1 {
+		return ENOSYS
+	}
+	return Errno(code)
+}
+
 func (e Errno) Error() string {
 	if 0 <= int(e) && int(e) < len(errors) {
 		if text := errors[e]; text != "" {

@@ -13,7 +13,7 @@ func Utimes(path string, tv []Timeval) error {
 		return EINVAL
 	}
 	if code := dart.SyscallUtimes(path, tv[0].Sec, int64(tv[0].Usec), tv[1].Sec, int64(tv[1].Usec)); code != 0 {
-		return Errno(code)
+		return syscallErrno(code)
 	}
 	return nil
 }
@@ -26,8 +26,8 @@ func UtimesNano(path string, ts []Timespec) error {
 	if code == 0 {
 		return nil
 	}
-	if Errno(code) != ENOSYS {
-		return Errno(code)
+	if syscallErrno(code) != ENOSYS {
+		return syscallErrno(code)
 	}
 	tv := []Timeval{
 		NsecToTimeval(TimespecToNsec(ts[0])),
@@ -41,7 +41,7 @@ func Futimes(fd int, tv []Timeval) error {
 		return EINVAL
 	}
 	if code := dart.SyscallFutimes(fd, tv[0].Sec, int64(tv[0].Usec), tv[1].Sec, int64(tv[1].Usec)); code != 0 {
-		return Errno(code)
+		return syscallErrno(code)
 	}
 	return nil
 }

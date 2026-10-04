@@ -6,7 +6,7 @@ import "syscall/dart"
 
 func Access(path string, mode uint32) error {
 	if errno := dart.SyscallAccess(path, mode); errno != 0 {
-		return Errno(errno)
+		return syscallErrno(errno)
 	}
 	return nil
 }

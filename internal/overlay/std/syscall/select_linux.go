@@ -59,7 +59,7 @@ func Select(nfd int, r, w, e *FdSet, timeout *Timeval) (int, error) {
 		timeout.Usec = int64(binary.NativeEndian.Uint64(timeval[8:]))
 	}
 	if code != 0 {
-		return count, Errno(code)
+		return count, syscallErrno(code)
 	}
 	return count, nil
 }

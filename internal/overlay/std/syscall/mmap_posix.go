@@ -14,7 +14,7 @@ func Mmap(fd int, offset int64, length int, prot, flags int) ([]byte, error) {
 	}
 	data, code := dart.SyscallMmap(fd, offset, length, prot, flags)
 	if code != 0 {
-		return nil, Errno(code)
+		return nil, syscallErrno(code)
 	}
 	return data, nil
 }
@@ -24,7 +24,7 @@ func Munmap(data []byte) error {
 		return EINVAL
 	}
 	if code := dart.SyscallMunmap(data); code != 0 {
-		return Errno(code)
+		return syscallErrno(code)
 	}
 	return nil
 }

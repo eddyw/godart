@@ -12,7 +12,7 @@ func Accept(fd int) (nfd int, sa Sockaddr, err error) {
 	address := make([]byte, SizeofSockaddrAny)
 	nfd, length, code := dart.SyscallAccept(fd, 0, address)
 	if code != 0 {
-		return nfd, nil, Errno(code)
+		return nfd, nil, syscallErrno(code)
 	}
 	if length == 0 {
 		Close(nfd)

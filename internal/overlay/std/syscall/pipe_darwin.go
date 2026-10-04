@@ -14,7 +14,7 @@ func Pipe(p []int) error {
 	}
 	first, second, code := dart.SyscallPipe()
 	if code != 0 {
-		return Errno(code)
+		return syscallErrno(code)
 	}
 	p[0], p[1] = first, second
 	return nil

@@ -19,7 +19,7 @@ func SetsockoptLinger(fd, level, opt int, value *Linger) error {
 		binary.NativeEndian.PutUint32(data[4:], uint32(value.Linger))
 	}
 	if code := dart.SyscallSetsockoptIPMreq(fd, level, opt, data); code != 0 {
-		return Errno(code)
+		return syscallErrno(code)
 	}
 	return nil
 }

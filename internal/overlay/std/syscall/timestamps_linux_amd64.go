@@ -21,7 +21,7 @@ func Utime(path string, buf *Utimbuf) error {
 
 func utimes(path string, tv []Timeval) error {
 	if code := dart.SyscallUtimes(path, tv[0].Sec, tv[0].Usec, tv[1].Sec, tv[1].Usec); code != 0 {
-		return Errno(code)
+		return syscallErrno(code)
 	}
 	return nil
 }

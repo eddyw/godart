@@ -24,7 +24,7 @@ func SetsockoptTimeval(fd, level, opt int, value *Timeval) error {
 		}
 	}
 	if code := dart.SyscallSetsockoptTimeval(fd, level, opt, data); code != 0 {
-		return Errno(code)
+		return syscallErrno(code)
 	}
 	return nil
 }

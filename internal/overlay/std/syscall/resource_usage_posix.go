@@ -11,7 +11,7 @@ import "syscall/dart"
 func Getrusage(who int, rusage *Rusage) error {
 	data, code := dart.SyscallGetrusage(who, rusage != nil)
 	if code != 0 {
-		return Errno(code)
+		return syscallErrno(code)
 	}
 	if rusage != nil {
 		*rusage = Rusage{

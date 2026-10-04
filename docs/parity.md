@@ -712,3 +712,9 @@ with a rename operation or claim successful exchange on that filesystem.
 
 Darwin `Mknod` and `Exchangedata` web calls return typed `ENOSYS` (78).
 That result matches `errors.ErrUnsupported` on JS and Wasm.
+
+Shared web syscall helpers use the selected Go SDK ENOSYS constant.
+The private unavailable sentinel does not change public Errno semantics.
+Darwin returns ENOSYS 78. Linux returns ENOSYS 38.
+Native helpers retain actual positive errno values, counts, and buffers.
+Web targets still have no native syscall backend.

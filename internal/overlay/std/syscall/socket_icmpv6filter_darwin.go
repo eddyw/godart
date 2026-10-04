@@ -19,7 +19,7 @@ func GetsockoptICMPv6Filter(fd, level, opt int) (*ICMPv6Filter, error) {
 		value.Filt[i] = binary.NativeEndian.Uint32(data[i*4:])
 	}
 	if code != 0 {
-		return &value, Errno(code)
+		return &value, syscallErrno(code)
 	}
 	return &value, nil
 }
@@ -33,7 +33,7 @@ func SetsockoptICMPv6Filter(fd, level, opt int, value *ICMPv6Filter) error {
 		}
 	}
 	if code := dart.SyscallSetsockoptICMPv6Filter(fd, level, opt, data); code != 0 {
-		return Errno(code)
+		return syscallErrno(code)
 	}
 	return nil
 }

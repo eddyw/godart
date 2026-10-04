@@ -11,14 +11,14 @@ import "syscall/dart"
 func Open(path string, mode int, perm uint32) (int, error) {
 	fd, errno := dart.SyscallOpen(path, mode, perm)
 	if errno != 0 {
-		return fd, Errno(errno)
+		return fd, syscallErrno(errno)
 	}
 	return fd, nil
 }
 
 func Close(fd int) error {
 	if errno := dart.SyscallClose(fd); errno != 0 {
-		return Errno(errno)
+		return syscallErrno(errno)
 	}
 	return nil
 }
@@ -26,14 +26,14 @@ func Close(fd int) error {
 func Dup(oldfd int) (int, error) {
 	fd, errno := dart.SyscallDup(oldfd)
 	if errno != 0 {
-		return fd, Errno(errno)
+		return fd, syscallErrno(errno)
 	}
 	return fd, nil
 }
 
 func Dup2(oldfd, newfd int) error {
 	if errno := dart.SyscallDup2(oldfd, newfd); errno != 0 {
-		return Errno(errno)
+		return syscallErrno(errno)
 	}
 	return nil
 }
@@ -41,7 +41,7 @@ func Dup2(oldfd, newfd int) error {
 func ReadDirent(fd int, buf []byte) (int, error) {
 	n, errno := dart.SyscallReadDirent(fd, buf)
 	if errno != 0 {
-		return n, Errno(errno)
+		return n, syscallErrno(errno)
 	}
 	return n, nil
 }
@@ -49,7 +49,7 @@ func ReadDirent(fd int, buf []byte) (int, error) {
 func Seek(fd int, offset int64, whence int) (int64, error) {
 	position, errno := dart.SyscallSeek(fd, offset, whence)
 	if errno != 0 {
-		return position, Errno(errno)
+		return position, syscallErrno(errno)
 	}
 	return position, nil
 }
@@ -163,14 +163,14 @@ func Mkdir(path string, mode uint32) error {
 
 func Unlink(path string) error {
 	if errno := dart.SyscallUnlink(path, false); errno != 0 {
-		return Errno(errno)
+		return syscallErrno(errno)
 	}
 	return nil
 }
 
 func Rmdir(path string) error {
 	if errno := dart.SyscallUnlink(path, true); errno != 0 {
-		return Errno(errno)
+		return syscallErrno(errno)
 	}
 	return nil
 }
@@ -178,7 +178,7 @@ func Rmdir(path string) error {
 func Readlink(path string, buf []byte) (int, error) {
 	n, errno := dart.SyscallReadlink(path, buf)
 	if errno != 0 {
-		return n, Errno(errno)
+		return n, syscallErrno(errno)
 	}
 	return n, nil
 }
@@ -201,7 +201,7 @@ func Write(fd int, p []byte) (int, error) {
 
 func Flock(fd, how int) error {
 	if code := dart.SyscallFlock(fd, how); code != 0 {
-		return Errno(code)
+		return syscallErrno(code)
 	}
 	return nil
 }

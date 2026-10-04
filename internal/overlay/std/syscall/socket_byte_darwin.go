@@ -11,7 +11,7 @@ import "syscall/dart"
 func GetsockoptByte(fd, level, opt int) (byte, error) {
 	value, code := dart.SyscallGetsockoptByte(fd, level, opt)
 	if code != 0 {
-		return byte(value), Errno(code)
+		return byte(value), syscallErrno(code)
 	}
 	return byte(value), nil
 }

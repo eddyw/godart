@@ -18,7 +18,7 @@ func GetsockoptIPv6Mreq(fd, level, opt int) (*IPv6Mreq, error) {
 	copy(value.Multiaddr[:], data[:16])
 	value.Interface = binary.NativeEndian.Uint32(data[16:])
 	if code != 0 {
-		return &value, Errno(code)
+		return &value, syscallErrno(code)
 	}
 	return &value, nil
 }
@@ -31,7 +31,7 @@ func SetsockoptIPv6Mreq(fd, level, opt int, value *IPv6Mreq) error {
 		binary.NativeEndian.PutUint32(data[16:], value.Interface)
 	}
 	if code := dart.SyscallSetsockoptIPv6Mreq(fd, level, opt, data); code != 0 {
-		return Errno(code)
+		return syscallErrno(code)
 	}
 	return nil
 }

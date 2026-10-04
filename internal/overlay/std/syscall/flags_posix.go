@@ -11,7 +11,7 @@ import "syscall/dart"
 func fcntl(fd, cmd, arg int) (int, error) {
 	value, code := dart.SyscallFcntl(fd, cmd, arg)
 	if code != 0 {
-		return value, Errno(code)
+		return value, syscallErrno(code)
 	}
 	return value, nil
 }
