@@ -636,3 +636,8 @@ The 112-byte SDK structure preserves uptime, loads, memory counters, process
 counts, units and raw padding. Nil pointers retain actual EFAULT. Independent
 caller values retain their ownership. These kernel observations do not describe
 Go GC state or runtime instrumentation.
+
+Linux 64-bit programs support `syscall.BindToDevice` through the SDK
+`SetsockoptString` wrapper. The kernel receives the exact device bytes and
+length. Device options, loopback datagrams, typed errors and descriptor
+ownership follow the native calls. Kernel permissions apply to device changes.

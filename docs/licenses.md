@@ -640,3 +640,11 @@ The Linux Sysinfo differential follows the selected Go SDK
 `src/syscall/syscall_unix.go` and `src/syscall/zsyscall_linux_amd64.go`
 contracts under the Go BSD license. It preserves actual kernel counters, raw fields,
 nil-pointer errors and caller ownership.
+
+The Linux BindToDevice differential follows the selected Go SDK
+`src/syscall/syscall_linux.go` wrapper and native socket contracts under the
+Go BSD license. It preserves raw device bytes, actual kernel option data,
+loopback transport, typed errors and descriptor ownership.
+
+The Linux BindToDevice overlay preserves the selected Go SDK
+`src/syscall/syscall_linux.go` implementation under the Go BSD license.
