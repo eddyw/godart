@@ -706,3 +706,8 @@ The macOS event value overlay follows the original Go SDK
 `src/syscall/syscall_darwin_arm64.go` SetKevent function under the Go BSD license.
 Its reference adapter extracts unchanged selected SDK setter and Kevent_t
 source for native Go value assertions on the host.
+
+The message value overlays follow the selected Go SDK architecture files
+`src/syscall/syscall_{darwin,linux}_{amd64,arm64}.go` under the Go BSD license.
+The reference adapter extracts unchanged selected Iovec, Msghdr and Cmsghdr
+declarations and their original setter methods for native Go assertions.

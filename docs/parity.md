@@ -743,3 +743,10 @@ Fflags, Data and Go Udata pointer aliases retain their original values.
 The original typed nil panic remains intact on VM, AOT, JS and Wasm.
 Selected amd64 and arm64 SDK declarations have native Go reference coverage.
 This value support does not establish native Kevent buffers or registration.
+
+Darwin and Linux 64-bit programs support the original SDK Iovec.SetLen
+and Msghdr.SetControllen methods on all 4 targets. Iovec lengths use uint64.
+Control lengths use uint32 on Darwin and uint64 on Linux.
+The setters preserve other fields, Go pointer aliases and typed nil panics.
+Selected amd64 and arm64 declarations have native Go reference coverage.
+Native pointer transport retains its existing limits.
