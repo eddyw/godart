@@ -20,6 +20,8 @@ func sockaddrFromBytes(data []byte) (Sockaddr, error) {
 			n++
 		}
 		return &SockaddrUnix{Name: string(path[:n])}, nil
+	case AF_NETLINK:
+		return &SockaddrNetlink{Family: binary.NativeEndian.Uint16(data), Pad: binary.NativeEndian.Uint16(data[2:]), Pid: binary.NativeEndian.Uint32(data[4:]), Groups: binary.NativeEndian.Uint32(data[8:])}, nil
 	case AF_INET:
 		sa := &SockaddrInet4{Port: int(data[2])<<8 + int(data[3])}
 		copy(sa.Addr[:], data[4:8])

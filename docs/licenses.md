@@ -600,3 +600,8 @@ The fixture preserves actual payload/control bytes, SDK dummy-byte rules,
 source addresses, flags, genuine SCM_RIGHTS transport and ownership.
 Linux uses its actual SDK `MSG_CMSG_CLOEXEC` name. macOS uses flags 0.
 No process inheritance assertion exists in this fixture.
+
+The Linux netlink differential follows the selected Go SDK
+`src/syscall/syscall_linux.go` and `src/syscall/netlink_linux.go`
+contracts under the Go BSD license. It preserves actual kernel port IDs,
+socket names, multipart messages, route attributes and buffer ownership.

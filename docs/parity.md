@@ -582,3 +582,10 @@ actual byte values. Typed errors and descriptor ownership remain.
 native Linux/macOS `setsockopt` call. An empty value uses a null pointer and
 0 length. The caller retains descriptor ownership. The documented
 non-atomic errno limit also applies to this call.
+
+Linux 64-bit programs support `syscall.SockaddrNetlink` and `syscall.NetlinkRIB`
+through actual native netlink sockets. Serialization uses the SDK family and
+12-byte layout. Returned addresses preserve actual kernel port IDs and independent
+values. RIB requests retain the SDK sequence, page-sized receive bound, multipart
+validation, binary error handling and caller-owned result bytes. Kernel queries
+use the actual bound socket port ID. They do not assume the process ID.
