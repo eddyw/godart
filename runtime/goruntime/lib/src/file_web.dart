@@ -378,3 +378,5 @@ int $syscallSetsockoptInt(int fd, int level, int option, int value) => 38;
 
 (int, int, int) $syscallSocketpair(int domain, int type, int protocol) =>
     (0, 0, 38);
+
+(int, int) $syscallGetsockoptByte(int fd, int level, int option) => (0, 38);

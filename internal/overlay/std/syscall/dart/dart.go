@@ -2176,3 +2176,7 @@ func SyscallSetsockoptInt(fd, level, opt, value int) int {
 func SyscallSocketpair(domain, typ, proto int) (int, int, int) {
 	panic("syscall/dart needs the gart compiler")
 }
+
+func SyscallGetsockoptByte(fd, level, opt int) (int, int) {
+	panic("syscall/dart needs the gart compiler")
+}

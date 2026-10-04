@@ -473,3 +473,7 @@ facilities outside this API fixture. Linux flag inputs follow the same SDK
 The native byte socket-option differential adapter follows the selected
 Go SDK `src/syscall/syscall_unix.go` contracts under the Go BSD license.
 The selected SDK has no standalone byte socket-option test in `src/syscall`.
+
+The Darwin byte socket-option differential adapter follows the selected
+Go SDK `src/syscall/syscall_bsd.go` contract under the Go BSD license.
+The selected SDK has no standalone byte socket-option getter test in `src/syscall`.

@@ -390,6 +390,12 @@ These calls preserve the exact 4-byte SDK value and option length
 through the same native integer socket-option calls. Returned arrays
 are independent values. Typed errors and descriptor ownership remain.
 
+Native 64-bit macOS programs support `syscall.GetsockoptByte` through Dart FFI.
+The call preserves the BSD SDK byte result and 1-byte option length,
+including partial scalar values. Typed errors and descriptor ownership
+remain. Web targets return `ENOSYS`. The non-atomic errno limit applies.
+The selected Linux SDK does not expose this API.
+
 Native 64-bit Linux and macOS programs support `syscall.SetsockoptByte`.
 The call preserves the exact byte and SDK 1-byte option length through
 the same native string socket-option call. NUL and high bytes remain

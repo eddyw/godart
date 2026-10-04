@@ -314,3 +314,20 @@ int $syscallSetsockoptInt(int fd, int level, int option, int value) {
     _free(buffer);
   }
 }
+
+(int, int) $syscallGetsockoptByte(int fd, int level, int option) {
+  final buffer = _malloc(8);
+  if (buffer == nullptr) return (0, 12);
+  try {
+    buffer[0] = 0;
+    final length = (buffer + 4).cast<Uint32>();
+    length.value = 1;
+    final getsockopt = _getsockopt;
+    final errorAddress = _errno();
+    final result = getsockopt(fd, level, option, buffer, length);
+    final code = result < 0 ? errorAddress.value : 0;
+    return (buffer[0], code);
+  } finally {
+    _free(buffer);
+  }
+}
