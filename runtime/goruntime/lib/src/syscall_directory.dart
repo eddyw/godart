@@ -27,6 +27,10 @@ final _nanosleep = _libc.lookupFunction<
   Int Function(Pointer<Uint8>, Pointer<Uint8>),
   int Function(Pointer<Uint8>, Pointer<Uint8>)
 >('nanosleep');
+final _exchangedata = _libc.lookupFunction<
+  Int Function(Pointer<Uint8>, Pointer<Uint8>, UnsignedInt),
+  int Function(Pointer<Uint8>, Pointer<Uint8>, int)
+>('exchangedata');
 final _getdtablesize = _libc.lookupFunction<Int Function(), int Function()>('getdtablesize');
 final _issetugid = _libc.lookupFunction<Int Function(), int Function()>('issetugid');
 
@@ -879,6 +883,26 @@ int $syscallEpollCtl(int epfd, int op, int fd, Slice<int> data) {
     return (written, code);
   } finally {
     if (storage != nullptr) _free(storage);
+  }
+}
+
+int $syscallExchangedata(GoString first, GoString second, int options) {
+  if (first.bytes.contains(0) || second.bytes.contains(0)) return 22;
+  final length = first.length + second.length + 2;
+  final storage = _malloc(length);
+  if (storage == nullptr) return 12;
+  try {
+    final bytes = storage.asTypedList(length);
+    bytes.setRange(0, first.length, first.bytes);
+    bytes[first.length] = 0;
+    bytes.setRange(first.length + 1, length - 1, second.bytes);
+    bytes[length - 1] = 0;
+    final other = Pointer<Uint8>.fromAddress(storage.address + first.length + 1);
+    final exchangedata = _exchangedata;
+    final errorAddress = _errno();
+    return exchangedata(storage, other, options) < 0 ? errorAddress.value : 0;
+  } finally {
+    _free(storage);
   }
 }
 

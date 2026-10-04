@@ -2081,6 +2081,10 @@ func SyscallCapDacOverride() bool {
 	panic("syscall/dart needs the gart compiler")
 }
 
+func SyscallExchangedata(first, second string, options int) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
 func SyscallGetdtablesize() int {
 	panic("syscall/dart needs the gart compiler")
 }

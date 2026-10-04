@@ -702,3 +702,13 @@ through actual native observations. Descriptor table values follow real
 child-local soft-limit changes. The privilege-history result comes from the
 native process, without an inferred value. Credential mutation and set-ID
 execution retain existing limits. Web targets reject these native observations.
+
+macOS 64-bit programs support `syscall.Exchangedata` through the actual
+native 2-path call and unsigned 32-bit options. Raw path bytes, NUL validation,
+actual native errors, file bytes and descriptor ownership follow the SDK.
+The validation filesystem returns `ENOTSUP` for regular-file exchange.
+Filesystem support remains necessary. The runtime does not replace this call
+with a rename operation or claim successful exchange on that filesystem.
+
+Darwin `Mknod` and `Exchangedata` web calls return typed `ENOSYS` (78).
+That result matches `errors.ErrUnsupported` on JS and Wasm.
