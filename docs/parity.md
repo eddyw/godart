@@ -390,6 +390,16 @@ These calls preserve the exact 4-byte SDK value and option length
 through the same native integer socket-option calls. Returned arrays
 are independent values. Typed errors and descriptor ownership remain.
 
+Native 64-bit Linux and macOS programs support `syscall.Mmap` and
+`syscall.Munmap` through Dart FFI. Returned byte slices view actual native
+memory. Slice aliases share that memory. Shared file mappings update
+the actual file, and private mappings retain kernel copy-on-write behavior.
+The calls preserve SDK length, capacity, base and active-mapping rules.
+The caller must unmap the complete original mapping and must not access
+its slices after successful unmap. Closing the file descriptor retains
+the mapping. Web targets return `ENOSYS`. The non-atomic errno limit applies.
+General unsafe pointers and `unsafe.Slice` remain unsupported.
+
 Native 64-bit Linux and macOS programs support `syscall.GetsockoptIPMreq`
 and `syscall.SetsockoptIPMreq` through Dart FFI. Both calls preserve the
 SDK 8-byte request and exact address arrays. Getters return independent

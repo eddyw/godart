@@ -640,6 +640,10 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$syscallGetsockoptICMPv6Filter(%s, %s, %s, %s)", args[0], args[1], args[2], args[3]), true
 	case "SyscallSetsockoptICMPv6Filter":
 		return fmt.Sprintf("$syscallSetsockoptICMPv6Filter(%s, %s, %s, %s)", args[0], args[1], args[2], args[3]), true
+	case "SyscallMmap":
+		return fmt.Sprintf("$syscallMmap(%s, %s, %s, %s, %s)", args[0], args[1], args[2], args[3], args[4]), true
+	case "SyscallMunmap":
+		return fmt.Sprintf("$syscallMunmap(%s)", args[0]), true
 	case "SyscallGetsockoptIPMreq":
 		return fmt.Sprintf("$syscallGetsockoptIPMreq(%s, %s, %s, %s)", args[0], args[1], args[2], args[3]), true
 	case "SyscallSetsockoptIPMreq":

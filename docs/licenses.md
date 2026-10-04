@@ -519,3 +519,8 @@ Go SDK `src/syscall/syscall_linux.go`, `src/syscall/syscall_bsd.go` and
 native `src/syscall/ztypes_*` contracts under the Go BSD license.
 The adapter uses each native SDK address field and filter name.
 The selected SDK has no standalone IPv6 MTU getter test.
+
+The native memory map adapter preserves the selected Go SDK
+`src/syscall/mmap_unix_test.go` original assertion under the Go BSD license.
+The memory map differential follows the SDK `src/syscall/syscall_unix.go`
+mapping, slice validation and ownership contracts under the same license.

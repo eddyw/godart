@@ -17,6 +17,7 @@ export 'file_attributes.dart';
 export 'file_handle.dart'
     show $nativePread, $nativePwrite, $nativeRead, $nativeWrite;
 export 'file_links.dart';
+export 'file_mmap.dart';
 export 'file_readlink.dart';
 export 'file_rename.dart';
 export 'file_stat.dart';

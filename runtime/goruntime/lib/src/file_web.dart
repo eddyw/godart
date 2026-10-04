@@ -446,3 +446,13 @@ int $syscallSetsockoptICMPv6Filter(
   int option,
   Slice<int> data,
 ) => 38;
+
+(Slice<int>, int) $syscallMmap(
+  int fd,
+  int offset,
+  int length,
+  int prot,
+  int flags,
+) => (Slice<int>.nil(), 38);
+
+int $syscallMunmap(Slice<int> data) => 38;

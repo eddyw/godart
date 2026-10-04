@@ -2229,3 +2229,13 @@ func SyscallGetsockoptICMPv6Filter(fd, level, opt int, data []byte) int {
 func SyscallSetsockoptICMPv6Filter(fd, level, opt int, data []byte) int {
 	panic("syscall/dart needs the gart compiler")
 }
+
+// SyscallMmap requires a positive length.
+func SyscallMmap(fd int, offset int64, length int, prot, flags int) ([]byte, int) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// SyscallMunmap requires a nonempty slice with equal length and capacity.
+func SyscallMunmap(data []byte) int {
+	panic("syscall/dart needs the gart compiler")
+}
