@@ -625,3 +625,8 @@ The Linux inotify differential follows the selected Go SDK
 `src/syscall/syscall_unix.go` and `src/syscall/zsyscall_linux_amd64.go`
 contracts under the Go BSD license. It preserves actual watch IDs, masks, paths,
 filesystem events, errors and descriptor ownership.
+
+The Linux process differential follows the selected Go SDK
+`src/syscall/syscall_unix.go` and `src/syscall/zsyscall_linux_amd64.go`
+contracts under the Go BSD license. It preserves actual thread IDs, CPU counters,
+elapsed ticks, nil pointers and caller ownership.

@@ -617,3 +617,9 @@ creation flags, path bytes, watch IDs, filesystem events, mask updates, duplicat
 lifetimes, nonblocking errors and ownership follow the SDK. A path with NUL
 returns watch ID 0 and EINVAL before descriptor validation. These raw APIs do
 not establish Dart scheduler integration.
+
+Linux 64-bit programs support `syscall.Gettid` and `syscall.Times` through actual
+native calls. The thread ID names the current kernel thread. CPU counters and
+elapsed ticks come from the kernel. `Times` preserves nil output pointers and
+the 32-byte native structure. These APIs do not establish thread affinity or
+parallel Go threads.

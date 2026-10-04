@@ -64,6 +64,11 @@ final _select = _libc
       Int Function(Int, Pointer<Uint8>, Pointer<Uint8>, Pointer<Uint8>, Pointer<Uint8>),
       int Function(int, Pointer<Uint8>, Pointer<Uint8>, Pointer<Uint8>, Pointer<Uint8>)
     >('select');
+final _gettid = _libc.lookupFunction<Int Function(), int Function()>('gettid');
+final _times = _libc.lookupFunction<
+  Int64 Function(Pointer<Uint8>),
+  int Function(Pointer<Uint8>)
+>('times');
 final _inotifyInit = _libc.lookupFunction<Int Function(), int Function()>('inotify_init');
 final _inotifyInit1 = _libc.lookupFunction<Int Function(Int), int Function(int)>('inotify_init1');
 final _inotifyAddWatch = _libc.lookupFunction<
@@ -604,6 +609,24 @@ int $syscallListen(int fd, int how) {
   final listen = _listen;
   final errorAddress = _errno();
   return listen(fd, how) < 0 ? errorAddress.value : 0;
+}
+
+int $syscallGettid() => _gettid();
+
+(int, int) $syscallTimes(Slice<int> data) {
+  final buffer = data.isNil ? nullptr.cast<Uint8>() : _malloc(32);
+  if (!data.isNil && buffer == nullptr) return (-1, 12);
+  try {
+    if (!data.isNil) buffer.asTypedList(32).setRange(0, 32, data.array, data.off);
+    final times = _times;
+    final errorAddress = _errno();
+    final ticks = times(buffer);
+    final code = ticks == -1 ? errorAddress.value : 0;
+    if (!data.isNil) data.array.setRange(data.off, data.off + 32, buffer.asTypedList(32));
+    return (ticks, code);
+  } finally {
+    if (buffer != nullptr) _free(buffer);
+  }
 }
 
 (int, int) $syscallInotifyInit() {

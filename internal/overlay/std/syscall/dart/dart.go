@@ -2252,6 +2252,15 @@ func SyscallListen(fd, how int) int {
 	panic("syscall/dart needs the gart compiler")
 }
 
+func SyscallGettid() int {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// SyscallTimes requires nil or a 32-byte native tms structure.
+func SyscallTimes(data []byte) (int64, int) {
+	panic("syscall/dart needs the gart compiler")
+}
+
 func SyscallInotifyInit() (int, int) {
 	panic("syscall/dart needs the gart compiler")
 }

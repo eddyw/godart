@@ -463,6 +463,10 @@ int $syscallFlock(int fd, int how) => 38;
 
 int $syscallListen(int fd, int how) => 38;
 
+int $syscallGettid() => throw UnsupportedError('syscall.Gettid requires native Linux');
+
+(int, int) $syscallTimes(Slice<int> data) => (-1, 38);
+
 (int, int) $syscallInotifyInit() => (-1, 38);
 
 (int, int) $syscallInotifyInit1(int flags) => (-1, 38);
