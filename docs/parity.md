@@ -390,6 +390,14 @@ These calls preserve the exact 4-byte SDK value and option length
 through the same native integer socket-option calls. Returned arrays
 are independent values. Typed errors and descriptor ownership remain.
 
+Native 64-bit Linux programs support `syscall.Fallocate` through Dart FFI.
+The call forwards the uint32 mode and signed 64-bit offset and length to
+the actual kernel. File bytes, size, sparse offsets, duplicate descriptors
+and typed errors follow the native SDK. The caller owns the descriptor.
+The differential covers mode 0 allocation and actual invalid arguments.
+It does not establish all filesystem allocation modes or physical block
+counts. Web targets return `ENOSYS`. The non-atomic errno limit applies.
+
 Native 64-bit Linux and macOS programs support `syscall.Flock` through
 Dart FFI. Nonblocking shared and exclusive locks, conflicts, duplicate
 lifetimes, unlock and close behavior follow the actual kernel.

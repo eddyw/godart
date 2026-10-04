@@ -542,3 +542,8 @@ The native socket listen differential follows the selected Go SDK
 `src/syscall/zsyscall_darwin_arm64.go` contracts under the Go BSD license.
 The SDK has no standalone raw Listen assertion. The fixture uses
 actual kernel listen calls and retains descriptor ownership.
+
+The Linux file allocation differential follows the selected Go SDK
+`src/syscall/zsyscall_linux_amd64.go` contract under the Go BSD license.
+The SDK has no standalone Fallocate assertion. The fixture uses actual
+file bytes, sizes and offsets without a physical block-count claim.

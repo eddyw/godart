@@ -462,3 +462,5 @@ int $syscallShutdown(int fd, int how) => 38;
 int $syscallFlock(int fd, int how) => 38;
 
 int $syscallListen(int fd, int how) => 38;
+
+int $syscallFallocate(int fd, int mode, int offset, int length) => 38;

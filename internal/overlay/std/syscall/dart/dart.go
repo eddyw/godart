@@ -2251,3 +2251,7 @@ func SyscallFlock(fd, how int) int {
 func SyscallListen(fd, how int) int {
 	panic("syscall/dart needs the gart compiler")
 }
+
+func SyscallFallocate(fd int, mode uint32, off, length int64) int {
+	panic("syscall/dart needs the gart compiler")
+}

@@ -33,6 +33,11 @@ final _socketpair = _libc
       Int Function(Int, Int, Int, Pointer<Int32>),
       int Function(int, int, int, Pointer<Int32>)
     >('socketpair');
+final _fallocate = _libc
+    .lookupFunction<
+      Int Function(Int, Int, Int64, Int64),
+      int Function(int, int, int, int)
+    >('fallocate');
 final _flock = _libc
     .lookupFunction<Int Function(Int, Int), int Function(int, int)>('flock');
 final _listen = _libc
@@ -533,4 +538,10 @@ int $syscallListen(int fd, int how) {
   final listen = _listen;
   final errorAddress = _errno();
   return listen(fd, how) < 0 ? errorAddress.value : 0;
+}
+
+int $syscallFallocate(int fd, int mode, int offset, int length) {
+  final fallocate = _fallocate;
+  final errorAddress = _errno();
+  return fallocate(fd, mode, offset, length) < 0 ? errorAddress.value : 0;
 }
