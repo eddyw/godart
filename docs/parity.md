@@ -247,6 +247,9 @@ A Linux VM trace confirms that native `EAGAIN` can become `EINVAL` before Dart r
 Thus, a UDP read can fail with an incorrect error.
 [Dart issue 38832](https://github.com/dart-lang/sdk/issues/38832) describes this missing atomicity.
 
+Linux VM directory unlink can return typed `EINVAL` where native Go returns
+typed `EISDIR`. Diagnostics do not establish the cause of this mismatch.
+
 On Linux and macOS, TCP connection failures and socket-option failures retain available native error codes through `net.OpError` and `os.SyscallError`.
 Closed sockets retain `net.ErrClosed`.
 
