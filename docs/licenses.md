@@ -725,3 +725,9 @@ build constraint from the reference copy for scalar execution on Linux.
 The reference adapter maps the private Signal.String strconv import to the
 public Go strconv package. Decoder declarations and scalar outputs remain
 unchanged. The fixture reads signal numbers as integers.
+
+The macOS BPF instruction value overlay follows the original Go SDK
+`src/syscall/bpf_bsd.go` BpfStmt and BpfJump constructors under the Go BSD
+license. It retains the 2018 source notice. The native reference adapter
+extracts unchanged declarations and removes only their BSD build constraint
+from the reference copy for scalar execution on Linux.

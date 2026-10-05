@@ -765,3 +765,10 @@ Selected amd64 and arm64 declarations have native Go reference coverage
 on VM, AOT, JS and Wasm. The process runtime still supplies only exit and
 termination signal values. Native Wait4, stopped or continued children,
 core dump observations and ptrace events remain unsupported.
+
+macOS 64-bit programs support the original BpfStmt and BpfJump constructors
+on VM, AOT, JS and Wasm. Code uses uint16, Jt and Jf use uint8,
+and K uses uint32. Each constructor returns a distinct Go pointer.
+Value copies and pointer aliases retain the original ownership contract.
+Selected amd64 and arm64 declarations have native Go reference coverage.
+Native BPF devices, ioctl calls and packet filter operations remain unsupported.
