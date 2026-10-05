@@ -54,3 +54,29 @@ int $syscallMunmap(Slice<int> data) {
   if (code == 0) _active.remove(data.array);
   return code;
 }
+
+final _mprotectDarwin = _libc.lookupFunction<
+  Int Function(Pointer<Uint8>, Size, Int),
+  int Function(Pointer<Uint8>, int, int)
+>('mprotect');
+final _mprotectLinux = _libc.lookupFunction<
+  Long Function(Long, VarArgs<(Pointer<Uint8>, Size, UnsignedLong)>),
+  int Function(int, Pointer<Uint8>, int, int)
+>('syscall');
+
+int $syscallMprotect(Slice<int> data, int prot) {
+  final mapping = _active[data.array];
+  if (data.len == 0 || mapping == null) return -1;
+  final address = mapping.$1 + data.off;
+  if (Platform.isMacOS) {
+    final protect = _mprotectDarwin;
+    final errorAddress = _errno();
+    final result = protect(address, data.len, prot);
+    return result < 0 ? errorAddress.value : 0;
+  }
+  final protect = _mprotectLinux;
+  final number = Abi.current() == Abi.linuxArm64 ? 226 : 10;
+  final errorAddress = _errno();
+  final result = protect(number, address, data.len, prot);
+  return result < 0 ? errorAddress.value : 0;
+}

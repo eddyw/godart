@@ -255,9 +255,9 @@
   {
     "package": "crypto/internal/fips140/nistec",
     "status": "compile-blocked",
-    "diagnostic": "undefined: syscall.Mprotect",
+    "diagnostic": "undefined: p256SelectAffine",
     "blocker_cause": "runtime-boundary",
-    "blocker_reason": "The suite requires native mapped-memory protection through syscall.Mprotect."
+    "blocker_reason": "The suite requires native P-256 assembly and unsafe page-boundary probes."
   },
   {
     "package": "crypto/internal/fips140/nistec/fiat",

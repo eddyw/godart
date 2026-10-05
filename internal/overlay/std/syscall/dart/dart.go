@@ -2291,6 +2291,10 @@ func SyscallMmap(fd int, offset int64, length int, prot, flags int) ([]byte, int
 	panic("syscall/dart needs the gart compiler")
 }
 
+func SyscallMprotect(data []byte, prot int) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // SyscallMunmap requires a nonempty slice with equal length and capacity.
 func SyscallMunmap(data []byte) int {
 	panic("syscall/dart needs the gart compiler")

@@ -480,6 +480,8 @@ int $syscallSetsockoptICMPv6Filter(
   int flags,
 ) => (Slice<int>.nil(), -1);
 
+int $syscallMprotect(Slice<GoInt> data, int prot) => -1;
+
 int $syscallMunmap(Slice<GoInt> data) => -1;
 
 int $syscallShutdown(int fd, int how) => -1;

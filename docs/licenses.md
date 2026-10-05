@@ -760,3 +760,8 @@ The macOS Sendfile adapter follows the selected Go SDK
 `src/syscall/syscall_unix.go`, `syscall_darwin_amd64.go` and
 `syscall_darwin_arm64.go` contracts under the Go BSD license.
 It retains the 2009 and 2015 notices and original API documentation.
+
+The mapped-memory Mprotect adapter follows the selected Go SDK
+`src/syscall/zsyscall_linux_{amd64,arm64}.go` and
+`src/syscall/zsyscall_darwin_{amd64,arm64}.go` contracts.
+It preserves the 2009 Go BSD notice and native protection flag widths.

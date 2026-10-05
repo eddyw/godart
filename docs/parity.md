@@ -813,3 +813,14 @@ Native partial transfers preserve their byte count and EAGAIN together.
 Web targets return selected SDK ENOSYS and preserve caller offsets.
 The existing Linux Sendfile implementation remains exact.
 Native scheduler and errno atomicity limits remain unchanged.
+
+Darwin and Linux 64-bit programs support actual syscall.Mprotect calls
+for nonempty ranges of active syscall.Mmap resources. The adapter preserves
+native addresses, slice offsets and lengths, Go aliases and kernel errors.
+Linux retains all 64 protection bits through the original raw syscall ABI.
+Darwin uses C-int protection flags. Current ARM64 retains high-bit EINVAL.
+Protected reads and writes fault in native programme child diagnostics.
+Go and Dart retain distinct fatal diagnostics after the native fault.
+Ordinary Dart heap slices, empty slices and released mappings lack native
+Go pointer transport. These cases and web targets return selected SDK ENOSYS.
+Native scheduler and errno atomicity limits remain unchanged.
