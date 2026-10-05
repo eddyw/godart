@@ -756,3 +756,12 @@ and SetPC value methods on all 4 targets. The methods retain uint64 values,
 all other register fields, Go pointer aliases and typed nil panics.
 Selected original SDK declarations have native Go reference coverage.
 This record support does not establish native ptrace operations.
+
+Darwin and Linux 64-bit WaitStatus values use the selected Go SDK decoders.
+Darwin preserves its SIGSTOP continuation word and full shifted exit value.
+Linux preserves its low-byte stop rule, 8-bit exit value and ptrace trap cause.
+All 9 methods preserve the status word and original nil receiver panic.
+Selected amd64 and arm64 declarations have native Go reference coverage
+on VM, AOT, JS and Wasm. The process runtime still supplies only exit and
+termination signal values. Native Wait4, stopped or continued children,
+core dump observations and ptrace events remain unsupported.

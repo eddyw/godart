@@ -716,3 +716,12 @@ The Linux register value overlays follow the selected Go SDK
 `src/syscall/syscall_linux_{amd64,arm64}.go` PC and SetPC methods
 under the Go BSD license. The reference adapter retains original selected
 PtraceRegs type declarations and methods for native Go value assertions.
+
+The wait status value overlays follow the selected Go SDK
+`src/syscall/syscall_bsd.go` and `syscall_linux.go` decoder methods
+under the Go BSD license. The portable native reference adapter retains
+original declarations and notices. It removes only the selected BSD file
+build constraint from the reference copy for scalar execution on Linux.
+The reference adapter maps the private Signal.String strconv import to the
+public Go strconv package. Decoder declarations and scalar outputs remain
+unchanged. The fixture reads signal numbers as integers.
