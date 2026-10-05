@@ -80,3 +80,18 @@ int $syscallMprotect(Slice<int> data, int prot) {
   final result = protect(number, address, data.len, prot);
   return result < 0 ? errorAddress.value : 0;
 }
+
+final _madvise = _libc.lookupFunction<
+  Int Function(Pointer<Uint8>, Size, Int),
+  int Function(Pointer<Uint8>, int, int)
+>('madvise');
+
+int $syscallMadvise(Slice<int> data, int advice) {
+  final mapping = _active[data.array];
+  if (data.len == 0 || mapping == null) return -1;
+  final address = mapping.$1 + data.off;
+  final advise = _madvise;
+  final errorAddress = _errno();
+  final result = advise(address, data.len, advice);
+  return result < 0 ? errorAddress.value : 0;
+}

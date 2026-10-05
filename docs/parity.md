@@ -824,3 +824,12 @@ Go and Dart retain distinct fatal diagnostics after the native fault.
 Ordinary Dart heap slices, empty slices and released mappings lack native
 Go pointer transport. These cases and web targets return selected SDK ENOSYS.
 Native scheduler and errno atomicity limits remain unchanged.
+
+Linux 64-bit programs support actual syscall.Madvise calls for nonempty
+ranges of active syscall.Mmap resources. Native addresses, slice offsets,
+lengths, 32-bit advice values, kernel errors and Go aliases remain intact.
+MADV_DONTNEED discards actual anonymous mapped pages and restores private
+file mapping bytes without a copy-based substitute. The backing file remains
+intact. Ordinary heap slices, empty slices, released mappings and web targets
+return selected SDK ENOSYS. Darwin has no public syscall.Madvise API.
+Native scheduler and errno atomicity limits remain unchanged.

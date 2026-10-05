@@ -765,3 +765,7 @@ The mapped-memory Mprotect adapter follows the selected Go SDK
 `src/syscall/zsyscall_linux_{amd64,arm64}.go` and
 `src/syscall/zsyscall_darwin_{amd64,arm64}.go` contracts.
 It preserves the 2009 Go BSD notice and native protection flag widths.
+
+The Linux mapped-memory Madvise adapter follows the selected Go SDK
+`src/syscall/zsyscall_linux_{amd64,arm64}.go` contracts.
+It preserves the Go BSD notice and native 32-bit advice values.

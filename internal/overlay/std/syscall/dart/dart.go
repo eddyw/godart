@@ -2291,6 +2291,10 @@ func SyscallMmap(fd int, offset int64, length int, prot, flags int) ([]byte, int
 	panic("syscall/dart needs the gart compiler")
 }
 
+func SyscallMadvise(data []byte, advice int) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
 func SyscallMprotect(data []byte, prot int) int {
 	panic("syscall/dart needs the gart compiler")
 }

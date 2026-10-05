@@ -930,7 +930,8 @@
     "blocker_cause": "runtime-boundary",
     "blocker_reason": "The suite requires Go's native file descriptors, fdMutex, and runtime poller. The overlay retains only the closed-network error.",
     "platform_diagnostics": {
-      "linux-amd64": "undefined: poll.ErrNotPollable"
+      "linux-amd64": "undefined: poll.ErrNotPollable",
+      "linux-arm64": "undefined: poll.ErrNotPollable"
     }
   },
   {
@@ -1328,7 +1329,8 @@
     "status": "compile-blocked",
     "diagnostic": "cmd.proc.SysProcAttr undefined (type *exec.Cmd has no field or method SysProcAttr)",
     "platform_diagnostics": {
-      "linux-amd64": "undefined: net.FileConn"
+      "linux-amd64": "undefined: net.FileConn",
+      "linux-arm64": "undefined: net.FileConn"
     },
     "blocker_cause": "runtime-boundary",
     "blocker_reason": "The complete suite requires process attributes and native file-descriptor adoption."
