@@ -785,3 +785,9 @@ The adapter preserves the 2009 Go BSD notice. Reference fixtures retain
 original selected Kevent_t and Timespec declarations under the Go BSD license.
 The native ABI assessment uses the installed Xcode SDK declarations.
 No Apple kernel source enters the implementation.
+
+The bounded Darwin BPF control adapter follows the original Go SDK
+`src/syscall/bpf_bsd.go` under its 2018 Go BSD notice. Reference fixtures
+retain selected Darwin record declarations and request constants under the
+Go BSD license. The native ABI assessment uses installed Xcode declarations.
+No Apple kernel source enters the implementation.

@@ -2117,6 +2117,12 @@ func SyscallKevent(kq int, changes, events, timeout []byte) (int, int) {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// SyscallBpfIoctl accepts only the selected Darwin BPF requests and their complete byte objects.
+// BIOCSETF uses a 16-byte program with a zero pointer and complete 8-byte instructions.
+func SyscallBpfIoctl(fd, request int, data, instructions []byte) int {
+ panic("syscall/dart needs the gart compiler")
+}
+
 func SyscallKqueue() (int, int) {
 	panic("syscall/dart needs the gart compiler")
 }

@@ -541,6 +541,8 @@ int $syscallUndelete(GoString path) => -1;
 
 (int, int) $syscallKevent(int kq, Slice<GoInt> changes, Slice<GoInt> events, Slice<GoInt> timeout) => (-1, 78);
 
+int $syscallBpfIoctl(int fd, int request, Slice<GoInt> data, Slice<GoInt> instructions) => 78;
+
 (int, int) $syscallKqueue() => (-1, -1);
 
 int $syscallGetdtablesize() => throw UnsupportedError('syscall.Getdtablesize');

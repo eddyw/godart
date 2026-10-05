@@ -97,6 +97,55 @@ final _kevent = _libc.lookupFunction<
   }
 }
 
+final _bpfIoctl = _libc.lookupFunction<
+  Int Function(Int, UnsignedLong, VarArgs<(Pointer<Uint8>,)>),
+  int Function(int, int, Pointer<Uint8>)
+>('ioctl');
+
+int $syscallBpfIoctl(int fd, int request, Slice<int> data, Slice<int> instructions) {
+  if (!Platform.isMacOS) return 78;
+  switch (request) {
+    case 0x40044266:
+    case 0xc0044266:
+    case 0x4004426a:
+    case 0x80044278:
+    case 0x20004269:
+    case 0x20004268:
+    case 0x4020426b:
+    case 0x8020426c:
+    case 0x4010426e:
+    case 0x8010426d:
+    case 0x4008426f:
+    case 0x80044270:
+    case 0x80104267:
+    case 0x40044271:
+    case 0x40044274:
+    case 0x80044275:
+      break;
+    default:
+      return 78;
+  }
+  final size = data.len + instructions.len;
+  final buffer = size == 0 ? nullptr.cast<Uint8>() : _malloc(size);
+  if (size != 0 && buffer == nullptr) return 12;
+  try {
+    if (data.len != 0) buffer.asTypedList(data.len).setRange(0, data.len, data.array, data.off);
+    if (request == 0x80104267) {
+      final filters = buffer + data.len;
+      filters.asTypedList(instructions.len).setRange(0, instructions.len, instructions.array, instructions.off);
+      (buffer + 8).cast<Pointer<Uint8>>().value = filters;
+    }
+    final call = _bpfIoctl;
+    final errorAddress = _errno();
+    final code = call(fd, request, buffer) < 0 ? errorAddress.value : 0;
+    // A native filter pointer must never enter a Go byte object.
+    if (data.len != 0 && request != 0x80104267) data.array.setRange(data.off, data.off + data.len, buffer.asTypedList(data.len));
+    return code;
+  } finally {
+    if (buffer != nullptr) _free(buffer);
+  }
+}
+
 final _kqueue = _libc.lookupFunction<Int Function(), int Function()>('kqueue');
 
 (int, int) $syscallKqueue() {

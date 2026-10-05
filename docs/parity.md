@@ -868,3 +868,14 @@ only registrations with nil Udata. Nonnil input Udata returns typed ENOSYS
 before native action. Web targets and other native hosts return Darwin ENOSYS.
 Native calls can block the Dart scheduler. General Go pointer transport,
 process inheritance, and scheduler readiness remain unsupported.
+
+Darwin 64-bit programs support the 16 selected `syscall` BPF controls through
+actual native ioctl calls and owned byte objects. Scalar values retain their
+64-bit upper bits. Interface objects allocate the complete 32-byte ifreq
+storage and preserve the original wrapper return value. Filter programs use
+owned native instruction buffers. No native pointer enters a Go byte object.
+Nil Timeval values reach native ioctl unchanged. Empty filters retain the
+original index panic. Web targets and other native hosts return Darwin ENOSYS.
+Fixtures use only owned file and queue descriptors. BPF device success,
+interface attachment, packet capture, scheduler progress, inheritance and
+general ioctl or Go pointer transport remain unverified or unsupported.

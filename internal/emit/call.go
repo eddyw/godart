@@ -760,6 +760,8 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$syscallUndelete(%s)", args[0]), true
 	case "SyscallKevent":
 		return fmt.Sprintf("$syscallKevent(%s, %s, %s, %s)", args[0], args[1], args[2], args[3]), true
+	case "SyscallBpfIoctl":
+		return fmt.Sprintf("$syscallBpfIoctl(%s, %s, %s, %s)", args[0], args[1], args[2], args[3]), true
 	case "SyscallKqueue":
 		return "$syscallKqueue()", true
 	case "SyscallGetdtablesize":
