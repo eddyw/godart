@@ -516,6 +516,9 @@ int $syscallEpollCtl(int epfd, int op, int fd, Slice<GoInt> data) => 38;
 
 (int, int) $syscallTee(int rfd, int wfd, int length, int flags) => (-1, 38);
 
+(int, int) $syscallDarwinSendfile(int outfd, int infd, int offset, int count) =>
+    (0, -1);
+
 (int, int) $syscallSendfile(int outfd, int infd, Slice<GoInt> offset, int count) => (-1, 38);
 
 int $syscallNanosleep(Slice<GoInt> request, Slice<GoInt> leftover) => 38;

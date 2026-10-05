@@ -30,6 +30,7 @@ export 'root.dart' show $rootOpen, $rootOpenAt, $rootOpenDir, $rootMkdir;
 export 'syscall_directory.dart';
 export 'unix_datagram.dart' show $syscallSendmsgN, $syscallRecvmsg;
 export 'sysctl_darwin.dart';
+export 'sendfile_darwin.dart';
 export 'pathconf_darwin.dart';
 export 'chflags_darwin.dart';
 export 'mkfifo_native.dart';

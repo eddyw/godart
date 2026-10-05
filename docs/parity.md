@@ -804,3 +804,12 @@ zero-size nil output, kernel errors and copied ownership.
 Go slice aliases retain their shared bytes. Web targets return selected SDK ENOSYS.
 Routing message parsers and route state changes remain unsupported.
 Native errno atomicity retains its documented limitation.
+
+macOS 64-bit programs support actual syscall.Sendfile file-to-socket calls.
+The adapter preserves unchanged caller offsets, file positions, descriptor
+ownership, sparse offsets, int32 descriptors and int64 offsets and counts.
+A zero count transfers to EOF. A nil offset retains the original Go panic.
+Native partial transfers preserve their byte count and EAGAIN together.
+Web targets return selected SDK ENOSYS and preserve caller offsets.
+The existing Linux Sendfile implementation remains exact.
+Native scheduler and errno atomicity limits remain unchanged.

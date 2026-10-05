@@ -755,3 +755,8 @@ It does not replace or establish the original inherited-FD test contract.
 The macOS RouteRIB adapter follows the selected Go SDK
 `src/syscall/route_bsd.go` contract under the Go BSD license.
 It retains the 2011 notice, API documentation and deprecation notice.
+
+The macOS Sendfile adapter follows the selected Go SDK
+`src/syscall/syscall_unix.go`, `syscall_darwin_amd64.go` and
+`syscall_darwin_arm64.go` contracts under the Go BSD license.
+It retains the 2009 and 2015 notices and original API documentation.

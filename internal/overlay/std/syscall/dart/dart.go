@@ -2371,6 +2371,10 @@ func SyscallTee(rfd, wfd, length, flags int) (int64, int) {
 	panic("syscall/dart needs the gart compiler")
 }
 
+func SyscallDarwinSendfile(outfd, infd int, offset int64, count int) (int, int) {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // SyscallSendfile requires a nil offset or exactly 8 native-endian bytes.
 func SyscallSendfile(outfd, infd int, offset []byte, count int) (int, int) {
 	panic("syscall/dart needs the gart compiler")
