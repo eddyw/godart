@@ -744,3 +744,10 @@ Those AMD64 observations cannot supply an ARM64 caller-data oracle.
 The fixture retains actual errors and metadata comparisons on AMD64.
 Actual ARM64 supplies the failed-call retention and typed EFAULT oracle.
 The AMD64 nil process assertion compares actual native termination.
+
+The FcntlFlock overlays follow original Go SDK `src/syscall/flock_linux.go`
+and `src/syscall/flock_bsd.go` contracts under the Go BSD license.
+They retain the original 2014 and 2018 notices. Native references execute
+original public SDK calls and preserve actual platform Flock_t declarations.
+The parent lock probe opens its own path and uses actual kernel process IDs.
+It does not replace or establish the original inherited-FD test contract.

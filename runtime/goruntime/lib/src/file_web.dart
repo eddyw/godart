@@ -251,6 +251,19 @@ int $syscallFchflags(int fd, int flags) => -1;
 
 int $syscallSetrlimit(int resource, bool input, int cur, int max) => -1;
 
+(Slice<int>, int) $syscallFcntlFlock(
+  int fd,
+  int cmd,
+  bool input,
+  int start,
+  int length,
+  int pid,
+  int kind,
+  int whence,
+  int pad0,
+  int pad1,
+) => (Slice<int>.nil(), -1);
+
 (int, int) $syscallFcntl(int fd, int cmd, int arg) => (-1, -1);
 (int, int) $syscallReadDirent(int fd, Slice<GoInt> data) => (0, -1);
 

@@ -14,6 +14,7 @@ import 'syscall_directory.dart';
 
 export 'directory_descriptor.dart';
 export 'file_attributes.dart';
+export 'fcntl_flock.dart';
 export 'file_handle.dart'
     show $nativePread, $nativePwrite, $nativeRead, $nativeWrite;
 export 'file_links.dart';

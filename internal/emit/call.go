@@ -818,6 +818,8 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$syscallGetrlimit(%s, %s)", args[0], args[1]), true
 	case "SyscallSetrlimit":
 		return fmt.Sprintf("$syscallSetrlimit(%s, %s, %s, %s)", args[0], args[1], args[2], args[3]), true
+	case "SyscallFcntlFlock":
+		return fmt.Sprintf("$syscallFcntlFlock(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9]), true
 	case "SyscallFcntl":
 		return fmt.Sprintf("$syscallFcntl(%s, %s, %s)", args[0], args[1], args[2]), true
 	case "SyscallReadDirent":

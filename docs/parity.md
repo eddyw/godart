@@ -786,3 +786,13 @@ Native errno atomicity retains its documented limitation.
 The AMD64 emulator crashes on nil fstatat metadata in both native Go and
 Dart FFI. ARM64 returns typed EFAULT. This host limit remains visible in
 the differential fixture. The native call does not synthesize that error.
+
+Darwin and Linux 64-bit programs support actual FcntlFlock record-lock calls.
+F_GETLK, F_SETLK and F_SETLKW preserve native fields, padding, widths,
+Go pointer aliases, kernel errors, file bytes and descriptor positions.
+Nil metadata reaches the kernel as a nil pointer.
+Actual parent-owned locks provide native process-ID and range observations.
+The fixture opens its own path. It does not establish descriptor inheritance.
+Other nonnegative commands lack generic pointer transport and return ENOSYS.
+Web targets return selected SDK ENOSYS and preserve all caller fields.
+Blocking commands retain the native scheduler and errno limitations.

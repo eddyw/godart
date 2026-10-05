@@ -1153,6 +1153,13 @@ func NativeFstatat(fd int, path string, output bool, flags int) ([]int64, int) {
  panic("syscall/dart needs the gart compiler")
 }
 
+// SyscallFcntlFlock transports all fields of the native record-lock structure.
+// A false input passes a nil pointer. Other pointer commands remain unavailable.
+func SyscallFcntlFlock(fd uintptr, cmd int, input bool, start, length int64, pid int32, kind, whence int16, pad0, pad1 uint32) ([]int64, int) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+
 // NativeFstat returns the NativeStat fields for an open descriptor.
 func NativeFstat(fd int) ([]int64, int) {
 	panic("syscall/dart needs the gart compiler")
