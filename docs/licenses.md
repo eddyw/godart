@@ -769,3 +769,7 @@ It preserves the 2009 Go BSD notice and native protection flag widths.
 The Linux mapped-memory Madvise adapter follows the selected Go SDK
 `src/syscall/zsyscall_linux_{amd64,arm64}.go` contracts.
 It preserves the Go BSD notice and native 32-bit advice values.
+
+The mapped-memory Mlock and Munlock adapters follow the selected Go SDK
+`src/syscall/zsyscall_{linux,darwin}_{amd64,arm64}.go` contracts.
+They preserve the 2009 Go BSD notice and native mapped-range contracts.

@@ -95,3 +95,32 @@ int $syscallMadvise(Slice<int> data, int advice) {
   final result = advise(address, data.len, advice);
   return result < 0 ? errorAddress.value : 0;
 }
+
+final _mlock = _libc.lookupFunction<
+  Int Function(Pointer<Uint8>, Size),
+  int Function(Pointer<Uint8>, int)
+>('mlock');
+final _munlock = _libc.lookupFunction<
+  Int Function(Pointer<Uint8>, Size),
+  int Function(Pointer<Uint8>, int)
+>('munlock');
+
+int $syscallMlock(Slice<int> data) {
+  final mapping = _active[data.array];
+  if (data.len == 0 || mapping == null) return -1;
+  final address = mapping.$1 + data.off;
+  final lock = _mlock;
+  final errorAddress = _errno();
+  final result = lock(address, data.len);
+  return result < 0 ? errorAddress.value : 0;
+}
+
+int $syscallMunlock(Slice<int> data) {
+  final mapping = _active[data.array];
+  if (data.len == 0 || mapping == null) return -1;
+  final address = mapping.$1 + data.off;
+  final unlock = _munlock;
+  final errorAddress = _errno();
+  final result = unlock(address, data.len);
+  return result < 0 ? errorAddress.value : 0;
+}

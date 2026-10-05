@@ -833,3 +833,14 @@ file mapping bytes without a copy-based substitute. The backing file remains
 intact. Ordinary heap slices, empty slices, released mappings and web targets
 return selected SDK ENOSYS. Darwin has no public syscall.Madvise API.
 Native scheduler and errno atomicity limits remain unchanged.
+
+Darwin and Linux 64-bit programs support actual syscall.Mlock and
+syscall.Munlock calls for nonempty ranges of active syscall.Mmap resources.
+The adapters preserve native addresses, offsets, lengths, kernel errors,
+caller bytes and Go aliases. Linux kernel VmLck observations prove page
+rounding, repeated-call semantics and partial unlock for anonymous and
+file-backed ranges. Local restored soft limits and protected ranges preserve
+the selected native results. Ordinary heap slices, empty slices, released
+mappings and web targets return selected SDK ENOSYS. Process-wide memory
+locks, native scheduler progress and atomic errno capture remain outside
+this support contract.

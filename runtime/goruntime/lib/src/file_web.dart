@@ -482,6 +482,9 @@ int $syscallSetsockoptICMPv6Filter(
 
 int $syscallMadvise(Slice<GoInt> data, int advice) => -1;
 
+int $syscallMlock(Slice<GoInt> data) => -1;
+int $syscallMunlock(Slice<GoInt> data) => -1;
+
 int $syscallMprotect(Slice<GoInt> data, int prot) => -1;
 
 int $syscallMunmap(Slice<GoInt> data) => -1;

@@ -660,6 +660,10 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$syscallMmap(%s, %s, %s, %s, %s)", args[0], args[1], args[2], args[3], args[4]), true
 	case "SyscallMadvise":
 		return fmt.Sprintf("$syscallMadvise(%s, %s)", args[0], args[1]), true
+	case "SyscallMlock":
+		return fmt.Sprintf("$syscallMlock(%s)", args[0]), true
+	case "SyscallMunlock":
+		return fmt.Sprintf("$syscallMunlock(%s)", args[0]), true
 	case "SyscallMprotect":
 		return fmt.Sprintf("$syscallMprotect(%s, %s)", args[0], args[1]), true
 	case "SyscallMunmap":
