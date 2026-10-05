@@ -891,3 +891,9 @@ with native Go on VM, AOT, JavaScript, and WebAssembly. It retains array
 slices, append storage identity, closure state, comparisons, short circuit
 behavior, labeled control flow, and typed divide-by-zero errors. It does not
 establish native compiler optimization, stack layout, or whole-Go parity.
+
+The compiler reference and flow fixture compares all 7 complete original
+files with native Go on VM, AOT, JavaScript, and WebAssembly. It retains
+reference aliases, load/store order, narrow integer values, map and channel
+values, control flow, string slices, and original bound assertions. It does
+not establish native compiler optimization, stack layout, or whole-Go parity.

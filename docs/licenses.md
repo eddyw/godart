@@ -802,3 +802,9 @@ The compiler value and control fixture executes the complete original
 `short_test.go`, `break_test.go`, and `divbyzero_test.go` files from
 `src/cmd/compile/internal/test/testdata`. It retains their original assertions,
 source bytes, available notices, and the selected SDK BSD `LICENSE`.
+
+The compiler reference and flow fixture executes the complete original
+`addressed_test.go`, `loadstore_test.go`, `map_test.go`, `chan_test.go`,
+`regalloc_test.go`, `ctl_test.go`, and `string_test.go` files from
+`src/cmd/compile/internal/test/testdata`. It retains all original assertions,
+source bytes, notices, and the selected SDK BSD `LICENSE`.
