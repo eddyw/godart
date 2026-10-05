@@ -821,3 +821,9 @@ The compiler concurrent slice fixture executes the complete original
 `src/cmd/compile/internal/test/testdata`. It retains all original roots,
 assertions, loop counts, source bytes, notices, and the selected SDK BSD
 `LICENSE`.
+
+The compiler phi fixture executes the complete original `phi_test.go`
+from `src/cmd/compile/internal/test/testdata`. Its source adapter extracts
+the exact shared `always` declaration from the selected SDK
+`unsafe_test.go`. It retains that complete dependency source, its source
+identity, the original notices, and the selected SDK BSD `LICENSE`.

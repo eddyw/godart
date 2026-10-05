@@ -910,3 +910,9 @@ complete files with native Go on VM, AOT, JavaScript, and WebAssembly. It
 retains concurrent load, slice, and original compile assertions. The empty
 `TestDeferNoReturn` root establishes compilation only. The fixture does not
 establish native thread preemption, atomicity, or compiler optimization.
+
+The compiler phi fixture compares the complete original `TestPhi` with
+native Go on VM, AOT, JavaScript, and WebAssembly. It preserves the original
+shared declaration bytes, input values, assertion, and `runtime.Gosched`
+call. It does not execute `TestUnsafe` or establish native stack spills,
+compiler optimization, pointer transport, or unsafe memory behavior.
