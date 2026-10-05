@@ -771,7 +771,8 @@ on VM, AOT, JS and Wasm. Code uses uint16, Jt and Jf use uint8,
 and K uses uint32. Each constructor returns a distinct Go pointer.
 Value copies and pointer aliases retain the original ownership contract.
 Selected amd64 and arm64 declarations have native Go reference coverage.
-Native BPF devices, ioctl calls and packet filter operations remain unsupported.
+BPF device access, interface attachment and packet capture remain unverified.
+The selected BPF controls below use bounded native ioctl calls.
 
 Linux ARM64 programs support the original syscall.Fstatat public API.
 The native call preserves raw path bytes, NUL validation, 32-bit descriptor
@@ -802,7 +803,7 @@ The adapter uses the original 6-word sysctl MIB and 2 native calls.
 It preserves int32 facility and parameter widths, raw bytes, slice capacity,
 zero-size nil output, kernel errors and copied ownership.
 Go slice aliases retain their shared bytes. Web targets return selected SDK ENOSYS.
-Routing message parsers and route state changes remain unsupported.
+Route state changes remain unsupported. The bounded parsers appear below.
 Native errno atomicity retains its documented limitation.
 
 macOS 64-bit programs support actual syscall.Sendfile file-to-socket calls.
