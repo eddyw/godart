@@ -40,8 +40,6 @@ void $gosched() {
   $block(const _Yield());
 }
 
-int _pollBudget = 128;
-
 final class _SyncYield implements Frame {
   const _SyncYield();
   @override
@@ -49,8 +47,8 @@ final class _SyncYield implements Frame {
 }
 
 void $poll() {
-  if (--_pollBudget > 0) return;
-  _pollBudget = 128;
+  if (--$pollBudget > 0) return;
+  $pollBudget = 128;
   if ($syncActive) {
     $block(const _SyncYield());
     return;
