@@ -791,3 +791,8 @@ The bounded Darwin BPF control adapter follows the original Go SDK
 retain selected Darwin record declarations and request constants under the
 Go BSD license. The native ABI assessment uses installed Xcode declarations.
 No Apple kernel source enters the implementation.
+
+The compound value and named return fixtures execute complete Go
+`src/cmd/compile/internal/test/testdata/compound_test.go` and
+`namedReturn_test.go` files. They retain the original 2015 and 2016
+BSD notices and the selected SDK LICENSE.

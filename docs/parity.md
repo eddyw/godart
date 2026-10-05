@@ -879,3 +879,9 @@ original index panic. Web targets and other native hosts return Darwin ENOSYS.
 Fixtures use only owned file and queue descriptors. BPF device success,
 interface attachment, packet capture, scheduler progress, inheritance and
 general ioctl or Go pointer transport remain unverified or unsupported.
+
+The compiler compound value and named return fixtures retain complete selected
+Go `compound_test.go` and `namedReturn_test.go` files and original assertions.
+They compare native Go results with VM, AOT, JS and Wasm results.
+The named return fixture retains its original GC calls and reference values.
+These assertions do not establish native GC layout or compiler optimization parity.
