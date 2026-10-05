@@ -808,3 +808,10 @@ The compiler reference and flow fixture executes the complete original
 `regalloc_test.go`, `ctl_test.go`, and `string_test.go` files from
 `src/cmd/compile/internal/test/testdata`. It retains all original assertions,
 source bytes, notices, and the selected SDK BSD `LICENSE`.
+
+The compiler arithmetic fixture executes the complete original
+`arith_test.go`, `arithBoundary_test.go`, `arithConst_test.go`,
+`cmpConst_test.go`, `fp_test.go`, `sqrtConst_test.go`, `copy_test.go`, and
+`zero_test.go` files from `src/cmd/compile/internal/test/testdata`. It retains
+all original roots, assertions, source bytes, available notices, and the
+selected SDK BSD `LICENSE`.

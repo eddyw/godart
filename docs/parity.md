@@ -897,3 +897,10 @@ files with native Go on VM, AOT, JavaScript, and WebAssembly. It retains
 reference aliases, load/store order, narrow integer values, map and channel
 values, control flow, string slices, and original bound assertions. It does
 not establish native compiler optimization, stack layout, or whole-Go parity.
+
+The compiler arithmetic fixture compares all original roots in 8 complete
+files with native Go on VM, AOT, JavaScript, and WebAssembly. It retains
+integer widths, shifts, boundaries, constant comparisons, float and complex
+values, square roots, copy operations, and zero values. Original inputs,
+assertions, and GC calls remain. It does not establish native compiler
+optimization, GC layout, or whole-Go parity.
