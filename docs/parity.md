@@ -750,3 +750,9 @@ Control lengths use uint32 on Darwin and uint64 on Linux.
 The setters preserve other fields, Go pointer aliases and typed nil panics.
 Selected amd64 and arm64 declarations have native Go reference coverage.
 Native pointer transport retains its existing limits.
+
+Linux amd64 and arm64 programs support the original PtraceRegs.PC
+and SetPC value methods on all 4 targets. The methods retain uint64 values,
+all other register fields, Go pointer aliases and typed nil panics.
+Selected original SDK declarations have native Go reference coverage.
+This record support does not establish native ptrace operations.

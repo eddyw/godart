@@ -711,3 +711,8 @@ The message value overlays follow the selected Go SDK architecture files
 `src/syscall/syscall_{darwin,linux}_{amd64,arm64}.go` under the Go BSD license.
 The reference adapter extracts unchanged selected Iovec, Msghdr and Cmsghdr
 declarations and their original setter methods for native Go assertions.
+
+The Linux register value overlays follow the selected Go SDK
+`src/syscall/syscall_linux_{amd64,arm64}.go` PC and SetPC methods
+under the Go BSD license. The reference adapter retains original selected
+PtraceRegs type declarations and methods for native Go value assertions.
