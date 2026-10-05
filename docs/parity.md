@@ -844,3 +844,18 @@ the selected native results. Ordinary heap slices, empty slices, released
 mappings and web targets return selected SDK ENOSYS. Process-wide memory
 locks, native scheduler progress and atomic errno capture remain outside
 this support contract.
+
+Darwin 64-bit declarations support bounded syscall.ParseRoutingMessage and
+syscall.ParseRoutingSockaddr byte decoding on VM, AOT, JavaScript and
+WebAssembly. Headers and sockaddr values own copies. Message payloads retain
+the caller slice, capacity and aliases. Selected SDK references cover all
+14 message types, header padding, address families, positional masks,
+version errors and bounded panics. SockaddrDatalink preserves the original
+raw cache, Index validation and 20-byte encoding. The adapters use byte
+operations and introduce no route mutation or general unsafe transport.
+Nonprogressing zero-length frames return selected SDK ENOSYS. The original
+SDK can loop without return for these frames. This explicit input limit
+does not infer an errno from the original programme deadline.
+
+Malformed frame panic text can differ from native Go. This support contract
+preserves the panic, but does not specify its exact text.

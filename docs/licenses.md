@@ -773,3 +773,8 @@ It preserves the Go BSD notice and native 32-bit advice values.
 The mapped-memory Mlock and Munlock adapters follow the selected Go SDK
 `src/syscall/zsyscall_{linux,darwin}_{amd64,arm64}.go` contracts.
 They preserve the 2009 Go BSD notice and native mapped-range contracts.
+
+The bounded Darwin routing message adapters follow the original Go SDK
+`src/syscall/route_bsd.go`, `route_darwin.go`, `syscall_bsd.go` and
+`syscall_darwin.go` contracts. They preserve the 2009 and 2011 Go BSD notices.
+Original decoder references retain their source bodies and selected layouts.
