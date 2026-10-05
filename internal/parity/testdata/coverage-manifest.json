@@ -255,9 +255,9 @@
   {
     "package": "crypto/internal/fips140/nistec",
     "status": "compile-blocked",
-    "diagnostic": "undefined: syscall.Mmap",
+    "diagnostic": "undefined: syscall.Mprotect",
     "blocker_cause": "runtime-boundary",
-    "blocker_reason": "The suite requires native memory mapping and memory protection through syscall."
+    "blocker_reason": "The suite requires native mapped-memory protection through syscall.Mprotect."
   },
   {
     "package": "crypto/internal/fips140/nistec/fiat",
@@ -426,9 +426,9 @@
   {
     "package": "crypto/subtle",
     "status": "compile-blocked",
-    "diagnostic": "the package internal/cpu is outside the supported surface (the standard library surface is curated)",
+    "diagnostic": "undefined: sys.DITEnabled",
     "blocker_cause": "runtime-boundary",
-    "blocker_reason": "The suite requires native CPU feature detection through internal/cpu."
+    "blocker_reason": "The suite requires native DIT register state and CPU feature detection."
   },
   {
     "package": "crypto/tls",
@@ -1214,9 +1214,9 @@
     "status": "compile-blocked",
     "diagnostic": "cmd.SysProcAttr undefined (type *exec.Cmd has no field or method SysProcAttr)",
     "blocker_cause": "public-api-gap",
-    "blocker_reason": "The complete suite requires native process attributes. Linux also requires syscall.Nanosleep.",
+    "blocker_reason": "The complete suite requires native process attributes.",
     "platform_diagnostics": {
-      "linux-amd64": "undefined: syscall.Nanosleep"
+      "linux-amd64": "cmd.SysProcAttr undefined (type *exec.Cmd has no field or method SysProcAttr)"
     }
   },
   {
@@ -1328,10 +1328,10 @@
     "status": "compile-blocked",
     "diagnostic": "cmd.proc.SysProcAttr undefined (type *exec.Cmd has no field or method SysProcAttr)",
     "platform_diagnostics": {
-      "linux-amd64": "undefined: syscall.Socketpair"
+      "linux-amd64": "undefined: net.FileConn"
     },
     "blocker_cause": "runtime-boundary",
-    "blocker_reason": "The complete suite requires process attributes, socket pairs, and raw file descriptors."
+    "blocker_reason": "The complete suite requires process attributes and native file-descriptor adoption."
   },
   {
     "package": "testing",
