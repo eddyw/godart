@@ -2112,6 +2112,11 @@ func SyscallUndelete(path string) int {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// SyscallKevent requires complete 32-byte events with nil Udata and a nil or 16-byte timespec.
+func SyscallKevent(kq int, changes, events, timeout []byte) (int, int) {
+	panic("syscall/dart needs the gart compiler")
+}
+
 func SyscallKqueue() (int, int) {
 	panic("syscall/dart needs the gart compiler")
 }

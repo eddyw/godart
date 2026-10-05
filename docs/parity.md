@@ -726,7 +726,7 @@ The private error conversion preserves native errno values and caller data.
 macOS 64-bit programs support `syscall.Kqueue` through the actual native call.
 Queue descriptors retain kernel metadata, duplication, close ownership,
 and actual descriptor-exhaustion errors. Web targets return selected SDK ENOSYS.
-Native Kevent buffers and C pointer metadata remain unsupported.
+General C pointer metadata remains unsupported.
 Process inheritance and scheduler readiness retain their existing limits.
 
 macOS 64-bit programs support actual `syscall.Revoke` and `syscall.Undelete`
@@ -742,7 +742,7 @@ Its field conversions preserve uint64 Ident, int16 Filter and uint16 Flags.
 Fflags, Data and Go Udata pointer aliases retain their original values.
 The original typed nil panic remains intact on VM, AOT, JS and Wasm.
 Selected amd64 and arm64 SDK declarations have native Go reference coverage.
-This value support does not establish native Kevent buffers or registration.
+The setter preserves Go pointer values without native pointer transport.
 
 Darwin and Linux 64-bit programs support the original SDK Iovec.SetLen
 and Msghdr.SetControllen methods on all 4 targets. Iovec lengths use uint64.
@@ -859,3 +859,12 @@ does not infer an errno from the original programme deadline.
 
 Malformed frame panic text can differ from native Go. This support contract
 preserves the panic, but does not specify its exact text.
+
+Darwin 64-bit programs support `syscall.Kevent` with nil Udata values.
+The actual native call preserves typed event fields, receipts, pipe data,
+EOF, error results, timeout values, unused slots, and caller slice aliases.
+Changes and events must contain only nil Udata values. The queue must contain
+only registrations with nil Udata. Nonnil input Udata returns typed ENOSYS
+before native action. Web targets and other native hosts return Darwin ENOSYS.
+Native calls can block the Dart scheduler. General Go pointer transport,
+process inheritance, and scheduler readiness remain unsupported.

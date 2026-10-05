@@ -65,6 +65,38 @@ int $syscallUndelete(GoString path) {
   }
 }
 
+final _kevent = _libc.lookupFunction<
+  Int Function(Int, Pointer<Uint8>, Int, Pointer<Uint8>, Int, Pointer<Uint8>),
+  int Function(int, Pointer<Uint8>, int, Pointer<Uint8>, int, Pointer<Uint8>)
+>('kevent');
+
+(int, int) $syscallKevent(int kq, Slice<int> changes, Slice<int> events, Slice<int> timeout) {
+  if (!Platform.isMacOS) return (-1, 78);
+  final buffers = Map<List<int>, Pointer<Uint8>>.identity();
+  try {
+    for (final data in [changes, events, timeout]) {
+      if (data.len == 0 || buffers.containsKey(data.array)) continue;
+      final buffer = _malloc(data.array.length);
+      if (buffer == nullptr) return (-1, 12);
+      buffers[data.array] = buffer;
+      buffer.asTypedList(data.array.length).setAll(0, data.array);
+    }
+    final change = changes.len == 0 ? nullptr.cast<Uint8>() : buffers[changes.array]! + changes.off;
+    final event = events.len == 0 ? nullptr.cast<Uint8>() : buffers[events.array]! + events.off;
+    final limit = timeout.len == 0 ? nullptr.cast<Uint8>() : buffers[timeout.array]! + timeout.off;
+    final call = _kevent;
+    final errorAddress = _errno();
+    final n = call(kq, change, changes.len ~/ 32, event, events.len ~/ 32, limit);
+    final code = n < 0 ? errorAddress.value : 0;
+    if (events.len != 0) events.array.setRange(events.off, events.off + events.len, event.asTypedList(events.len));
+    return (n, code);
+  } finally {
+    for (final buffer in buffers.values) {
+      _free(buffer);
+    }
+  }
+}
+
 final _kqueue = _libc.lookupFunction<Int Function(), int Function()>('kqueue');
 
 (int, int) $syscallKqueue() {

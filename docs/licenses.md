@@ -778,3 +778,10 @@ The bounded Darwin routing message adapters follow the original Go SDK
 `src/syscall/route_bsd.go`, `route_darwin.go`, `syscall_bsd.go` and
 `syscall_darwin.go` contracts. They preserve the 2009 and 2011 Go BSD notices.
 Original decoder references retain their source bodies and selected layouts.
+
+The Darwin Kevent byte adapter follows the Go SDK
+`src/syscall/syscall_bsd.go` and selected Darwin `zsyscall` contracts.
+The adapter preserves the 2009 Go BSD notice. Reference fixtures retain
+original selected Kevent_t and Timespec declarations under the Go BSD license.
+The native ABI assessment uses the installed Xcode SDK declarations.
+No Apple kernel source enters the implementation.
