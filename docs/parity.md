@@ -772,3 +772,17 @@ and K uses uint32. Each constructor returns a distinct Go pointer.
 Value copies and pointer aliases retain the original ownership contract.
 Selected amd64 and arm64 declarations have native Go reference coverage.
 Native BPF devices, ioctl calls and packet filter operations remain unsupported.
+
+Linux ARM64 programs support the original syscall.Fstatat public API.
+The native call preserves raw path bytes, NUL validation, 32-bit descriptor
+and flag widths, all Stat_t metadata fields and actual kernel errors.
+Nil metadata reaches the native call as a nil pointer.
+Failed calls preserve caller fields. The call has no EINTR retry.
+Both pinned AMD64 SDK references use original host kernel constants and types.
+Current ARM64 also executes the original public API and native ABI.
+Web targets return selected SDK ENOSYS after NUL validation.
+Native errno atomicity retains its documented limitation.
+
+The AMD64 emulator crashes on nil fstatat metadata in both native Go and
+Dart FFI. ARM64 returns typed EFAULT. This host limit remains visible in
+the differential fixture. The native call does not synthesize that error.

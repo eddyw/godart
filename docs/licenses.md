@@ -731,3 +731,16 @@ The macOS BPF instruction value overlay follows the original Go SDK
 license. It retains the 2018 source notice. The native reference adapter
 extracts unchanged declarations and removes only their BSD build constraint
 from the reference copy for scalar execution on Linux.
+
+The Linux ARM64 Fstatat overlay follows the original public wrapper in
+`src/syscall/syscall_linux_arm64.go` under the Go BSD license. It retains
+its 2015 notice. Native references preserve the original generated fstatat
+body, BytePtrFromString, Syscall6, errnoErr and actual host kernel constants
+and Stat_t aliases. The ARM64 reference also executes the original public API.
+
+The AMD64 native reference retains original syscall code and host types.
+The x64 emulator changes failed-call stat fields and crashes with nil output.
+Those AMD64 observations cannot supply an ARM64 caller-data oracle.
+The fixture retains actual errors and metadata comparisons on AMD64.
+Actual ARM64 supplies the failed-call retention and typed EFAULT oracle.
+The AMD64 nil process assertion compares actual native termination.

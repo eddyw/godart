@@ -1147,6 +1147,12 @@ func NativeLstatat(fd int, path string) ([]int64, int) {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// NativeFstatat returns the NativeStat fields relative to a directory descriptor.
+// A false output passes a nil metadata pointer to the native call.
+func NativeFstatat(fd int, path string, output bool, flags int) ([]int64, int) {
+ panic("syscall/dart needs the gart compiler")
+}
+
 // NativeFstat returns the NativeStat fields for an open descriptor.
 func NativeFstat(fd int) ([]int64, int) {
 	panic("syscall/dart needs the gart compiler")

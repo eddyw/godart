@@ -257,6 +257,13 @@ int $syscallSetrlimit(int resource, bool input, int cur, int max) => -1;
 (int, int, int) $fileOpenFlags(GoString path, int flags, int mode) =>
     (-1, -1, 38);
 
+(Slice<int>, int) $nativeFstatat(
+  int fd,
+  GoString path,
+  bool output,
+  int flags,
+) => (Slice<int>.nil(), path.bytes.contains(0) ? 22 : -1);
+
 (Slice<int>, int) $nativeLstatat(int fd, GoString path) =>
     (Slice<int>.nil(), 38);
 
