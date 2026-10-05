@@ -904,3 +904,9 @@ integer widths, shifts, boundaries, constant comparisons, float and complex
 values, square roots, copy operations, and zero values. Original inputs,
 assertions, and GC calls remain. It does not establish native compiler
 optimization, GC layout, or whole-Go parity.
+
+The compiler concurrent slice fixture compares all original roots in 3
+complete files with native Go on VM, AOT, JavaScript, and WebAssembly. It
+retains concurrent load, slice, and original compile assertions. The empty
+`TestDeferNoReturn` root establishes compilation only. The fixture does not
+establish native thread preemption, atomicity, or compiler optimization.

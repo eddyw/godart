@@ -815,3 +815,9 @@ The compiler arithmetic fixture executes the complete original
 `zero_test.go` files from `src/cmd/compile/internal/test/testdata`. It retains
 all original roots, assertions, source bytes, available notices, and the
 selected SDK BSD `LICENSE`.
+
+The compiler concurrent slice fixture executes the complete original
+`dupLoad_test.go`, `slice_test.go`, and `deferNoReturn_test.go` files from
+`src/cmd/compile/internal/test/testdata`. It retains all original roots,
+assertions, loop counts, source bytes, notices, and the selected SDK BSD
+`LICENSE`.
