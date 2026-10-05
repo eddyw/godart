@@ -796,3 +796,9 @@ The compound value and named return fixtures execute complete Go
 `src/cmd/compile/internal/test/testdata/compound_test.go` and
 `namedReturn_test.go` files. They retain the original 2015 and 2016
 BSD notices and the selected SDK LICENSE.
+
+The compiler value and control fixture executes the complete original
+`array_test.go`, `append_test.go`, `closure_test.go`, `cmp_test.go`,
+`short_test.go`, `break_test.go`, and `divbyzero_test.go` files from
+`src/cmd/compile/internal/test/testdata`. It retains their original assertions,
+source bytes, available notices, and the selected SDK BSD `LICENSE`.

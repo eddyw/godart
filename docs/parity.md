@@ -885,3 +885,9 @@ Go `compound_test.go` and `namedReturn_test.go` files and original assertions.
 They compare native Go results with VM, AOT, JS and Wasm results.
 The named return fixture retains its original GC calls and reference values.
 These assertions do not establish native GC layout or compiler optimization parity.
+
+The compiler value and control fixture compares all 7 complete original files
+with native Go on VM, AOT, JavaScript, and WebAssembly. It retains array
+slices, append storage identity, closure state, comparisons, short circuit
+behavior, labeled control flow, and typed divide-by-zero errors. It does not
+establish native compiler optimization, stack layout, or whole-Go parity.
