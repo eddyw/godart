@@ -802,6 +802,8 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$syscallPathconf(%s, %s)", args[0], args[1]), true
 	case "SyscallFpathconf":
 		return fmt.Sprintf("$syscallFpathconf(%s, %s)", args[0], args[1]), true
+	case "SyscallRouteRIB":
+		return fmt.Sprintf("$syscallRouteRIB(%s, %s)", args[0], args[1]), true
 	case "SyscallSysctl":
 		return fmt.Sprintf("$syscallSysctl(%s)", args[0]), true
 	case "SyscallSysctlUint32":

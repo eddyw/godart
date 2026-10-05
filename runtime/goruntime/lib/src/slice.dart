@@ -443,6 +443,7 @@ void $clearSlice<T>(
 /// shares the storage, because the element type erases there, and the JS
 /// form copies each element into a pair.
 Slice<GoInt> $gils(Slice<int> v) {
+  if (v.isNil) return Slice<GoInt>.nil();
   if ($isJS) {
     final List<GoInt> out = <GoInt>[
       for (var i = 0; i < v.len; i++) $gi(v.array[v.off + i]),

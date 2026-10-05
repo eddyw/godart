@@ -4,6 +4,7 @@
 
 import 'dart:ffi';
 
+import 'slice.dart';
 import 'string.dart';
 
 final _libc = DynamicLibrary.process();
@@ -145,6 +146,38 @@ final _sysctl = _libc
     return (buffer.value, 0);
   } finally {
     _free(buffer.cast<Uint8>());
+    _free(length.cast<Uint8>());
+    _free(mib.cast<Uint8>());
+  }
+}
+
+(Slice<int>, int) $syscallRouteRIB(int facility, int param) {
+  final mib = _malloc(6 * sizeOf<Int32>()).cast<Int32>();
+  final length = _malloc(sizeOf<Size>()).cast<Size>();
+  var buffer = nullptr.cast<Uint8>();
+  try {
+    if (mib == nullptr || length == nullptr) return (Slice<int>.nil(), 12);
+    mib.asTypedList(6).setAll(0, [4, 17, 0, 0, facility, param]);
+    length.value = 0;
+    final get = _sysctl;
+    final errorAddress = _errno();
+    var code = get(mib, 6, nullptr, length, nullptr, 0) == 0
+        ? 0
+        : errorAddress.value;
+    if (code != 0) return (Slice<int>.nil(), code);
+    final capacity = length.value;
+    if (capacity == 0) return (Slice<int>.nil(), 0);
+    buffer = _malloc(capacity);
+    if (buffer == nullptr) return (Slice<int>.nil(), 12);
+    buffer.asTypedList(capacity).fillRange(0, capacity, 0);
+    code = get(mib, 6, buffer.cast<Void>(), length, nullptr, 0) == 0
+        ? 0
+        : errorAddress.value;
+    if (code != 0) return (Slice<int>.nil(), code);
+    final bytes = buffer.asTypedList(capacity).toList(growable: false);
+    return (Slice<int>(bytes, 0, length.value, capacity), 0);
+  } finally {
+    _free(buffer);
     _free(length.cast<Uint8>());
     _free(mib.cast<Uint8>());
   }

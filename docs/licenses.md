@@ -751,3 +751,7 @@ They retain the original 2014 and 2018 notices. Native references execute
 original public SDK calls and preserve actual platform Flock_t declarations.
 The parent lock probe opens its own path and uses actual kernel process IDs.
 It does not replace or establish the original inherited-FD test contract.
+
+The macOS RouteRIB adapter follows the selected Go SDK
+`src/syscall/route_bsd.go` contract under the Go BSD license.
+It retains the 2011 notice, API documentation and deprecation notice.

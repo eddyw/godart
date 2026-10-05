@@ -796,3 +796,11 @@ The fixture opens its own path. It does not establish descriptor inheritance.
 Other nonnegative commands lack generic pointer transport and return ENOSYS.
 Web targets return selected SDK ENOSYS and preserve all caller fields.
 Blocking commands retain the native scheduler and errno limitations.
+
+macOS 64-bit programs support actual syscall.RouteRIB kernel queries.
+The adapter uses the original 6-word sysctl MIB and 2 native calls.
+It preserves int32 facility and parameter widths, raw bytes, slice capacity,
+zero-size nil output, kernel errors and copied ownership.
+Go slice aliases retain their shared bytes. Web targets return selected SDK ENOSYS.
+Routing message parsers and route state changes remain unsupported.
+Native errno atomicity retains its documented limitation.

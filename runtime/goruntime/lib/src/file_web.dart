@@ -232,6 +232,9 @@ int $syscallFchflags(int fd, int flags) => -1;
 
 (int, int) $syscallFpathconf(int fd, int name) => (0, -1);
 
+(Slice<int>, int) $syscallRouteRIB(int facility, int param) =>
+    (Slice<int>.nil(), -1);
+
 (GoString, int) $syscallSysctl(GoString name) => (GoString.empty, -1);
 
 (int, int) $syscallSysctlUint32(GoString name) => (0, -1);

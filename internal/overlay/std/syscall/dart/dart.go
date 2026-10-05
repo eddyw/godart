@@ -2022,6 +2022,10 @@ func SyscallFpathconf(fd int, name int) (int, int) {
 	panic("syscall/dart needs the gart compiler")
 }
 
+func SyscallRouteRIB(facility, param int32) ([]byte, int) {
+	panic("syscall/dart needs the gart compiler")
+}
+
 func SyscallSysctl(name string) (string, int) {
 	panic("syscall/dart needs the gart compiler")
 }
