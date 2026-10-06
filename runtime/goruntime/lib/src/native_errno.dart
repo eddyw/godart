@@ -76,3 +76,6 @@ external NativeResult nativeGetpeername(
   symbol: 'goruntime_unlinkat',
 )
 external NativeResult nativeUnlinkat(int fd, Pointer<Uint8> path, int flags);
+
+@Native<NativeResult Function(Int, Int)>(symbol: 'goruntime_kill')
+external NativeResult nativeKill(int pid, int signal);

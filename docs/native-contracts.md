@@ -3,6 +3,7 @@
 This design defines acceptance requirements for APIs that the runtime does not yet provide.
 It does not establish implementation or behavioral parity.
 The runtime code asset captures errno atomically for UDP connect, send, sendto, recvfrom and socket-name calls.
+It also captures actual unlinkat and kill errors within their syscall boundaries.
 Other native calls still need atomic error boundaries.
 Optimization and isolates can resume when a concrete parity blocker requires them.
 

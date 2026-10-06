@@ -1,4 +1,5 @@
 #include <errno.h>
+#include <signal.h>
 #include <unistd.h>
 #include <stdint.h>
 #include <sys/socket.h>
@@ -53,6 +54,13 @@ struct goruntime_result goruntime_getpeername(int fd, void *address, uint32_t *l
 struct goruntime_result goruntime_unlinkat(int fd, const char *path, int flags) {
   struct goruntime_result result;
   result.value = unlinkat(fd, path, flags);
+  result.error = result.value < 0 ? errno : 0;
+  return result;
+}
+
+struct goruntime_result goruntime_kill(int pid, int signal) {
+  struct goruntime_result result;
+  result.value = kill(pid, signal);
   result.error = result.value < 0 ? errno : 0;
   return result;
 }

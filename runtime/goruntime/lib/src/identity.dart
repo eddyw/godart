@@ -5,6 +5,7 @@
 import 'dart:ffi';
 import 'dart:io';
 
+import 'native_errno.dart';
 import 'slice.dart';
 
 final _libc = DynamicLibrary.process();
@@ -164,10 +165,7 @@ final _errno = _libc
   }
 }
 
-final _kill = _libc
-    .lookupFunction<Int Function(Int, Int), int Function(int, int)>('kill');
-
 int $sendSignal(int pid, int signal) {
   if (!_posix) return -1;
-  return _kill(pid, signal) == 0 ? 0 : _errno().value;
+  return nativeKill(pid, signal).error;
 }

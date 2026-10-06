@@ -137,9 +137,9 @@ Dart can start a shell for an invalid executable format where Go returns `ENOEXE
 
 Linux and macOS support `syscall.Kill` and `syscall.Getpid` through native APIs.
 `os.Process.Signal` supports the standard signals that Dart exposes, plus SIGIO and the native signal-0 query.
-The native errno capture limitation also applies to signal calls.
-Linux VM runs with Go 1.27.0 and Dart 3.13.3 intermittently fail the absent-process signal-0 assertion, while AOT passes.
-The failure cause remains unproved.
+The native code asset captures the `syscall.Kill` result and errno within 1 C boundary.
+Signal-0 queries and SIGIO operations use that boundary.
+Other native process calls retain their documented errno limits.
 SIGSTOP and SIGCONT preserve child stop and resume behavior.
 Other platform-specific signal numbers remain unsupported by `os.Process.Signal`.
 Signal watches support SIGHUP, SIGINT, SIGTERM, SIGUSR1, SIGUSR2, and SIGWINCH.
