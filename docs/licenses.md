@@ -834,3 +834,6 @@ The file adapter also retains `examplefiles_test.go`.
 All these sources retain their 2011 and 2012 BSD notices. It preserves
 the selected assertions, helper bodies, inputs and loops. The complete
 unsafe-dependent suite remains outside this portable selection.
+
+The standard descriptor variables retain the original Go
+`src/syscall/syscall_unix.go` declarations and 2009 BSD notice.

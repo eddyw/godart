@@ -415,3 +415,7 @@ These targets receive no file-assertion acceptance claim.
 The depth adapter executes the original `TestMaxExecDepth` on all 4 targets.
 Full mode retains the original depth of 100000 and the existing target command bounds.
 Short mode retains the original skip. A skip does not establish depth parity.
+
+The standard descriptor fixture compares `syscall.Stdin`, `Stdout` and `Stderr`
+with native Go on all 4 targets. It covers their int type, initial values,
+address-based mutation and restore. Web values do not establish native descriptor access.

@@ -9,6 +9,12 @@ package syscall
 
 import "strconv"
 
+var (
+	Stdin  = 0
+	Stdout = 1
+	Stderr = 2
+)
+
 // Signal identifies an operating system signal.
 type Signal int
 
