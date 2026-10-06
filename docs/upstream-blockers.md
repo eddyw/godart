@@ -35,3 +35,6 @@ A new diagnostic or a newly successful compile requires classification review.
 Run the original tests before a status change to a behavioral pass.
 Preserve source identities, platform details, SDK versions, and explicit exclusions.
 Read [Upstream parity](upstream-parity.md) for the result requirements.
+
+The [native contract design](native-contracts.md) defines descriptor ownership,
+readiness, process launch and IPv6 acceptance. It establishes no implementation pass.

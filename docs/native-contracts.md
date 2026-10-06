@@ -1,0 +1,150 @@
+# Native descriptor and process contracts
+
+This design defines acceptance requirements for APIs that the runtime does not yet provide.
+It does not establish implementation or behavioral parity.
+The C toolchain, atomic errno bridge, optimization and isolates remain deferred.
+
+## Source basis
+
+The design uses Go 1.27.1 and the pinned Dart 3.13.4 SDK.
+The original Go sources define ownership, callbacks, address families and launch errors:
+
+- `src/syscall/net.go`
+- `src/internal/poll/fd_unix.go`
+- `src/net/rawconn.go`
+- `src/net/file_unix.go`
+- `src/net/fd_unix.go`
+- `src/net/ipsock_posix.go`
+- `src/net/sock_posix.go`
+- `src/net/sockopt_linux.go` and `src/net/sockopt_bsd.go`
+- `src/syscall/exec_unix.go`
+
+Dart `lib/io/socket.dart` defines `ResourceHandle`, received control messages and `RawDatagramSocket.bind`.
+The current runtime uses Dart-owned UDP sockets and borrows their actual descriptors.
+That access does not transfer ownership or permit a second close.
+
+## Descriptor ownership
+
+A native descriptor needs an owner before the runtime exposes it.
+The owner retains the descriptor, open/closed state, pending operations and deadline state.
+All callbacks and operations retain that owner until their native access ends.
+Close rejects new operations and cancels pending operations.
+The runtime closes the descriptor only after active access ends.
+A later descriptor reuse must not satisfy an earlier pending operation.
+
+`net.FileConn`, `net.FileListener` and `net.FilePacketConn` duplicate the caller's descriptor.
+The caller retains its file. The new network object owns the duplicate.
+The duplicate uses close-on-exec and nonblocking mode, as the original Go adapter requires.
+`TCPConn.File`, `TCPListener.File` and corresponding APIs return a separately owned duplicate.
+Closure of either owner must preserve the other owner's valid descriptor.
+Duplication can share native file status flags. Descriptor ownership does not imply independent native flags.
+
+An integer alone cannot establish descriptor type, ownership or readiness.
+Native metadata and socket queries must establish the descriptor contract before adoption.
+A failed adoption closes only the new duplicate.
+No public API can return a fabricated descriptor or a successful placeholder.
+
+## RawConn and readiness
+
+`Control` retains the descriptor for the complete callback.
+Its guarantee ends when the callback returns.
+The runtime must preserve operation errors, callback panics and the original `net.OpError` metadata.
+
+`Read` and `Write` serialize operations in their respective directions.
+They prepare the poll state before the first callback, as the original Go implementation does.
+A prior close or deadline can return an error before that callback.
+A true callback result completes the operation.
+A false result suspends the goroutine until actual readiness, closure or a deadline permits another action.
+The runtime must retain callback validity and descriptor ownership across that suspension.
+Readiness does not guarantee that the next syscall succeeds.
+Another operation can consume the available data before that syscall.
+
+The initial native design uses nonblocking descriptors and actual zero-timeout readiness probes.
+A scheduler timer requests another probe after an unready result.
+The timer itself never establishes readiness.
+This design avoids a native wait that blocks the single Dart isolate.
+It does not claim native Go poller performance.
+Callback suspension requires compiler and runtime analysis before implementation.
+A synchronous callback wrapper must not silently replace a permitted Go callback contract.
+
+Acceptance must cover:
+
+- Immediate callback completion and repeated false callback results.
+- Actual EAGAIN, partial reads, partial writes and empty datagrams.
+- Concurrent same-direction operations and independent read/write progress.
+- Close during a pending operation and close during a callback.
+- Deadline changes, deadline cancellation and descriptor reuse after close.
+- Adoption failure, duplicate ownership and actual descriptor exhaustion.
+- Original listener restrictions on RawConn read and write operations.
+
+The existing separate errno read cannot establish atomic syscall/error capture.
+That limitation remains an explicit acceptance blocker for exact native error behavior.
+
+## Process launch and inheritance
+
+A launch operation must distinguish child setup failure from successful execution followed by an exit.
+A child exit of 127 does not establish ENOEXEC or any other launch error.
+Error text and signal status cannot supply that distinction.
+
+The required native boundary creates a close-on-exec child status pipe before the launch.
+The child writes its actual setup or exec error through that pipe.
+Successful exec closes the write end through close-on-exec.
+The parent reads the complete error value or EOF, as the original status-pipe contract requires.
+EOF does not prove that the child program executed user code.
+It closes both pipe ends on their respective ownership paths.
+A failed launch requires child reap and cleanup before the parent returns.
+No Dart code may execute in the child between fork and exec.
+The Dart VM can have native threads even when Go goroutines use 1 isolate.
+
+The same boundary must implement the original descriptor map and preserve source descriptors.
+It must handle descriptor cycles, nil file entries, close-on-exec and unrelated inherited descriptors.
+It must apply the requested directory, environment, signal state and supported process attributes before exec.
+An unsupported process attribute must produce an explicit error.
+A process proxy or shell cannot establish this contract.
+
+Acceptance must distinguish:
+
+- A valid executable that returns 127.
+- A missing executable, a denied executable and an invalid executable format.
+- A failed child directory or descriptor setup.
+- Successful stdio and ExtraFiles inheritance, including descriptor cycles.
+- Actual child signal dispositions and descriptor leak prevention.
+- Launch failure cleanup and successful child wait results.
+
+The production native launch boundary needs a separate implementation decision.
+The deferred C toolchain prevents that implementation in the current scope.
+
+## IPv6 and UDP creation
+
+The socket creator must choose the native family before bind.
+The original Go family rules distinguish `udp`, `udp4` and `udp6`.
+`udp6` requires AF_INET6 and the original IPv6-only option attempt before bind.
+A wildcard `udp` listener can require an IPv6 socket with IPv4 mapping.
+The implementation must preserve original platform-specific option error policy.
+Go's Linux and BSD default adapters ignore the IPv6-only option error.
+It still observes errors from required broadcast options.
+
+Dart `RawDatagramSocket.bind` exposes reuseAddress, reusePort and ttl.
+It exposes no IPv6-only parameter.
+A descriptor borrowed after Dart bind cannot establish the required pre-bind behavior.
+The native creator must own a real socket, apply the original options and then bind or connect it.
+It must retain address bytes, port, scope ID, local address and peer address from actual native operations.
+
+The descriptor owner and readiness contract above apply to these sockets.
+The first implementation must retain native ownership through its own read/write adapter.
+It must not manufacture a Dart ResourceHandle from locally assembled control bytes.
+Dart permits `extractHandles` only on actual received control messages and only 1 time.
+A future Dart ownership transfer would need a real kernel descriptor transfer and separate acceptance.
+
+Acceptance must cover:
+
+- IPv4, IPv6-only and wildcard dual-family bind and dial behavior.
+- IPv4-mapped addresses, explicit zones and actual interface scope IDs.
+- Incompatible local/remote families and exact typed errors.
+- Empty datagrams, actual sender addresses, message flags and control bytes.
+- Deadline changes, cancellation, close ownership and descriptor exhaustion.
+- Original socket-control callback order before bind or connect.
+
+Exact native errors remain subject to the deferred atomic errno boundary.
+The current Dart-owned UDP adapter retains its scoped acceptance.
+It does not establish full IPv6, RawConn or descriptor inheritance parity.
