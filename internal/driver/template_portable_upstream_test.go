@@ -19,7 +19,7 @@ func TestTemplatePortableOriginal(t *testing.T) {
 		"exec_test.go": {
 			"T", "U", "W", "S", "I", "myError", "cmpTest", "cmpTests", "TestComparison",
 			"execErrorText", "TestExecError", "CustomError", "CustomError.Error", "TestExecError_CustomError",
-			"TestJSEscaping", "Tree", "treeTemplate", "TestTree", "TestEvalFieldErrors",
+			"TestJSEscaping", "TestDelims", "delimPairs", "Tree", "treeTemplate", "TestTree", "TestEvalFieldErrors",
 			"debug", "testTemplates", "alwaysErrorText", "alwaysError", "ErrorWriter", "ErrorWriter.Write",
 			"funcNameTestFunc", "testBadFuncName", "V", "V.String",
 			"TestExecuteOnNewTemplate", "TestMessageForExecuteEmpty", "TestFinalForPrintf", "TestMissingMapKey",
@@ -54,7 +54,7 @@ func TestTemplatePortableOriginal(t *testing.T) {
 		t.Fatal(err)
 	}
 	prepareDart(t, out)
-	const filter = "^(ExampleTemplate|ExampleTemplate_block|ExampleTemplate_func|ExampleTemplate_funcs|ExampleTemplate_if|TestClone|TestComparison|TestExecError|TestExecError_CustomError|TestJSEscaping|TestTree|TestEvalFieldErrors|TestExecuteOnNewTemplate|TestMessageForExecuteEmpty|TestFinalForPrintf|TestMissingMapKey|TestUnterminatedStringError|TestExecuteGivesExecError|TestGoodFuncNames|TestBadFuncNames|TestBlock|TestAddrOfIndex|TestInterfaceValues|TestIssue31810|TestIssue43065|TestIssue39807|TestIssue48215|TestMultiParse|TestAddParseTree|TestAddParseTreeToUnparsedTemplate|TestRedefinition|TestEmptyTemplateCloneCrash|TestTemplateLookUp|TestNew|TestParse|TestEmptyTemplate|TestIssue19294|TestAddToZeroTemplate)$"
+	const filter = "^(ExampleTemplate|ExampleTemplate_block|ExampleTemplate_func|ExampleTemplate_funcs|ExampleTemplate_if|TestClone|TestComparison|TestExecError|TestExecError_CustomError|TestJSEscaping|TestDelims|TestTree|TestEvalFieldErrors|TestExecuteOnNewTemplate|TestMessageForExecuteEmpty|TestFinalForPrintf|TestMissingMapKey|TestUnterminatedStringError|TestExecuteGivesExecError|TestGoodFuncNames|TestBadFuncNames|TestBlock|TestAddrOfIndex|TestInterfaceValues|TestIssue31810|TestIssue43065|TestIssue39807|TestIssue48215|TestMultiParse|TestAddParseTree|TestAddParseTreeToUnparsedTemplate|TestRedefinition|TestEmptyTemplateCloneCrash|TestTemplateLookUp|TestNew|TestParse|TestEmptyTemplate|TestIssue19294|TestAddToZeroTemplate)$"
 	args := upstreamTestArgs("-test.run=" + filter)
 	for _, target := range []string{"vm", "aot", "js", "wasm"} {
 		t.Run(target, func(t *testing.T) {

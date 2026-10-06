@@ -88,7 +88,9 @@ final class GoPanic implements Exception {
       traceParent = $chainPanic;
 
   @override
-  String toString() => 'panic: ${$panicText(value)}';
+  // Dart exception conversion can call toString during Go panic propagation.
+  // Go reports invoke Error and String separately through $panicText.
+  String toString() => 'panic: ${_panicValueText(value)}';
 }
 
 /// The text of a panic value.
