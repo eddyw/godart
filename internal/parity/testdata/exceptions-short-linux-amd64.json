@@ -14022,5 +14022,13 @@
       "reason": "The original inverse fixture skips modulus 1 because the modulus must exceed 1.",
       "test": "TestInverse/line_19"
     }
+  ],
+  "template-depth-original": [
+    {
+      "gart": "skip",
+      "native": "skip",
+      "reason": "The original upstream test skips this case in short mode.",
+      "test": "TestMaxExecDepth"
+    }
   ]
 }

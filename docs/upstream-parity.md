@@ -397,3 +397,21 @@ Those backend tests remain implementation gaps in the parity denominator.
 
 The system-random read fixture gives Node a 4 GiB heap for the original 40 MiB buffer.
 The fixture retains the original data size, assertions, and deadlines.
+
+## Portable template assertions
+
+The template adapter executes 33 complete original execution and
+multiple-template tests, plus 5 original examples on VM, AOT, JavaScript and Wasm. It selects
+original declarations and their exact dependencies from the active SDK.
+The native reference executes the original package with the same filter.
+No test input, assertion or loop changes. The complete package suite still
+requires unsupported unsafe pointer conversion in separate declarations.
+
+The file adapter executes 2 original file-data tests and 3 original file
+examples on VM and AOT. It retains the SDK template files and original
+temporary-file setup. JS and Wasm lack the native filesystem contract.
+These targets receive no file-assertion acceptance claim.
+
+The depth adapter executes the original `TestMaxExecDepth` on all 4 targets.
+Full mode retains the original depth of 100000 and the existing target command bounds.
+Short mode retains the original skip. A skip does not establish depth parity.

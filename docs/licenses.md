@@ -827,3 +827,10 @@ from `src/cmd/compile/internal/test/testdata`. Its source adapter extracts
 the exact shared `always` declaration from the selected SDK
 `unsafe_test.go`. It retains that complete dependency source, its source
 identity, the original notices, and the selected SDK BSD `LICENSE`.
+
+The template adapter selects original Go `src/text/template/exec_test.go`,
+`multi_test.go`, `example_test.go` and `examplefunc_test.go` declarations.
+The file adapter also retains `examplefiles_test.go`.
+All these sources retain their 2011 and 2012 BSD notices. It preserves
+the selected assertions, helper bodies, inputs and loops. The complete
+unsafe-dependent suite remains outside this portable selection.
