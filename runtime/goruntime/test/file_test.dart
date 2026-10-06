@@ -4,6 +4,15 @@ import 'package:goruntime/goruntime.dart';
 import 'package:test/test.dart';
 
 void main() {
+  test('Unlink preserves directory and missing-path errors', () {
+    final result = Process.runSync(Platform.resolvedExecutable, [
+      'run',
+      '--verbosity=error',
+      'test/fixtures/unlink_native_errno.dart',
+    ]);
+    expect(result.exitCode, 0, reason: '${result.stdout}${result.stderr}');
+  }, skip: !(Platform.isLinux || Platform.isMacOS));
+
   test('Native open preserves errors on the first failure', () {
     final result = Process.runSync(Platform.resolvedExecutable, [
       'test/fixtures/native_open_errors.dart',
@@ -163,6 +172,8 @@ void main() {
 
   test('RemoveAll closes directory descriptors after repeated traversal', () {
     final result = Process.runSync(Platform.resolvedExecutable, [
+      'run',
+      '--verbosity=error',
       'test/fixtures/removeall_descriptors.dart',
     ]);
     expect(result.exitCode, 0, reason: '${result.stdout}${result.stderr}');

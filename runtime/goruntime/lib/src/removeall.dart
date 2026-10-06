@@ -7,6 +7,7 @@ import 'dart:ffi';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'native_errno.dart';
 import 'string.dart';
 
 final bool hasDescriptorRemoval = switch (Abi.current()) {
@@ -30,11 +31,6 @@ final _openat = _libc
       Int Function(Int, Pointer<Uint8>, Int),
       int Function(int, Pointer<Uint8>, int)
     >('openat');
-final _unlinkat = _libc
-    .lookupFunction<
-      Int Function(Int, Pointer<Uint8>, Int),
-      int Function(int, Pointer<Uint8>, int)
-    >('unlinkat');
 final _close = _libc.lookupFunction<Int Function(Int), int Function(int)>(
   'close',
 );
@@ -93,7 +89,7 @@ int _unlink(int parent, Uint8List name, int flags) {
   try {
     final p = _name(name);
     try {
-      return _unlinkat(parent, p, flags) == 0 ? 0 : _errnoLocation().value;
+      return nativeUnlinkat(parent, p, flags).error;
     } finally {
       _free(p);
     }

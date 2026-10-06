@@ -248,8 +248,9 @@ Linux native builds use GCC and GNU binutils. Apple native builds use the Xcode 
 VM execution uses `dart run`. AOT distribution uses the complete `dart build cli` bundle.
 Other native calls retain the separate errno limitation.
 
-Linux VM directory unlink can return typed `EINVAL` where native Go returns
-typed `EISDIR`. Diagnostics do not establish the cause of this mismatch.
+Native unlink calls capture the actual result and errno within the C asset.
+Linux directory unlink preserves `EISDIR`. macOS preserves `EPERM`.
+Other filesystem calls retain the separate errno limitation.
 
 On Linux and macOS, TCP connection failures and socket-option failures retain available native error codes through `net.OpError` and `os.SyscallError`.
 Closed sockets retain `net.ErrClosed`.

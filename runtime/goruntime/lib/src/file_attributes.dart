@@ -8,6 +8,7 @@
 import 'dart:ffi';
 import 'dart:io';
 
+import 'native_errno.dart';
 import 'string.dart';
 
 final _libc = DynamicLibrary.process();
@@ -608,11 +609,6 @@ final _mkdirat = _libc
       Int Function(Int, Pointer<Uint8>, Uint32),
       int Function(int, Pointer<Uint8>, int)
     >('mkdirat');
-final _unlinkat = _libc
-    .lookupFunction<
-      Int Function(Int, Pointer<Uint8>, Int),
-      int Function(int, Pointer<Uint8>, int)
-    >('unlinkat');
 final _renameat = _libc
     .lookupFunction<
       Int Function(Int, Pointer<Uint8>, Int, Pointer<Uint8>),
@@ -638,12 +634,7 @@ int $syscallFchownat(int fd, GoString path, int uid, int gid, int flags) {
 }
 
 int $syscallUnlinkat(int fd, GoString path) {
-  final unlink = _unlinkat;
-  final errorAddress = _errno();
-  return _withSyscallPath(
-    path,
-    (name) => unlink(fd, name, 0) == 0 ? 0 : errorAddress.value,
-  );
+  return _withSyscallPath(path, (name) => nativeUnlinkat(fd, name, 0).error);
 }
 
 int $syscallRenameat(int oldFD, GoString oldPath, int newFD, GoString newPath) {

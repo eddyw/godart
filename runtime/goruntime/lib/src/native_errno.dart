@@ -71,3 +71,8 @@ external NativeResult nativeGetpeername(
   Pointer<Void> address,
   Pointer<Uint32> length,
 );
+
+@Native<NativeResult Function(Int, Pointer<Uint8>, Int)>(
+  symbol: 'goruntime_unlinkat',
+)
+external NativeResult nativeUnlinkat(int fd, Pointer<Uint8> path, int flags);
