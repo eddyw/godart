@@ -13,6 +13,9 @@ import (
 )
 
 func (e *emitter) call(x *ir.Call) string {
+	if text, ok := e.integerFormatCall(x); ok {
+		return text
+	}
 	if text, ok := e.bitsCall(x); ok {
 		return text
 	}
@@ -24,6 +27,52 @@ func (e *emitter) call(x *ir.Call) string {
 		text = "$syncCall(() => " + text + ")"
 	}
 	return e.sourceCall(x.Pos, text, x.GoType())
+}
+
+// A builtin integer has no Go formatting callback. Other values and formats
+// retain the original fmt body and its source frame.
+func (e *emitter) integerFormatCall(x *ir.Call) (string, bool) {
+	if x.Results != nil || x.Spread || len(x.Args) != 2 {
+		return "", false
+	}
+	id, ok := x.Fun.(*ir.Ident)
+	if !ok {
+		return "", false
+	}
+	fn, ok := id.Obj.(*types.Func)
+	if !ok || fn.Pkg() == nil || fn.Pkg().Path() != "fmt" || fn.Name() != "Sprintf" {
+		return "", false
+	}
+	format, ok := x.Args[0].(*ir.Const)
+	if !ok || format.Value.Kind() != constant.String {
+		return "", false
+	}
+	prefix, suffix, found := strings.Cut(constant.StringVal(format.Value), "%d")
+	if !found || strings.Contains(prefix, "%") || strings.Contains(suffix, "%") {
+		return "", false
+	}
+	value, ok := x.Args[1].(*ir.Conv)
+	if !ok || !isInterfaceType(value.Type) {
+		return "", false
+	}
+	basic, ok := types.Unalias(value.From).(*types.Basic)
+	if !ok || basic.Info()&types.IsInteger == 0 {
+		return "", false
+	}
+	operand := e.expr(value.X)
+	text := "(" + operand + ").toString()"
+	if isUnsigned64(value.From) {
+		text = "$ustring(" + operand + ")"
+	}
+	text = "GoString.fromString(" + text + ")"
+	if prefix != "" {
+		text = "$concat(" + e.stringLit(prefix) + ", " + text + ")"
+	}
+	if suffix != "" {
+		text = "$concat(" + text + ", " + e.stringLit(suffix) + ")"
+	}
+	e.mark(x.Pos)
+	return text, true
 }
 
 // These intrinsics cannot call Go code or panic, thus they need no source-call
@@ -89,6 +138,9 @@ func (e *emitter) integerEqualCall(x *ir.Call) (string, bool) {
 func (e *emitter) callText(x *ir.Call) string {
 	if x.Results != nil {
 		return e.spreadCall(x)
+	}
+	if text, ok := e.integerFormatCall(x); ok {
+		return text
 	}
 	if text, ok := e.bitsCall(x); ok {
 		return text

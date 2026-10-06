@@ -28,6 +28,7 @@ SDK versions, modes, and exclusions.
 | Deep calls | Recursive call cycles use resumable frames. Synchronous callbacks execute those frames without scheduler waits. Actual channel and I/O waits remain invalid in synchronous callbacks. |
 | Linkname | Module variable aliases share storage with variables of the same type in imported packages. Module function aliases resolve to functions of the same type in the program import graph. Alias initializers, function alias bodies, and aliases to other aliases remain unsupported. |
 | Panic text | Go panic reports invoke `Error` and `String` methods. Dart exception conversion uses raw value text and preserves Go panic state. |
+| Integer format calls | Direct static `fmt.Sprintf` calls with 1 bare `%d` and a builtin integer preserve operand evaluation and string bytes. Other values and formats use the original Go implementation. |
 | Stack traces | Go source positions, without native instruction offsets. `-trimpath` selects portable paths. Synthetic runtime frames use Dart implementation paths and can report line 0. |
 | Zero-size arrays and slices | Zero-size elements use virtual storage. Logical lengths remain 64-bit values on VM, AOT, JS, and Wasm. |
 | Numbers | Target representations differ. JavaScript conversion boundaries need particular care. |
