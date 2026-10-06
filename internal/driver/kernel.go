@@ -148,6 +148,16 @@ func (opt Options) kernel(entry string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	assets := filepath.Join(output, ".dart_tool", "native_assets.yaml")
+	if _, err := os.Stat(assets); err == nil {
+		hash, err := fileDigest(assets)
+		if err != nil {
+			return "", err
+		}
+		sources[assets] = hash
+	} else if !os.IsNotExist(err) {
+		return "", err
+	}
 	if err := os.MkdirAll(directory, 0755); err != nil {
 		return "", err
 	}

@@ -242,10 +242,11 @@ IPv6 multicast preserves native interface index conversions and kernel error cod
 `udp6` requires an IPv6-only bind, which remains incomplete.
 Mixed-family destinations, IPv6 zones, and socket controls remain incomplete.
 
-Native UDP error codes remain unreliable across separate Dart FFI calls.
-A Linux VM trace confirms that native `EAGAIN` can become `EINVAL` before Dart reads `errno`.
-Thus, a UDP read can fail with an incorrect error.
-[Dart issue 38832](https://github.com/dart-lang/sdk/issues/38832) describes this missing atomicity.
+UDP connect, send, sendto, recvfrom and socket-name calls capture their result and actual errno in 1 C call.
+The runtime packages these calls as a Dart code asset.
+Linux native builds use GCC and GNU binutils. Apple native builds use the Xcode toolchain.
+VM execution uses `dart run`. AOT distribution uses the complete `dart build cli` bundle.
+Other native calls retain the separate errno limitation.
 
 Linux VM directory unlink can return typed `EINVAL` where native Go returns
 typed `EISDIR`. Diagnostics do not establish the cause of this mismatch.

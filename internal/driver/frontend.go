@@ -3,6 +3,7 @@ package driver
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -61,6 +62,11 @@ func (opt *Options) selectExecutionFrontend() error {
 func (opt Options) executionEntry(entry string) (string, error) {
 	if opt.Frontend == "source" {
 		return filepath.Abs(filepath.Join(opt.Out, entry))
+	}
+	cmd := exec.Command("dart", "run", "goruntime:build_assets")
+	cmd.Dir = opt.Out
+	if text, err := cmd.CombinedOutput(); err != nil {
+		return "", fmt.Errorf("dart native assets: %v\n%s", err, text)
 	}
 	return opt.kernel(entry)
 }

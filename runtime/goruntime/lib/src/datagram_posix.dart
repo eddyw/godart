@@ -7,6 +7,8 @@ import 'dart:ffi';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'native_errno.dart';
+
 final _libc = DynamicLibrary.process();
 final _allocate = _libc
     .lookupFunction<Pointer<Void> Function(Size), Pointer<Void> Function(int)>(
@@ -15,48 +17,6 @@ final _allocate = _libc
 final _release = _libc
     .lookupFunction<Void Function(Pointer<Void>), void Function(Pointer<Void>)>(
       'free',
-    );
-final _connect = _libc
-    .lookupFunction<
-      Int Function(Int, Pointer<Void>, Uint32),
-      int Function(int, Pointer<Void>, int)
-    >('connect');
-final _send = _libc
-    .lookupFunction<
-      IntPtr Function(Int, Pointer<Void>, Size, Int),
-      int Function(int, Pointer<Void>, int, int)
-    >('send');
-final _sendto = _libc
-    .lookupFunction<
-      IntPtr Function(Int, Pointer<Void>, Size, Int, Pointer<Void>, Uint32),
-      int Function(int, Pointer<Void>, int, int, Pointer<Void>, int)
-    >('sendto');
-final _recvfrom = _libc
-    .lookupFunction<
-      IntPtr Function(
-        Int,
-        Pointer<Void>,
-        Size,
-        Int,
-        Pointer<Void>,
-        Pointer<Uint32>,
-      ),
-      int Function(int, Pointer<Void>, int, int, Pointer<Void>, Pointer<Uint32>)
-    >('recvfrom');
-final _getsockname = _libc
-    .lookupFunction<
-      Int Function(Int, Pointer<Void>, Pointer<Uint32>),
-      int Function(int, Pointer<Void>, Pointer<Uint32>)
-    >('getsockname');
-final _getpeername = _libc
-    .lookupFunction<
-      Int Function(Int, Pointer<Void>, Pointer<Uint32>),
-      int Function(int, Pointer<Void>, Pointer<Uint32>)
-    >('getpeername');
-// Resolve this binding before a syscall, because its lazy lookup can change errno.
-final _errno = _libc
-    .lookupFunction<Pointer<Int> Function(), Pointer<Int> Function()>(
-      Platform.isMacOS ? '__error' : '__errno_location',
     );
 final _strerror = _libc
     .lookupFunction<Pointer<Uint8> Function(Int), Pointer<Uint8> Function(int)>(
@@ -93,16 +53,17 @@ SocketException datagramError(int code) {
   try {
     _writeAddress(memory, remote, port);
     final bytes = memory.cast<Uint8>().asTypedList(length);
-    final errno = _errno();
-    if (_connect(fd, memory, length) != 0) throw datagramError(errno.value);
+    final connected = nativeConnect(fd, memory, length);
+    if (connected.value != 0) throw datagramError(connected.error);
     final size = (memory.cast<Uint8>() + length).cast<Uint32>()..value = length;
-    if (_getsockname(fd, memory, size) != 0) {
-      throw datagramError(errno.value);
+    final localName = nativeGetsockname(fd, memory, size);
+    if (localName.value != 0) {
+      throw datagramError(localName.error);
     }
     final local = _readAddress(bytes, ipv6);
     size.value = length;
     // An empty peer lets the overlay retain the original Go address when getpeername fails.
-    final peer = _getpeername(fd, memory, size) == 0
+    final peer = nativeGetpeername(fd, memory, size).value == 0
         ? _readAddress(bytes, ipv6)
         : '';
     return (fd, local, peer);
@@ -130,10 +91,9 @@ int sendDatagram(int fd, Uint8List bytes) {
   if (memory == nullptr) throw datagramError(12);
   try {
     memory.cast<Uint8>().asTypedList(bytes.length).setAll(0, bytes);
-    final errno = _errno();
-    final count = _send(fd, memory, bytes.length, 0);
-    if (count < 0) throw datagramError(errno.value);
-    return count;
+    final result = nativeSend(fd, memory, bytes.length, 0);
+    if (result.value < 0) throw datagramError(result.error);
+    return result.value;
   } finally {
     _release(memory);
   }
@@ -210,10 +170,16 @@ int sendDatagramTo(
     _writeAddress(memory, remote, port);
     final payload = memory.cast<Uint8>() + length;
     payload.asTypedList(bytes.length).setAll(0, bytes);
-    final errno = _errno();
-    final count = _sendto(fd, payload.cast(), bytes.length, 0, memory, length);
-    if (count < 0) throw datagramError(errno.value);
-    return count;
+    final result = nativeSendto(
+      fd,
+      payload.cast(),
+      bytes.length,
+      0,
+      memory,
+      length,
+    );
+    if (result.value < 0) throw datagramError(result.error);
+    return result.value;
   } finally {
     _release(memory);
   }
@@ -226,11 +192,10 @@ Datagram? receiveEmptyDatagram(RawDatagramSocket socket) {
   try {
     final bytes = memory.cast<Uint8>();
     final size = (bytes + 28).cast<Uint32>()..value = 28;
-    final errno = _errno();
-    final count = _recvfrom(fd, (bytes + 32).cast(), 1, 2, memory, size);
-    if (count > 0) return null;
-    if (count < 0) {
-      final code = errno.value;
+    final result = nativeRecvfrom(fd, (bytes + 32).cast(), 1, 2, memory, size);
+    if (result.value > 0) return null;
+    if (result.value < 0) {
+      final code = result.error;
       if (code == (Platform.isMacOS ? 35 : 11)) return null;
       throw datagramError(code);
     }

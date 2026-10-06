@@ -118,6 +118,15 @@ Future<ServerSocket> _startEcho() async {
 }
 
 void main() {
+  test('UDP calls preserve errors on the first failure', () {
+    final result = Process.runSync(Platform.resolvedExecutable, [
+      'run',
+      '--verbosity=error',
+      'test/fixtures/udp_native_errno.dart',
+    ]);
+    expect(result.exitCode, 0, reason: '${result.stdout}${result.stderr}');
+  }, skip: !(Platform.isLinux || Platform.isMacOS));
+
   group('the network access', () {
     test('a dial, a write, and a read pass through a frame', () async {
       final ServerSocket server = await _startEcho();

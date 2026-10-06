@@ -231,6 +231,8 @@ Future<void> main(List<String> args) async {
             '--platform',
             File('$sdk/lib/_internal/vm_platform_strong.dill').uri.toString(),
             '--target=vm',
+            if (sources.containsKey('$output/.dart_tool/native_assets.yaml'))
+              '--native-assets=$output/.dart_tool/native_assets.yaml',
             '--incremental',
             '--enable-asserts',
             '--packages',

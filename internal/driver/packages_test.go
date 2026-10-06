@@ -22,8 +22,22 @@ type dartPackage struct {
 }
 
 type dartPackages struct {
-	Version  int           `json:"configVersion"`
-	Packages []dartPackage `json:"packages"`
+	Version  int              `json:"configVersion"`
+	Packages []dartPackage    `json:"packages"`
+	Graph    dartPackageGraph `json:"-"`
+}
+
+type dartGraphPackage struct {
+	Name            string   `json:"name"`
+	Version         string   `json:"version,omitempty"`
+	Dependencies    []string `json:"dependencies"`
+	DevDependencies []string `json:"devDependencies,omitempty"`
+}
+
+type dartPackageGraph struct {
+	Version  int                `json:"configVersion"`
+	Roots    []string           `json:"roots"`
+	Packages []dartGraphPackage `json:"packages"`
 }
 
 // Parity fixtures all depend on the same runtime. Resolve that dependency once
@@ -54,6 +68,13 @@ var fixturePackages = sync.OnceValues(func() (dartPackages, error) {
 	}
 	var config dartPackages
 	if err := json.Unmarshal(data, &config); err != nil {
+		return config, err
+	}
+	graph, err := os.ReadFile(filepath.Join(dir, ".dart_tool", "package_graph.json"))
+	if err != nil {
+		return config, err
+	}
+	if err := json.Unmarshal(graph, &config.Graph); err != nil {
 		return config, err
 	}
 	if config.Version != 2 {
@@ -103,6 +124,21 @@ func prepareDart(t *testing.T, out string) {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(dir, "package_config.json"), data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	graph := config.Graph
+	graph.Roots = []string{name}
+	graph.Packages = append([]dartGraphPackage(nil), graph.Packages...)
+	for i := range graph.Packages {
+		if graph.Packages[i].Name == "gart_fixture" {
+			graph.Packages[i].Name = name
+		}
+	}
+	data, err = json.Marshal(graph)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "package_graph.json"), data, 0o644); err != nil {
 		t.Fatal(err)
 	}
 	t.Logf("phase=package-config duration=%.3fs", time.Since(start).Seconds())

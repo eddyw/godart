@@ -2,6 +2,9 @@
 
 Gart loads a Go module and emits a Dart package. The runtime is bundled.
 Go remains an execution prerequisite for package discovery and standard sources.
+The POSIX runtime code asset requires a C compiler for native execution.
+Linux uses GCC and GNU binutils for native builds. macOS and iOS use the Xcode toolchain.
+JavaScript and WebAssembly compilation do not compile this native code asset.
 See [SDK compatibility](sdk-upgrades.md) for supported SDK selection.
 
 ## Commands
@@ -77,8 +80,12 @@ Run `dart pub get` in that directory before direct Dart compilation.
 gart build -o dartout ./...
 cd dartout
 dart pub get
-dart compile exe bin/main.dart -o program
+dart build cli -t bin/main.dart -o application
+./application/bundle/bin/main
 ```
+
+Distribute the complete `application/bundle` directory, including its native libraries.
+`dart compile exe` does not bundle runtime code assets.
 
 Use the public Dart compiler for JavaScript or WebAssembly output where the
 [platform limits](parity.md) permit the application.

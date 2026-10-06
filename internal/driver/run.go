@@ -179,7 +179,7 @@ func runBinary(opt Options, bin TestBinary, testOpt TestOptions) (string, int, e
 		}
 		start := time.Now()
 		defer func() { opt.trace("execute", start) }()
-		return dartOutput(dir, append([]string{"run", entry}, args...))
+		return dartOutput(dir, append([]string{"run", "--verbosity=error", entry}, args...))
 	}
 	exe, err := compileExe(out, bin.Entry)
 	if err != nil {
@@ -226,16 +226,16 @@ func binaryArgs(testOpt TestOptions) []string {
 // compileExe builds an ahead of time binary of an entry point and gives its
 // full path.
 func compileExe(out, entry string) (string, error) {
-	exe, err := filepath.Abs(filepath.Join(out, strings.TrimSuffix(entry, ".dart")+".exe"))
+	directory, err := filepath.Abs(filepath.Join(out, ".gart", "aot", strings.TrimSuffix(entry, ".dart")))
 	if err != nil {
 		return "", err
 	}
-	cmd := exec.Command("dart", "compile", "exe", entry, "-o", exe)
+	cmd := exec.Command("dart", "build", "cli", "--verbosity=error", "-t", entry, "-o", directory)
 	cmd.Dir = out
 	if text, err := cmd.CombinedOutput(); err != nil {
-		return "", fmt.Errorf("dart compile exe %s: %v\n%s", entry, err, text)
+		return "", fmt.Errorf("dart build cli %s: %v\n%s", entry, err, text)
 	}
-	return exe, nil
+	return filepath.Join(directory, "bundle", "bin", strings.TrimSuffix(filepath.Base(entry), ".dart")), nil
 }
 
 // noRun marks a package whose filter kept no test. go test reads the warning of
@@ -304,7 +304,7 @@ func fresh(config string, specs []string) bool {
 
 // dartRun runs the Dart VM and gives the exit code of the program.
 func dartRun(dir string, args []string, out, stderr io.Writer) (int, error) {
-	cmd := exec.Command("dart", append([]string{"run"}, args...)...)
+	cmd := exec.Command("dart", append([]string{"run", "--verbosity=error"}, args...)...)
 	cmd.Dir = dir
 	cmd.Stdout = out
 	cmd.Stderr = stderr

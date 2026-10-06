@@ -2,7 +2,9 @@
 
 This design defines acceptance requirements for APIs that the runtime does not yet provide.
 It does not establish implementation or behavioral parity.
-The C toolchain, atomic errno bridge, optimization and isolates remain deferred.
+The runtime code asset captures errno atomically for UDP connect, send, sendto, recvfrom and socket-name calls.
+Other native calls still need atomic error boundaries.
+Optimization and isolates can resume when a concrete parity blocker requires them.
 
 ## Source basis
 
@@ -112,7 +114,7 @@ Acceptance must distinguish:
 - Launch failure cleanup and successful child wait results.
 
 The production native launch boundary needs a separate implementation decision.
-The deferred C toolchain prevents that implementation in the current scope.
+The UDP code asset provides a C toolchain path. Native process launch still needs its own implementation and acceptance.
 
 ## IPv6 and UDP creation
 
@@ -145,6 +147,7 @@ Acceptance must cover:
 - Deadline changes, cancellation, close ownership and descriptor exhaustion.
 - Original socket-control callback order before bind or connect.
 
-Exact native errors remain subject to the deferred atomic errno boundary.
+UDP bridge calls return their actual errno within the native result.
+Other native calls still need the same atomic boundary.
 The current Dart-owned UDP adapter retains its scoped acceptance.
 It does not establish full IPv6, RawConn or descriptor inheritance parity.

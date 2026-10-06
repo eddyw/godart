@@ -5,5 +5,5 @@ import "embed"
 
 // Files contains the runtime package, license, and dependency manifest.
 //
-//go:embed goruntime/lib goruntime/pubspec.yaml goruntime/LICENSE
+//go:embed goruntime/lib goruntime/hook goruntime/src goruntime/bin goruntime/pubspec.yaml goruntime/LICENSE
 var Files embed.FS

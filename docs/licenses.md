@@ -837,3 +837,10 @@ unsafe-dependent suite remains outside this portable selection.
 
 The standard descriptor variables retain the original Go
 `src/syscall/syscall_unix.go` declarations and 2009 BSD notice.
+
+The UDP errno bridge and its build hook use project-authored source under the root BSD license.
+The build hook depends on Dart `hooks` 2.0.2 and `native_toolchain_c` 0.19.2.
+Their package licenses permit source and binary distribution under the Dart BSD terms.
+`native_toolchain_c` also resolves `code_assets` 1.2.1 and its Dart BSD terms.
+Pub retains these dependency licenses. Flutter collects their package licenses.
+Standalone distributions must retain applicable dependency notices as specified above.

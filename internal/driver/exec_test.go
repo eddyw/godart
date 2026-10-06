@@ -2,7 +2,10 @@ package driver_test
 
 import (
 	"context"
+	"os"
 	"os/exec"
+	"path/filepath"
+	"strings"
 	"syscall"
 	"testing"
 	"time"
@@ -42,6 +45,20 @@ func output(dir string, env []string, limit time.Duration, name string, args ...
 	defer takeSlot()()
 	ctx, cancel := context.WithTimeout(context.Background(), limit)
 	defer cancel()
+	if filepath.Base(name) == "dart" && len(args) > 0 && strings.HasSuffix(args[0], ".dart") {
+		args = append([]string{"run", "--verbosity=error"}, args...)
+	}
+	var executable, bundle string
+	if filepath.Base(name) == "dart" && len(args) == 5 && args[0] == "compile" && args[1] == "exe" && args[3] == "-o" {
+		executable = args[4]
+		if !filepath.IsAbs(executable) {
+			executable = filepath.Join(dir, executable)
+		}
+		bundle = executable + ".assets"
+		entry := strings.TrimSuffix(filepath.Base(args[2]), ".dart")
+		args = []string{"build", "cli", "--verbosity=error", "-t", args[2], "-o", bundle}
+		bundle = filepath.Join(bundle, "bundle", "bin", entry)
+	}
 	cmd := exec.CommandContext(ctx, name, args...)
 	cmd.Dir = dir
 	cmd.Env = env
@@ -51,6 +68,14 @@ func output(dir string, env []string, limit time.Duration, name string, args ...
 	}
 	cmd.WaitDelay = 10 * time.Second
 	text, err = cmd.CombinedOutput()
+	if err == nil && executable != "" {
+		// Resolve the executable inside its bundle to preserve native library paths.
+		link := executable + ".next"
+		err = os.Symlink(bundle, link)
+		if err == nil {
+			err = os.Rename(link, executable)
+		}
+	}
 	return text, err, ctx.Err() == nil
 }
 
