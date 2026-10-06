@@ -5,6 +5,38 @@ Slice<int> makeInts(int len, int cap) =>
     $makeSlice<int>($gi(len), $gi(cap), (n) => List<int>.filled(n, 0));
 
 void main() {
+  test('integer views preserve shared writes and index panics', () {
+    final source = Slice<GoInt>.of([$gi(1), $gi(2), $gi(3)]);
+    final view = source.range($gi(1), $gi(3), $gi(3));
+    view.$set($gi(0), $gi(7));
+    expect(source.$at($gi(1)), $gi(7));
+    expect(view.$at($gi(1)), $gi(3));
+    expect(() => view.$at($gi(-1)), throwsA(isA<GoPanic>()));
+    expect(() => view.$set($gi(2), $gi(9)), throwsA(isA<GoPanic>()));
+    expect(source.$at($gi(2)), $gi(3));
+  });
+
+  test('integer append and overlapping copy preserve storage', () {
+    final source = $makeSlice<GoInt>(
+      $gi(3),
+      $gi(4),
+      (n) => List<GoInt>.filled(n, GoInt.zero),
+    );
+    for (var i = 0; i < 3; i++) {
+      source.$set($gi(i), $gi(i + 1));
+    }
+    final grown = $append(source, [
+      $gi(4),
+    ], (n) => List<GoInt>.filled(n, GoInt.zero));
+    expect(identical(source.array, grown.array), isTrue);
+    final destination = grown.range($gi(1), $gi(4), $gi(4));
+    expect($copySlice(destination, source), $gi(3));
+    expect(
+      [for (var i = 0; i < 4; i++) grown.$at($gi(i))],
+      [$gi(1), $gi(1), $gi(2), $gi(3)],
+    );
+  });
+
   test('make gives the length and the capacity', () {
     final s = makeInts(2, 4);
     expect(s.len, 2);

@@ -375,6 +375,7 @@ bool _inIdle = false;
 bool $hosted = false;
 
 int $pollBudget = 128;
+final Stopwatch $pollClock = Stopwatch();
 
 /// Runs each goroutine of the run queue until the queue is empty.
 ///
@@ -396,6 +397,9 @@ void _schedule() {
   if (_running) return;
   // Short host callbacks must not inherit another event's poll budget.
   $pollBudget = 128;
+  $pollClock
+    ..reset()
+    ..start();
   _running = true;
   while (!_mainDone) {
     if (_runq.isEmpty) {

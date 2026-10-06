@@ -1,3 +1,7 @@
+// Copyright 2017 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 import 'goint_division.dart'
     if (dart.library.js) 'goint_division_js.dart'
     as division;
@@ -308,3 +312,77 @@ List<GoInt> $goListU8(int n) => List<GoInt>.filled(n, GoInt.zero);
 List<GoInt> $goListU16(int n) => List<GoInt>.filled(n, GoInt.zero);
 List<GoInt> $goListU32(int n) => List<GoInt>.filled(n, GoInt.zero);
 List<GoInt> $goListU64(int n) => List<GoInt>.filled(n, GoInt.zero);
+
+(GoInt, GoInt) $bitsAdd64(GoInt x, GoInt y, GoInt carry) {
+  final low = x.$l + y.$l + carry.$l;
+  final high = _u32(x.$h) + _u32(y.$h) + (low / _b32).floor();
+  return (GoInt._(_s32(high), _u32(low)), GoInt._(0, (high / _b32).floor()));
+}
+
+(GoInt, GoInt) $bitsMul64(GoInt x, GoInt y) {
+  final a0 = (x.$l) & 0xffff;
+  final a1 = (x.$l >>> 16) & 0xffff;
+  final a2 = (x.$h) & 0xffff;
+  final a3 = (x.$h >>> 16) & 0xffff;
+  final b0 = (y.$l) & 0xffff;
+  final b1 = (y.$l >>> 16) & 0xffff;
+  final b2 = (y.$h) & 0xffff;
+  final b3 = (y.$h >>> 16) & 0xffff;
+  final t0 = a0 * b0;
+  final t1 = (t0 / _b16).floor() + a0 * b1 + a1 * b0;
+  final t2 = (t1 / _b16).floor() + a0 * b2 + a1 * b1 + a2 * b0;
+  final t3 = (t2 / _b16).floor() + a0 * b3 + a1 * b2 + a2 * b1 + a3 * b0;
+  final t4 = (t3 / _b16).floor() + a1 * b3 + a2 * b2 + a3 * b1;
+  final t5 = (t4 / _b16).floor() + a2 * b3 + a3 * b2;
+  final t6 = (t5 / _b16).floor() + a3 * b3;
+  final t7 = (t6 / _b16).floor();
+  final lowL = (t1 & 0xffff) * 65536 + (t0 & 0xffff);
+  final lowH = (t3 & 0xffff) * 65536 + (t2 & 0xffff);
+  final highL = (t5 & 0xffff) * 65536 + (t4 & 0xffff);
+  final highH = (t7 & 0xffff) * 65536 + (t6 & 0xffff);
+  return (GoInt._(_s32(highH), highL), GoInt._(_s32(lowH), lowL));
+}
+
+// The nonnegative 16-bit product columns and carries remain below 2^34.
+// The high result wraps to 64 bits after both full-width addends.
+(GoInt, GoInt) $mulAddWord64(GoInt x, GoInt y, GoInt a, GoInt c) {
+  final a0 = x.$l & 0xffff;
+  final a1 = (x.$l >>> 16) & 0xffff;
+  final a2 = x.$h & 0xffff;
+  final a3 = (x.$h >>> 16) & 0xffff;
+  final b0 = y.$l & 0xffff;
+  final b1 = (y.$l >>> 16) & 0xffff;
+  final b2 = y.$h & 0xffff;
+  final b3 = (y.$h >>> 16) & 0xffff;
+  final t0 = a0 * b0 + (a.$l & 0xffff) + (c.$l & 0xffff);
+  final t1 =
+      (t0 / _b16).floor() +
+      a0 * b1 +
+      a1 * b0 +
+      ((a.$l >>> 16) & 0xffff) +
+      ((c.$l >>> 16) & 0xffff);
+  final t2 =
+      (t1 / _b16).floor() +
+      a0 * b2 +
+      a1 * b1 +
+      a2 * b0 +
+      (a.$h & 0xffff) +
+      (c.$h & 0xffff);
+  final t3 =
+      (t2 / _b16).floor() +
+      a0 * b3 +
+      a1 * b2 +
+      a2 * b1 +
+      a3 * b0 +
+      ((a.$h >>> 16) & 0xffff) +
+      ((c.$h >>> 16) & 0xffff);
+  final t4 = (t3 / _b16).floor() + a1 * b3 + a2 * b2 + a3 * b1;
+  final t5 = (t4 / _b16).floor() + a2 * b3 + a3 * b2;
+  final t6 = (t5 / _b16).floor() + a3 * b3;
+  final t7 = (t6 / _b16).floor();
+  final lowL = (t1 & 0xffff) * _b16 + (t0 & 0xffff);
+  final lowH = (t3 & 0xffff) * _b16 + (t2 & 0xffff);
+  final highL = (t5 & 0xffff) * _b16 + (t4 & 0xffff);
+  final highH = (t7 & 0xffff) * _b16 + (t6 & 0xffff);
+  return (GoInt._(_s32(highH), highL), GoInt._(_s32(lowH), lowL));
+}

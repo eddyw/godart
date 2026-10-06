@@ -1,4 +1,5 @@
 // Copyright 2009 The Go Authors. All rights reserved.
+// Copyright 2021 The Go Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -45,6 +46,9 @@ final class Slice<T> {
     }
     if (!$isJS && array is Uint8List) {
       return $ByteSlice(array as Uint8List, off, len, cap) as Slice<T>;
+    }
+    if ($isJS && array is List<GoInt>) {
+      return _IntegerSlice(array as List<GoInt>, off, len, cap) as Slice<T>;
     }
     return Slice<T>._(array, off, len, cap, false);
   }
@@ -179,6 +183,31 @@ final class Slice<T> {
   /// A header on the same storage, with an absolute offset.
   Slice<T> $view(int start, int n, int room) =>
       Slice<T>._(array, start, n, room, false);
+}
+
+final class _IntegerSlice extends Slice<GoInt> {
+  final List<GoInt> words;
+
+  _IntegerSlice(this.words, int off, int len, int cap)
+    : super._(words, off, len, cap, false);
+
+  @override
+  GoInt $at(GoInt index, [bool uns = false]) {
+    final i = $ix(index);
+    if (i < 0 || i >= len) $panicIndex(index, len, uns);
+    return words[off + i];
+  }
+
+  @override
+  void $set(GoInt index, GoInt value, [bool uns = false]) {
+    final i = $ix(index);
+    if (i < 0 || i >= len) $panicIndex(index, len, uns);
+    words[off + i] = value;
+  }
+
+  @override
+  Slice<GoInt> $view(int start, int n, int room) =>
+      _IntegerSlice(words, start, n, room);
 }
 
 /// A Go slice with a backing array of bytes. `[]byte` is the common case,
@@ -547,4 +576,13 @@ int $nextSliceCapacity(int current, int need) {
     capacity += capacity < 256 ? capacity : capacity ~/ 4;
   }
   return capacity;
+}
+
+// Integer elements cannot invoke Go equality methods or panic.
+bool $equalIntegerSlices(Slice<GoInt> left, Slice<GoInt> right) {
+  if (left.len != right.len) return false;
+  for (var i = 0; i < left.len; i++) {
+    if (left.array[left.off + i] != right.array[right.off + i]) return false;
+  }
+  return true;
 }

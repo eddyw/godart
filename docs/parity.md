@@ -1,6 +1,9 @@
 # Compatibility
 
 Gart aims to preserve Go behavior within its supported subset.
+Cooperative polls preserve the runnable queue after 128 polls.
+An active goroutine permits a host event turn after a 10-millisecond quantum when the host or a pending event requires one.
+Explicit `runtime.Gosched` retains its host event turn.
 A successful build does not establish complete Go compatibility.
 Upstream tests establish parity only for their recorded inputs, targets,
 SDK versions, modes, and exclusions.

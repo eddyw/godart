@@ -49,6 +49,34 @@ int back(js.GoInt v) => v.$h * 4294967296 + v.$l;
 js.GoInt js2(int v) => js.$gi2(v >> 32, v & 0xFFFFFFFF);
 
 void main() {
+  test('fused word products preserve both full-width addends', () {
+    for (final x in values) {
+      for (final y in values) {
+        for (final a in [0, -1, -0x8000000000000000]) {
+          for (final c in [0, -1, 0x7FFFFFFFFFFFFFFF]) {
+            final total =
+                BigInt.from(x).toUnsigned(64) * BigInt.from(y).toUnsigned(64) +
+                BigInt.from(a).toUnsigned(64) +
+                BigInt.from(c).toUnsigned(64);
+            final expected = (
+              (total >> 64).toSigned(64).toInt(),
+              total.toSigned(64).toInt(),
+            );
+            final pair = js.$mulAddWord64(js2(x), js2(y), js2(a), js2(c));
+            final native = nat.$mulAddWord64(
+              nat.$gi(x),
+              nat.$gi(y),
+              nat.$gi(a),
+              nat.$gi(c),
+            );
+            expect((back(pair.$1), back(pair.$2)), expected);
+            expect((native.$1.$v, native.$2.$v), expected);
+          }
+        }
+      }
+    }
+  });
+
   test('the 2 constructors give the value back', () {
     for (final v in values) {
       expect(back(js2(v)), v);
@@ -58,6 +86,47 @@ void main() {
         expect(js.$gi(v).$v, v);
       }
       expect(nat.$gi(v).$v, v);
+    }
+  });
+
+  test('full-width products match the exact unsigned value', () {
+    for (final a in values) {
+      for (final b in values) {
+        final product =
+            BigInt.from(a).toUnsigned(64) * BigInt.from(b).toUnsigned(64);
+        final high = (product >> 64).toSigned(64).toInt();
+        final low = product.toSigned(64).toInt();
+        final pair = js.$bitsMul64(js2(a), js2(b));
+        final native = nat.$bitsMul64(nat.$gi(a), nat.$gi(b));
+        expect((back(pair.$1), back(pair.$2)), (high, low), reason: '$a * $b');
+        expect((native.$1.$v, native.$2.$v), (high, low), reason: '$a * $b');
+      }
+    }
+  });
+
+  test('full-width sums preserve both carry values', () {
+    for (final a in values) {
+      for (final b in values) {
+        for (final carry in [0, 1]) {
+          final sum =
+              BigInt.from(a).toUnsigned(64) +
+              BigInt.from(b).toUnsigned(64) +
+              BigInt.from(carry);
+          final expected = (sum.toSigned(64).toInt(), (sum >> 64).toInt());
+          final pair = js.$bitsAdd64(js2(a), js2(b), js.$gi(carry));
+          final native = nat.$bitsAdd64(nat.$gi(a), nat.$gi(b), nat.$gi(carry));
+          expect(
+            (back(pair.$1), back(pair.$2)),
+            expected,
+            reason: '$a + $b + $carry',
+          );
+          expect(
+            (native.$1.$v, native.$2.$v),
+            expected,
+            reason: '$a + $b + $carry',
+          );
+        }
+      }
     }
   });
 

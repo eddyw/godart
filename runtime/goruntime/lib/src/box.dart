@@ -1,3 +1,7 @@
+// Copyright 2009 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 import 'array.dart';
 import 'dict.dart';
 import 'goint.dart';
@@ -137,6 +141,50 @@ $Ref<List<T>, T> $sequencePtr<T>(Object? value, GoInt i, [bool uns = false]) {
 Slice<GoInt> $bigmodUintSlice($Ptr<GoInt>? pointer, int n) {
   final ref = pointer as $Ref<List<GoInt>, GoInt>;
   return Slice<GoInt>(ref.owner, ref.index, n, n);
+}
+
+// The pointers address n available words. Reads precede each destination write.
+GoInt $bigMulAddVWW($Ptr<GoInt> z, $Ptr<GoInt> x, int n, GoInt m, GoInt a) {
+  final destination = z as $Ref<List<GoInt>, GoInt>;
+  final source = x as $Ref<List<GoInt>, GoInt>;
+  var carry = a;
+  for (var i = 0; i < n; i++) {
+    final result = $mulAddWord64(
+      source.owner[source.index + i],
+      m,
+      GoInt.zero,
+      carry,
+    );
+    destination.owner[destination.index + i] = result.$2;
+    carry = result.$1;
+  }
+  return carry;
+}
+
+// The pointers address n available words. Reads precede each destination write.
+GoInt $bigAddMulVVWW(
+  $Ptr<GoInt> z,
+  $Ptr<GoInt> x,
+  $Ptr<GoInt> y,
+  int n,
+  GoInt m,
+  GoInt a,
+) {
+  final destination = z as $Ref<List<GoInt>, GoInt>;
+  final left = x as $Ref<List<GoInt>, GoInt>;
+  final right = y as $Ref<List<GoInt>, GoInt>;
+  var carry = a;
+  for (var i = 0; i < n; i++) {
+    final result = $mulAddWord64(
+      right.owner[right.index + i],
+      m,
+      left.owner[left.index + i],
+      carry,
+    );
+    destination.owner[destination.index + i] = result.$2;
+    carry = result.$1;
+  }
+  return carry;
 }
 
 T _listGet<T>(List<T> owner, int i) => owner[i];

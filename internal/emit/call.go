@@ -13,6 +13,12 @@ import (
 )
 
 func (e *emitter) call(x *ir.Call) string {
+	if text, ok := e.bitsCall(x); ok {
+		return text
+	}
+	if text, ok := e.integerEqualCall(x); ok {
+		return text
+	}
 	text := e.callText(x)
 	if x.Sync {
 		text = "$syncCall(() => " + text + ")"
@@ -20,9 +26,75 @@ func (e *emitter) call(x *ir.Call) string {
 	return e.sourceCall(x.Pos, text, x.GoType())
 }
 
+// These intrinsics cannot call Go code or panic, thus they need no source-call
+// closure. Function values retain the original Go bodies and source frames.
+func (e *emitter) bitsCall(x *ir.Call) (string, bool) {
+	if x.Results != nil {
+		return "", false
+	}
+	id, ok := x.Fun.(*ir.Ident)
+	if !ok {
+		return "", false
+	}
+	fn, ok := id.Obj.(*types.Func)
+	if !ok || fn.Pkg() == nil || fn.Pkg().Path() != "math/bits" {
+		return "", false
+	}
+	var target string
+	switch fn.Name() {
+	case "Add", "Mul":
+		width, _ := constant.Int64Val(fn.Pkg().Scope().Lookup("UintSize").(*types.Const).Val())
+		if width != 64 {
+			return "", false
+		}
+		if fn.Name() == "Add" {
+			target = "$bitsAdd64"
+		} else {
+			target = "$bitsMul64"
+		}
+	case "Add64":
+		target = "$bitsAdd64"
+	case "Mul64":
+		target = "$bitsMul64"
+	default:
+		return "", false
+	}
+	args := e.callArgs(x)
+	e.mark(x.Pos)
+	return target + "(" + strings.Join(args, ", ") + ")", true
+}
+
+// Integer equality has no Go callback or panic. Function values retain the
+// original generic body and source frame.
+func (e *emitter) integerEqualCall(x *ir.Call) (string, bool) {
+	if x.Results != nil {
+		return "", false
+	}
+	id, ok := x.Fun.(*ir.Ident)
+	if !ok {
+		return "", false
+	}
+	fn, ok := id.Obj.(*types.Func)
+	if !ok || fn.Pkg() == nil || fn.Pkg().Path() != "slices" || fn.Name() != "Equal" {
+		return "", false
+	}
+	if !isInteger(x.TypeArgs[1]) {
+		return "", false
+	}
+	args := e.callArgs(x)
+	e.mark(x.Pos)
+	return "$equalIntegerSlices(" + strings.Join(args, ", ") + ")", true
+}
+
 func (e *emitter) callText(x *ir.Call) string {
 	if x.Results != nil {
 		return e.spreadCall(x)
+	}
+	if text, ok := e.bitsCall(x); ok {
+		return text
+	}
+	if text, ok := e.integerEqualCall(x); ok {
+		return text
 	}
 	args := e.callArgs(x)
 	e.mark(x.Pos)
@@ -209,6 +281,8 @@ func (e *emitter) intrinsic(x *ir.Call, args []string) (string, bool) {
 // intrinsicRaw lists each interop function whose boundary the mapped text
 // handles itself.
 var intrinsicRaw = map[string]bool{
+	"BigMulAddVWW":    true,
+	"BigAddMulVVWW":   true,
 	"BigmodUintSlice": true,
 
 	"SelectValue":   true,
@@ -594,6 +668,10 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$intRadix(%s, $ix(%s))", args[0], args[1]), true
 	case "UintRadix":
 		return fmt.Sprintf("$uintRadix(%s, $ix(%s))", args[0], args[1]), true
+	case "BigMulAddVWW":
+		return fmt.Sprintf("$bigMulAddVWW(%s, %s, $ix(%s), %s, %s)", args[0], args[1], args[2], args[3], args[4]), true
+	case "BigAddMulVVWW":
+		return fmt.Sprintf("$bigAddMulVVWW(%s, %s, %s, $ix(%s), %s, %s)", args[0], args[1], args[2], args[3], args[4], args[5]), true
 	case "Sqrt":
 		return fmt.Sprintf("$sqrt(%s)", args[0]), true
 	case "Floor":

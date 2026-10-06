@@ -1,3 +1,7 @@
+// Copyright 2017 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 import 'dart:typed_data';
 
 import 'int.dart';
@@ -182,3 +186,40 @@ List<GoInt> $goListU8(int n) => Uint8List(n) as List<GoInt>;
 List<GoInt> $goListU16(int n) => Uint16List(n) as List<GoInt>;
 List<GoInt> $goListU32(int n) => Uint32List(n) as List<GoInt>;
 List<GoInt> $goListU64(int n) => Uint64List(n) as List<GoInt>;
+
+(GoInt, GoInt) $bitsAdd64(GoInt x, GoInt y, GoInt carry) {
+  final sum = x.$v + y.$v + carry.$v;
+  final out = ((x.$v & y.$v) | ((x.$v | y.$v) & ~sum)) >>> 63;
+  return (GoInt(sum), GoInt(out));
+}
+
+(GoInt, GoInt) $bitsMul64(GoInt x, GoInt y) {
+  final a0 = (x.$v >>> 0) & 0xffff;
+  final a1 = (x.$v >>> 16) & 0xffff;
+  final a2 = (x.$v >>> 32) & 0xffff;
+  final a3 = (x.$v >>> 48) & 0xffff;
+  final b0 = (y.$v >>> 0) & 0xffff;
+  final b1 = (y.$v >>> 16) & 0xffff;
+  final b2 = (y.$v >>> 32) & 0xffff;
+  final b3 = (y.$v >>> 48) & 0xffff;
+  final t0 = a0 * b0;
+  final t1 = t0 ~/ 65536 + a0 * b1 + a1 * b0;
+  final t2 = t1 ~/ 65536 + a0 * b2 + a1 * b1 + a2 * b0;
+  final t3 = t2 ~/ 65536 + a0 * b3 + a1 * b2 + a2 * b1 + a3 * b0;
+  final t4 = t3 ~/ 65536 + a1 * b3 + a2 * b2 + a3 * b1;
+  final t5 = t4 ~/ 65536 + a2 * b3 + a3 * b2;
+  final t6 = t5 ~/ 65536 + a3 * b3;
+  final t7 = t6 ~/ 65536;
+  final lowL = (t1 & 0xffff) * 65536 + (t0 & 0xffff);
+  final lowH = (t3 & 0xffff) * 65536 + (t2 & 0xffff);
+  final highL = (t5 & 0xffff) * 65536 + (t4 & 0xffff);
+  final highH = (t7 & 0xffff) * 65536 + (t6 & 0xffff);
+  return (GoInt((highH << 32) | highL), GoInt((lowH << 32) | lowL));
+}
+
+(GoInt, GoInt) $mulAddWord64(GoInt x, GoInt y, GoInt a, GoInt c) {
+  final product = $bitsMul64(x, y);
+  final sum = $bitsAdd64(product.$2, a, GoInt.zero);
+  final accumulated = $bitsAdd64(sum.$1, c, GoInt.zero);
+  return (product.$1 + sum.$2 + accumulated.$2, accumulated.$1);
+}

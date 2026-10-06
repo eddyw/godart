@@ -2467,3 +2467,15 @@ func SyscallSendmsgN(fd int, data, oob []byte, flags int, address []byte) (int, 
 func SyscallRecvmsg(fd int, data, oob []byte, flags int, address []byte) (int, int, int, int) {
 	panic("syscall/dart needs the gart compiler")
 }
+
+// BigMulAddVWW requires nonnil element pointers with n available uint cells.
+// It reads each source word before the corresponding destination write.
+func BigMulAddVWW(z, x *uint, n int, m, a uint) uint {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// BigAddMulVVWW requires nonnil element pointers with n available uint cells.
+// It reads both source words before the corresponding destination write.
+func BigAddMulVVWW(z, x, y *uint, n int, m, a uint) uint {
+	panic("syscall/dart needs the gart compiler")
+}

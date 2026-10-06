@@ -839,6 +839,14 @@ The standard descriptor variables retain the original Go
 `src/syscall/syscall_unix.go` declarations and 2009 BSD notice.
 
 The UDP errno bridge and its build hook use project-authored source under the root BSD license.
+The full-width arithmetic helpers adapt Go `src/math/bits/bits.go` under its 2017 BSD notice.
+The word vector helpers follow Go `src/math/big/arith.go` under its 2009 BSD notice.
+The `arith_decl.go` replacement retains the same notice for its adapted wrappers.
+The runtime sources retain these notices and the Go terms in `runtime/goruntime/LICENSE`.
+The arithmetic adapters preserve original SDK assertions, helper bodies, inputs and notices.
+The integer-only slice equality helper follows Go `src/slices/slices.go` under its 2021 BSD notice.
+The runtime retains this notice and the Go terms.
+The compiler preserves the original SDK source.
 The build hook depends on Dart `hooks` 2.0.2 and `native_toolchain_c` 0.19.2.
 Their package licenses permit source and binary distribution under the Dart BSD terms.
 `native_toolchain_c` also resolves `code_assets` 1.2.1 and its Dart BSD terms.

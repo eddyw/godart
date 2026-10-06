@@ -56,7 +56,13 @@ void $poll() {
   final g = $current;
   if (g == null) return;
   if ($eventWaits > 0 || $hosted) {
-    _yieldEvent(g);
+    // A pending timer must not force a host timer at each cooperative poll.
+    if ($pollClock.elapsedMicroseconds >= 10000) {
+      _yieldEvent(g);
+    } else {
+      $ready(g);
+      $block(const _Yield());
+    }
     return;
   }
   $gosched();

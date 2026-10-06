@@ -77,6 +77,21 @@ the cutover. Float-bit operations, reflection integers, slice bounds, and clock 
 `GoInt` boundaries because their values can exceed the exact JS integer range.
 Zero-size slices use virtual storage and retain exact logical counts.
 
+Static calls to `math/bits.Add`, `Add64`, `Mul` and `Mul64` use exact runtime arithmetic on 64-bit targets.
+The compiler preserves the original 32-bit paths and argument evaluation order.
+Function values retain the complete original Go bodies and source declarations.
+The compiler does not patch the SDK `math/bits` source.
+The product uses 16-bit columns that remain exact on JS.
+The `math/big` multiply and accumulate wrappers use synchronous word vector helpers.
+These helpers read each source word before the destination write and retain sequential aliases.
+The wrappers retain their length panics and empty-vector returns.
+The original pure Go vector bodies remain independent references.
+JS integer slice views retain typed storage, shared writes and index panics.
+Static integer-only `slices.Equal` calls compare the actual slice elements directly.
+Other element types and function values retain their complete original Go bodies.
+The compiler preserves offsets, nil/empty equality, argument order, spread evaluation and caller source positions.
+The compiler does not patch the SDK `slices` source.
+
 A Go constant of an integer type emits as a lazy `final`, because `$gi` is
 no Dart constant.
 
