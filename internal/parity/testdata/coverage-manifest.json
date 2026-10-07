@@ -1048,9 +1048,6 @@
     "package": "math/big",
     "status": "compile-blocked",
     "diagnostic": "undefined: runtime.MemStats",
-    "platform_diagnostics": {
-      "linux-amd64": "invalid operation: cannot take address of hasADX (untyped bool constant false)"
-    },
     "blocker_cause": "runtime-boundary",
     "blocker_reason": "The suite requires Go allocation and heap statistics through runtime.MemStats."
   },
