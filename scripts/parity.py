@@ -11,6 +11,7 @@ from pathlib import Path
 import platform
 import re
 import signal
+import shutil
 import subprocess
 import sys
 import time
@@ -1145,7 +1146,22 @@ def application(args, compiler=None):
         if target:
             target = execute("pub", ["dart", "pub", "get"], out / "dart")
         if target:
+            target = execute("native-assets", ["dart", "run", "--verbosity=error", "goruntime:build_assets"], out / "dart")
+        if target:
             target = execute("kernel", ["dart", "compile", "kernel", "-o", str(out / "program.dill"), "bin/main.dart"], out / "dart")
+        if target:
+            dart_root = Path(shutil.which("dart")).resolve().parent.parent
+            sdk = next(path for path in (dart_root, dart_root / "bin/cache/dart-sdk")
+                       if (path / "version").is_file())
+            target = execute("kernel-assets", [
+                sdk / "bin/dartaotruntime", sdk / "bin/snapshots/frontend_server_aot.dart.snapshot",
+                "--sdk-root", sdk, "--platform", sdk / "lib/_internal/vm_platform_strong.dill",
+                "--target=vm", "--native-assets-only",
+                "--native-assets=" + str(out / "dart/.dart_tool/native_assets.yaml"),
+                "--output-dill", out / "native-assets.dill", "bin/main.dart"], out / "dart")
+        if target:
+            with (out / "program.dill").open("ab") as kernel:
+                kernel.write((out / "native-assets.dill").read_bytes())
         if native and target:
             result["status"] = "compiled"
             if args.mode == "run":

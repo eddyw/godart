@@ -49,10 +49,22 @@ class ParityTest(unittest.TestCase):
             args = parity.argparse.Namespace(
                 output=root / "report", project=root, gart=binary,
                 mode="compile", pattern=".", tags="", timeout=1)
+            sdk = root / "sdk"
+            sdk.mkdir()
+            (sdk / "version").write_text("fixture")
+
+            def compile_fixture(command, cwd, directory, name, timeout):
+                if name == "kernel":
+                    (directory / "program.dill").write_bytes(b"kernel fixture")
+                if name == "kernel-assets":
+                    (directory / "native-assets.dill").write_bytes(b"native assets fixture")
+                return {"exit": 0}
+
             with mock.patch.object(parity, "identity", return_value={"head": "unrelated"}), \
-                 mock.patch.object(parity, "command", return_value={"exit": 0}), \
+                 mock.patch.object(parity, "command", side_effect=compile_fixture), \
                  mock.patch.object(parity.subprocess, "check_output", return_value="version"), \
                  mock.patch.object(parity.platform, "platform", return_value="fixture"), \
+                 mock.patch.object(parity.shutil, "which", return_value=str(sdk / "bin/dart")), \
                  mock.patch("builtins.print"):
                 self.assertEqual(parity.application(args), 0)
             result = parity.read(args.output / "application.json")
