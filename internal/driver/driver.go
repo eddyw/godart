@@ -678,7 +678,7 @@ func dartPackageName(module string) string {
 		}
 	}
 	out := b.String()
-	if out == "" || out[0] >= '0' && out[0] <= '9' || pubReservedWords[out] || out == "goruntime" || out == "http2" {
+	if out == "" || out[0] >= '0' && out[0] <= '9' || pubReservedWords[out] || out == "goruntime" || out == "http2" || out == "async" {
 		out = "go_" + out
 	}
 	return out
