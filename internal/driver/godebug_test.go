@@ -1,7 +1,10 @@
 package driver_test
 
 import (
+	"archive/zip"
+	"bytes"
 	"crypto/sha256"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -127,6 +130,42 @@ func main() { fmt.Println(fips140.Enabled(), fips140.Enforced()) }
 }
 
 func TestGODEBUGUpstreamDefaults(t *testing.T) {
+	proxy := t.TempDir()
+	endpoint := filepath.Join(proxy, "rsc.io", "panicnil", "@v")
+	if err := os.MkdirAll(endpoint, 0755); err != nil {
+		t.Fatal(err)
+	}
+	moduleSource, err := os.ReadFile(filepath.Join(runtime.GOROOT(), "src/cmd/go/testdata/mod/rsc.io_panicnil_v1.0.0.txt"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("upstream module Go=%s SHA256=%x", runtime.Version(), sha256.Sum256(moduleSource))
+	var moduleZip bytes.Buffer
+	writer := zip.NewWriter(&moduleZip)
+	for _, file := range txtar.Parse(moduleSource).Files {
+		if !filepath.IsLocal(file.Name) {
+			t.Fatalf("nonlocal upstream module fixture: %s", file.Name)
+		}
+		if file.Name == ".mod" || file.Name == ".info" {
+			writeFile(t, filepath.Join(endpoint, "v1.0.0"+file.Name), string(file.Data))
+			continue
+		}
+		entry, err := writer.Create("rsc.io/panicnil@v1.0.0/" + file.Name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := entry.Write(file.Data); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, filepath.Join(endpoint, "v1.0.0.zip"), moduleZip.String())
+	proxyURL := url.URL{Scheme: "file", Path: filepath.ToSlash(proxy)}
+	t.Setenv("GOPROXY", proxyURL.String())
+	t.Setenv("GOSUMDB", "off")
+	t.Setenv("GOMODCACHE", t.TempDir())
 	t.Setenv("GODEBUG", "")
 	t.Setenv("GOWORK", "auto")
 	source, err := os.ReadFile(filepath.Join(runtime.GOROOT(), "src/cmd/go/testdata/script/godebug_default.txt"))

@@ -261,6 +261,12 @@ The metrics overlay adapts Go `src/runtime/metrics/value.go`, `sample.go`,
 `histogram.go`, and `description.go`. Its source retains the Go BSD notice.
 GODEBUG counter validation follows `src/internal/godebug/godebug.go`.
 The runtime reads `src/internal/godebugs/table.go` from the active SDK.
+
+Default-value tests retain `src/cmd/go/testdata/script/godebug_default.txt` and
+its canonical module fixture,
+`src/cmd/go/testdata/mod/rsc.io_panicnil_v1.0.0.txt`.
+These SDK fixtures use the Go BSD license.
+The harness serves the original module bytes through a static file URL.
 UTC values preserve the location representation from Go `src/time/time.go`
 and `zoneinfo.go`. Their source headers retain the BSD notice.
 Source headers and the runtime license preserve their BSD terms.
