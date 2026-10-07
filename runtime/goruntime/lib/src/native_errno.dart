@@ -139,3 +139,13 @@ external NativeProcessState nativeProcessWait(int pid, int statusfd);
 
 @Native<NativeResult Function(Int, Int, Int)>(symbol: 'goruntime_process_kill')
 external NativeResult nativeProcessKill(int pid, int statusfd, int signal);
+
+@Native<NativeResult Function(Int, Pointer<Uint8>, Pointer<Void>, Int)>(
+  symbol: 'goruntime_fstatat',
+)
+external NativeResult nativeFstatat(
+  int fd,
+  Pointer<Uint8> path,
+  Pointer<Void> data,
+  int flags,
+);

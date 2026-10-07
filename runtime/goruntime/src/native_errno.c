@@ -4,6 +4,7 @@
 #include <poll.h>
 #include <pthread.h>
 #include <signal.h>
+#include <sys/stat.h>
 #include <string.h>
 #include <sys/ioctl.h>
 #include <sys/wait.h>
@@ -343,6 +344,13 @@ struct goruntime_result goruntime_process_kill(int pid, int statusfd, int signal
   (void)statusfd;
   result.value = kill(pid, signal);
 #endif
+  result.error = result.value < 0 ? errno : 0;
+  return result;
+}
+
+struct goruntime_result goruntime_fstatat(int fd, const void *path, void *data, int flags) {
+  struct goruntime_result result;
+  result.value = fstatat(fd, (const char *)path, (struct stat *)data, flags);
   result.error = result.value < 0 ? errno : 0;
   return result;
 }

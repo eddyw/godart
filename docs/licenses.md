@@ -839,6 +839,7 @@ The standard descriptor variables retain the original Go
 `src/syscall/syscall_unix.go` declarations and 2009 BSD notice.
 
 The UDP errno bridge and its build hook use project-authored source under the root BSD license.
+The fstatat errno boundary also uses project-authored C source under the root BSD license.
 The full-width arithmetic helpers adapt Go `src/math/bits/bits.go` under its 2017 BSD notice.
 The word vector helpers follow Go `src/math/big/arith.go` under its 2009 BSD notice.
 The `arith_decl.go` replacement retains the same notice for its adapted wrappers.

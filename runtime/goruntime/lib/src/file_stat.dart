@@ -6,6 +6,7 @@ import 'dart:ffi';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'native_errno.dart';
 import 'slice.dart';
 import 'string.dart';
 
@@ -137,11 +138,20 @@ final _errno = _libc
 (Slice<int>, int) $nativeFstat(int fd) =>
     _readStat((buffer) => _fstat(fd, buffer));
 
-final _fstatat = _libc
-    .lookupFunction<
-      Int Function(Int, Pointer<Uint8>, Pointer<Uint8>, Int),
-      int Function(int, Pointer<Uint8>, Pointer<Uint8>, int)
-    >(Abi.current() == Abi.macosX64 ? 'fstatat64' : 'fstatat');
+(Slice<int>, int) _readFstatat(int fd, Pointer<Uint8> name, int flags) {
+  final buffer = _malloc(144);
+  if (buffer == nullptr) return (Slice<int>.nil(), 12);
+  try {
+    int error;
+    do {
+      error = nativeFstatat(fd, name, buffer.cast<Void>(), flags).error;
+    } while (error == 4);
+    if (error != 0) return (Slice<int>.nil(), error);
+    return _decodeStat(buffer);
+  } finally {
+    _free(buffer);
+  }
+}
 
 (Slice<int>, int) $nativeLstatat(int fd, GoString path) {
   final bytes = path.bytes;
@@ -152,9 +162,7 @@ final _fstatat = _libc
     name.asTypedList(bytes.length + 1)
       ..setRange(0, bytes.length, bytes)
       ..[bytes.length] = 0;
-    return _readStat(
-      (buffer) => _fstatat(fd, name, buffer, Platform.isMacOS ? 0x20 : 0x100),
-    );
+    return _readFstatat(fd, name, Platform.isMacOS ? 0x20 : 0x100);
   } finally {
     _free(name);
   }
@@ -172,10 +180,9 @@ final _fstatat = _libc
     final buffer = _malloc(144);
     if (buffer == nullptr) return (0, 0, 0, 12);
     try {
-      final stat = _fstatat;
-      final errorAddress = _errno();
-      if (stat(fd, name, buffer, flags) != 0) {
-        return (0, 0, 0, errorAddress.value);
+      final result = nativeFstatat(fd, name, buffer.cast<Void>(), flags);
+      if (result.error != 0) {
+        return (0, 0, 0, result.error);
       }
       final data = ByteData.sublistView(buffer.asTypedList(144));
       final x64 = Abi.current() == Abi.linuxX64;
@@ -210,10 +217,9 @@ final _fstatat = _libc
     final buffer = output ? _malloc(144) : nullptr.cast<Uint8>();
     if (output && buffer == nullptr) return (Slice<int>.nil(), 12);
     try {
-      final stat = _fstatat;
-      final errorAddress = _errno();
-      if (stat(fd, name, buffer, flags) != 0) {
-        return (Slice<int>.nil(), errorAddress.value);
+      final result = nativeFstatat(fd, name, buffer.cast<Void>(), flags);
+      if (result.error != 0) {
+        return (Slice<int>.nil(), result.error);
       }
       return _decodeStat(buffer);
     } finally {

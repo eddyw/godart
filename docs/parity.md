@@ -129,7 +129,9 @@ returns an explicit error because inherited listener descriptors remain unsuppor
 `os.Root.FS` implements `fs.ReadDirFS` and `fs.ReadLinkFS`, with sorted directory entries and link metadata.
 Rooted directory entries retain descriptor-derived metadata after file and root closure.
 On supported Linux and macOS hosts, `os.Root` retains a native directory descriptor.
-Root operations use that descriptor after directory renames. Native errno capture retains the limitation below.
+Root operations use that descriptor after directory renames.
+Descriptor-relative stat calls capture the actual result and errno within the native code asset.
+Other root operations retain the native errno limitation below.
 On Linux and macOS, `Root.Link` preserves the final symbolic link and its inode identity.
 
 `os.CreateTemp` and `os.MkdirTemp` use random decimal `uint32` suffixes and exclusive creation.
@@ -811,7 +813,7 @@ Failed calls preserve caller fields. The call has no EINTR retry.
 Both pinned AMD64 SDK references use original host kernel constants and types.
 Current ARM64 also executes the original public API and native ABI.
 Web targets return selected SDK ENOSYS after NUL validation.
-Native errno atomicity retains its documented limitation.
+The fstatat code asset captures the actual result and errno within 1 C boundary.
 
 The AMD64 emulator crashes on nil fstatat metadata in both native Go and
 Dart FFI. ARM64 returns typed EFAULT. This host limit remains visible in

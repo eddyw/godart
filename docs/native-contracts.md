@@ -4,7 +4,7 @@ This design defines acceptance requirements for native descriptor and process AP
 File callbacks implement the ownership and readiness contract below.
 Network ownership transfer and process inheritance remain incomplete.
 The runtime code asset captures errno atomically for UDP connect, send, sendto, recvfrom and socket-name calls.
-It also captures actual unlinkat, kill, read, write and readiness probe errors within their syscall boundaries.
+It also captures actual unlinkat, kill, read, write, fstatat and readiness probe errors within their syscall boundaries.
 Other native calls still need atomic error boundaries.
 Optimization and isolates can resume when a concrete parity blocker requires them.
 
