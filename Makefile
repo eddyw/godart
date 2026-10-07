@@ -85,7 +85,7 @@ dart-analyze:
 	cd $(RUNTIME) && dart analyze --fatal-infos
 
 dart-test:
-	cd $(RUNTIME) && dart test
+	cd $(RUNTIME) && dart test --concurrency=1
 
 # flutter-go runs the Go side of the Flutter work. Each one is a module of its
 # own, thus the go targets of the root do not reach it. It needs no Flutter SDK.
