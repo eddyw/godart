@@ -65,7 +65,7 @@ func main() {
 	}
 	run(t, out, "dart", "pub", "get")
 	want := runProgram(t, dir, "go", "run", ".")
-	if got := runProgram(t, out, "dart", "run", "bin/main.dart"); got != want {
+	if got := runProgram(t, out, "dart", "bin/main.dart"); got != want {
 		t.Fatalf("Go:\n%s\nDart:\n%s", want, got)
 	}
 }

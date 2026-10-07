@@ -372,7 +372,7 @@ func TestCacheRemovesObsoleteParts(t *testing.T) {
 	}
 	build()
 	run(t, out, "dart", "pub", "get")
-	if got := runProgram(t, out, "dart", "run", "bin/main.dart"); strings.TrimSpace(got) != "1" {
+	if got := runProgram(t, out, "dart", "bin/main.dart"); strings.TrimSpace(got) != "1" {
 		t.Fatalf("generated program output: %q", got)
 	}
 }

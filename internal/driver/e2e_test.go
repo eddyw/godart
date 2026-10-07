@@ -296,7 +296,7 @@ func TestZoneinfoZip(t *testing.T) {
 		t.Fatal(err)
 	}
 	run(t, out, "dart", "pub", "get")
-	got := runProgramEnv(t, out, env, "dart", "run", "bin/main.dart")
+	got := runProgramEnv(t, out, env, "dart", "bin/main.dart")
 	if got != want {
 		t.Errorf("the output differs under ZONEINFO\nGo:\n%s\nDart:\n%s", want, got)
 	}
