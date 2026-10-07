@@ -20,6 +20,7 @@ Future<void> main(List<String> arguments) async {
       r'kill -TERM $$': -15,
     }.entries) {
       final child = await NativeChild.start(
+        GoString.fromString('/bin/sh'),
         Slice.of(
           ['/bin/sh', '-c', scenario.key].map(GoString.fromString).toList(),
         ),

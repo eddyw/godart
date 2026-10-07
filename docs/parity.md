@@ -155,7 +155,8 @@ An invalid executable returns `ENOEXEC` from `Start`, without shell execution.
 A valid child exit of 127 remains a successful launch followed by an exit error.
 Relative executable paths resolve after the child changes its directory.
 Argument and environment values retain their original bytes.
-`Cmd.Args[0]` still follows the program path. `ExtraFiles` and `SysProcAttr` remain unsupported.
+Native POSIX launch preserves `Cmd.Args[0]` independently from the executable path.
+`ExtraFiles` and `SysProcAttr` remain unsupported.
 
 Native child wait uses the actual `waitpid` status.
 On Linux and macOS, a concurrent Dart process reaper can consume that status first.

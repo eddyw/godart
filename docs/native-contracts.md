@@ -144,7 +144,9 @@ After `ECHILD`, the bridge reads the actual captured status only when `NOTE_EXIT
 Apple defines this public contract in [`bsd/sys/event.h`](https://github.com/apple-oss-distributions/xnu/blob/main/bsd/sys/event.h).
 The parent closes the status descriptor after wait or launch cleanup.
 
-`ExtraFiles`, `SysProcAttr`, caller-selected `argv[0]` and full descriptor-map inheritance remain incomplete.
+Native POSIX launch preserves the child name from `argv[0]`.
+The name can be empty or contain non-UTF-8 bytes.
+`ExtraFiles`, `SysProcAttr` and full descriptor-map inheritance remain incomplete.
 The bridge preserves Dart's inherited ignored dispositions and signal mask.
 Thus, inherited SIGPIPE and SIGTTOU behavior still has the documented host limits.
 These limits do not establish complete process parity.

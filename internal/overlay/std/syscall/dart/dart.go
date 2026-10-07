@@ -1762,7 +1762,7 @@ func BubbleWait() bool {
 	panic("syscall/dart needs the gart compiler")
 }
 
-// ProcStart starts a process. argv holds the program and each argument, dir
+// ProcStart starts executable. argv holds the child name and arguments, dir
 // holds the working directory, and env holds each variable in the form
 // name=value. An empty dir keeps the directory of the program.
 // env supplies the complete environment, including when the list is empty.
@@ -1771,7 +1771,7 @@ func BubbleWait() bool {
 // An error code of 0 means that Dart supplied no OS error code.
 //
 // The call blocks the goroutine, thus the caller becomes an async function.
-func ProcStart(argv []string, dir string, env []string) (int, int, string) {
+func ProcStart(executable string, argv []string, dir string, env []string) (int, int, string) {
 	panic("syscall/dart needs the gart compiler")
 }
 

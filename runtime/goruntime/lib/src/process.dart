@@ -93,6 +93,7 @@ Future<int> _fill(_Pipe pipe) {
 /// cause of a failure. Go keeps a child alive when the program ends, thus the
 /// table holds no release hook.
 (int, int, GoString) $procStart(
+  GoString executable,
   Slice<GoString> argv,
   GoString dir,
   Slice<GoString> env,
@@ -110,9 +111,9 @@ Future<int> _fill(_Pipe pipe) {
   }
   $await(
     (Platform.isLinux || Platform.isMacOS
-            ? NativeChild.start(argv, dir, env)
+            ? NativeChild.start(executable, argv, dir, env)
             : Process.start(
-                parts.first,
+                executable.toDartString(),
                 parts.sublist(1),
                 workingDirectory: dir.length == 0 ? null : dir.toDartString(),
                 environment: environment,

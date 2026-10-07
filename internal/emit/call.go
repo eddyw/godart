@@ -1180,8 +1180,8 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 	case "DialTCP":
 		return fmt.Sprintf("$dialTCP(%s, %s, %s, %s)", args[0], args[1], args[2], args[3]), true
 	case "ProcStart":
-		return fmt.Sprintf("$procStart(%s, %s, %s)",
-			args[0], args[1], args[2]), true
+		return fmt.Sprintf("$procStart(%s, %s, %s, %s)",
+			args[0], args[1], args[2], args[3]), true
 	case "ProcWrite":
 		return fmt.Sprintf("$procWrite(%s, %s)", args[0], args[1]), true
 	case "ProcCloseStdin":

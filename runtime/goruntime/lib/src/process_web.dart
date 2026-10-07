@@ -18,6 +18,7 @@ import 'string.dart';
 final GoString _noSys = GoString.fromString('function not implemented');
 
 (int, int, GoString) $procStart(
+  GoString executable,
   Slice<GoString> argv,
   GoString dir,
   Slice<GoString> env,
@@ -36,7 +37,6 @@ GoString $procCloseOutput(int pid, bool errStream) => _noSys;
 (int, GoString) $procReadErr(int pid, Slice<GoInt> p) => (0, _noSys);
 
 (int, bool, GoString) $procWait(int pid) => (0, false, _noSys);
-
 
 GoString $killPid(int pid, int number) => _noSys;
 

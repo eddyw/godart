@@ -103,6 +103,7 @@ final class NativeChild implements ChildProcess {
       _diagnostic = _ProcessPipe(result.diagnostic);
 
   static Future<NativeChild> start(
+    GoString executable,
     Slice<GoString> arguments,
     GoString directory,
     Slice<GoString> environment,
@@ -137,14 +138,14 @@ final class NativeChild implements ChildProcess {
     try {
       final argv = strings(arguments);
       final result = nativeProcessStart(
-        argv[0],
+        string(executable),
         argv,
         strings(environment),
         string(directory),
       );
       if (result.error != 0) {
         throw ProcessException(
-          arguments[0].toDartString(),
+          executable.toDartString(),
           [],
           'native process launch',
           result.error,
@@ -181,7 +182,7 @@ final class NativeChild implements ChildProcess {
           if (error.errorCode != 10) rethrow;
         }
         throw ProcessException(
-          arguments[0].toDartString(),
+          executable.toDartString(),
           [],
           'native child setup or exec',
           code,

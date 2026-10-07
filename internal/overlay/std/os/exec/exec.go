@@ -13,7 +13,7 @@
 // calls carry the start, the 3 pipes, the wait, and the kill.
 //
 // The gaps against Go: no SysProcAttr, no ExtraFiles, no process group,
-// argv[0] cannot differ from the program, a pipe of StdinPipe or StdoutPipe
+// a pipe of StdinPipe or StdoutPipe
 // works only after Start.
 package exec
 
@@ -81,8 +81,8 @@ func (e *ExitError) Error() string { return e.ProcessState.String() }
 
 // Cmd holds a command before and after its run.
 type Cmd struct {
-	// Path is the program. Args holds argv, with the name at index 0. The
-	// start reads the program from Path, thus Args[0] changes nothing.
+	// Path selects the executable. Args[0] supplies the child name.
+	// Native POSIX launch preserves that name independently from Path.
 	Path string
 	Args []string
 
@@ -223,7 +223,6 @@ func (c *Cmd) Start() error {
 	if system := dart.OS(); system != "linux" && system != "darwin" && c.Dir != "" && !filepath.IsAbs(path) {
 		path = filepath.Join(c.Dir, path)
 	}
-	full := append([]string{path}, argv[1:]...)
 	env, err := c.environ()
 	if err != nil {
 		return err
@@ -243,7 +242,7 @@ func (c *Cmd) Start() error {
 			return &os.PathError{Op: "fork/exec", Path: c.Path, Err: syscall.EINVAL}
 		}
 	}
-	pid, code, cause := dart.ProcStart(full, c.Dir, env)
+	pid, code, cause := dart.ProcStart(path, argv, c.Dir, env)
 	if code > 0 {
 		return &os.PathError{Op: "fork/exec", Path: c.Path, Err: syscall.Errno(code)}
 	}
