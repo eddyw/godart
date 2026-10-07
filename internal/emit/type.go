@@ -437,11 +437,11 @@ func (e *emitter) chanExpr(x ir.Expr) string {
 func (e *emitter) makeArray(a *types.Array) string {
 	zero, known := zeroSized(a.Elem())
 	n := intConst(constant.MakeInt64(a.Len()), types.Typ[types.Int])
-	virtual := fmt.Sprintf("$ZeroList<%s>(%s, %s)", e.dartType(a.Elem()), n, e.zeroFunc(a.Elem()))
+	virtual := e.inlineArray(fmt.Sprintf("$ZeroList<%s>(%s, %s)", e.dartType(a.Elem()), n, e.zeroFunc(a.Elem())), a.Elem())
 	if zero {
 		return virtual
 	}
-	allocation := fmt.Sprintf("$makeArray<%s>($ix(%s), %s)", e.dartType(a.Elem()), n, e.zeroFunc(a.Elem()))
+	allocation := e.inlineArray(fmt.Sprintf("$makeArray<%s>($ix(%s), %s)", e.dartType(a.Elem()), n, e.zeroFunc(a.Elem())), a.Elem())
 	if !known {
 		return fmt.Sprintf("($typeSize(%s) == GoInt.zero ? %s : %s)", e.descriptorOf(a.Elem()), virtual, allocation)
 	}
@@ -684,10 +684,10 @@ func (e *emitter) alloc(elem types.Type) string {
 	}
 	zero, known := zeroSized(elem)
 	if zero {
-		return fmt.Sprintf("(n) => $ZeroList<%s>($gi(n), () => %s)", e.dartType(elem), e.zero(elem))
+		return "(n) => " + e.inlineArray(fmt.Sprintf("$ZeroList<%s>($gi(n), () => %s)", e.dartType(elem), e.zero(elem)), elem)
 	}
 	if !known {
-		return fmt.Sprintf("(n) => $typeSize(%s) == GoInt.zero ? $ZeroList<%s>($gi(n), () => %s) : List<%s>.generate(n, (_) => %s)", e.descriptorOf(elem), e.dartType(elem), e.zero(elem), e.dartType(elem), e.zero(elem))
+		return fmt.Sprintf("(n) => $typeSize(%s) == GoInt.zero ? %s : %s", e.descriptorOf(elem), e.inlineArray(fmt.Sprintf("$ZeroList<%s>($gi(n), () => %s)", e.dartType(elem), e.zero(elem)), elem), e.inlineArray(fmt.Sprintf("List<%s>.generate(n, (_) => %s)", e.dartType(elem), e.zero(elem)), elem))
 	}
 	if fn := goList(elem); fn != "" {
 		return fn
@@ -695,8 +695,7 @@ func (e *emitter) alloc(elem types.Type) string {
 	if list := typedList(elem); list != "" {
 		return fmt.Sprintf("(n) => %s(n)", list)
 	}
-	return fmt.Sprintf("(n) => List<%s>.generate(n, (_) => %s)",
-		e.dartType(elem), e.zero(elem))
+	return "(n) => " + e.inlineArray(fmt.Sprintf("List<%s>.generate(n, (_) => %s)", e.dartType(elem), e.zero(elem)), elem)
 }
 
 // goList gives the allocator of a Go integer element type. The native form

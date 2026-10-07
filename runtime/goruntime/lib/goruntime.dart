@@ -31,6 +31,7 @@ export 'src/layout.dart';
 export 'src/map.dart';
 export 'src/mathfn.dart';
 export 'src/net.dart' if (dart.library.js_interop) 'src/net_web.dart';
+export 'src/opaque_pointer.dart';
 export 'src/panic.dart';
 export 'src/print.dart';
 export 'src/process.dart' if (dart.library.js_interop) 'src/process_web.dart';

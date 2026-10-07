@@ -18,7 +18,7 @@
   {
     "package": "cmp",
     "status": "compile-blocked",
-    "diagnostic": "the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "diagnostic": "the compiler rejects the package unsafe conversion (unsafe conversions support typed pointers, nil and constant zero)",
     "blocker_cause": "runtime-boundary",
     "blocker_reason": "The suite imports unsafe and requires native memory operations outside the Dart contract."
   },
@@ -348,7 +348,7 @@
   {
     "package": "crypto/md5",
     "status": "compile-blocked",
-    "diagnostic": "the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
+    "diagnostic": "the compiler rejects the package unsafe conversion (unsafe conversions support typed pointers, nil and constant zero)",
     "blocker_cause": "runtime-boundary",
     "blocker_reason": "The suite imports unsafe and requires native memory operations outside the Dart contract."
   },
@@ -709,7 +709,7 @@
   {
     "package": "go/types",
     "status": "compile-blocked",
-    "diagnostic": "cannot convert v.FieldByName(name).Addr().UnsafePointer() (value of type uintptr) to type *bool",
+    "diagnostic": "the compiler rejects the package unsafe conversion (unsafe conversions support typed pointers, nil and constant zero)",
     "blocker_cause": "runtime-boundary",
     "blocker_reason": "The suite converts an unsafe address into a typed pointer. Dart has no native pointer conversion."
   },
@@ -853,10 +853,12 @@
   },
   {
     "package": "internal/fmtsort",
-    "status": "compile-blocked",
-    "diagnostic": "the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
-    "blocker_cause": "runtime-boundary",
-    "blocker_reason": "The suite imports unsafe and requires native memory operations outside the Dart contract."
+    "status": "vm-suite",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ]
   },
   {
     "package": "internal/gate",
@@ -1377,10 +1379,10 @@
   },
   {
     "package": "text/template",
-    "status": "compile-blocked",
-    "diagnostic": "the compiler rejects the package unsafe conversion (only nil pointer values are supported)",
-    "blocker_cause": "runtime-boundary",
-    "blocker_reason": "The suite imports unsafe and requires native memory operations outside the Dart contract."
+    "status": "vm-suite",
+    "targets": [
+      "aot"
+    ]
   },
   {
     "package": "text/template/parse",

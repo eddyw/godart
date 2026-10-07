@@ -23,6 +23,7 @@ import (
 	"strconv"
 	"syscall/dart"
 	"unicode"
+	"unsafe"
 )
 
 // DeepEqual reports whether 2 values are deeply equal.
@@ -1791,10 +1792,24 @@ func (v Value) SetComplex(x complex128) {
 // Dart gives no machine address, thus the number is the identity of the object
 // and not an address. 2 reads of the same object give the same number, and the
 // number names no memory. Read docs/parity.md.
-func (v Value) Pointer() uintptr { return dart.ValuePointer(v.read()) }
+func (v Value) Pointer() uintptr {
+	switch v.Kind() {
+	case Chan, Func, Map, Pointer, Slice, String, UnsafePointer:
+		return dart.ValuePointer(v.read())
+	default:
+		panic(&ValueError{"reflect.Value.Pointer", v.Kind()})
+	}
+}
 
-// UnsafePointer gives the same number as Pointer.
-func (v Value) UnsafePointer() uintptr { return v.Pointer() }
+// UnsafePointer returns an opaque pointer to the managed object.
+func (v Value) UnsafePointer() unsafe.Pointer {
+	switch v.Kind() {
+	case Chan, Func, Map, Pointer, Slice, String, UnsafePointer:
+		return dart.ValueUnsafePointer(v.read())
+	default:
+		panic(&ValueError{"reflect.Value.UnsafePointer", v.Kind()})
+	}
+}
 
 // Value.UnsafeAddr stays out. Go gives the address of the value, and Dart
 // gives no address: Pointer reads the identity of an object instead. Addr

@@ -6,6 +6,8 @@
 // library, thus no body below ever runs.
 package dart
 
+import "unsafe"
+
 // Print writes text to standard output.
 func Print(text string) {
 	panic("syscall/dart needs the gart compiler")
@@ -386,6 +388,11 @@ func WithComplex(handle int, x complex128) any {
 
 // ValuePointer gives a number that names the object of a value.
 func ValuePointer(value any) uintptr {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// ValueUnsafePointer returns the opaque pointer of a reflected value.
+func ValueUnsafePointer(value any) unsafe.Pointer {
 	panic("syscall/dart needs the gart compiler")
 }
 
@@ -1173,7 +1180,7 @@ func NativeLstatat(fd int, path string) ([]int64, int) {
 // NativeFstatat returns the NativeStat fields relative to a directory descriptor.
 // A false output passes a nil metadata pointer to the native call.
 func NativeFstatat(fd int, path string, output bool, flags int) ([]int64, int) {
- panic("syscall/dart needs the gart compiler")
+	panic("syscall/dart needs the gart compiler")
 }
 
 // SyscallFcntlFlock transports all fields of the native record-lock structure.
@@ -1181,7 +1188,6 @@ func NativeFstatat(fd int, path string, output bool, flags int) ([]int64, int) {
 func SyscallFcntlFlock(fd uintptr, cmd int, input bool, start, length int64, pid int32, kind, whence int16, pad0, pad1 uint32) ([]int64, int) {
 	panic("syscall/dart needs the gart compiler")
 }
-
 
 // NativeFstat returns the NativeStat fields for an open descriptor.
 func NativeFstat(fd int) ([]int64, int) {
@@ -1946,14 +1952,14 @@ func Getppid() int               { panic("syscall/dart needs the gart compiler")
 func Getpgrp() int               { panic("syscall/dart needs the gart compiler") }
 func Getpgid(pid int) (int, int) { panic("syscall/dart needs the gart compiler") }
 func Getsid(pid int) (int, int)  { panic("syscall/dart needs the gart compiler") }
-func NumCPU() int { panic("syscall/dart needs the gart compiler") }
+func NumCPU() int                { panic("syscall/dart needs the gart compiler") }
 
-func Getpagesize() int           { panic("syscall/dart needs the gart compiler") }
+func Getpagesize() int { panic("syscall/dart needs the gart compiler") }
 
 func Setpgid(pid, pgid int) int { panic("syscall/dart needs the gart compiler") }
-func Setsid() (int, int) { panic("syscall/dart needs the gart compiler") }
+func Setsid() (int, int)        { panic("syscall/dart needs the gart compiler") }
 
-func Getpriority(which, who int) (int, int) { panic("syscall/dart needs the gart compiler") }
+func Getpriority(which, who int) (int, int)    { panic("syscall/dart needs the gart compiler") }
 func Setpriority(which, who, priority int) int { panic("syscall/dart needs the gart compiler") }
 
 func Getgroups() ([]int, int) { panic("syscall/dart needs the gart compiler") }
@@ -2068,11 +2074,11 @@ func SyscallFstatfs(fd int, output bool) ([]int64, int) {
 // SyscallGetfsstat returns the native count, Statfs_t fields, and errno.
 // Each record has 13 scalar fields, 2064 name bytes, and 8 reserved values.
 func SyscallGetfsstat(count, flags int) (int, []int64, int) {
- panic("syscall/dart needs the gart compiler")
+	panic("syscall/dart needs the gart compiler")
 }
 
 func SyscallGettimeofday(output bool) (int64, int64, int) {
- panic("syscall/dart needs the gart compiler")
+	panic("syscall/dart needs the gart compiler")
 }
 
 func SyscallGetrlimit(resource int, output bool) (uint64, uint64, int) {
@@ -2143,7 +2149,7 @@ func SyscallKevent(kq int, changes, events, timeout []byte) (int, int) {
 // SyscallBpfIoctl accepts only the selected Darwin BPF requests and their complete byte objects.
 // BIOCSETF uses a 16-byte program with a zero pointer and complete 8-byte instructions.
 func SyscallBpfIoctl(fd, request int, data, instructions []byte) int {
- panic("syscall/dart needs the gart compiler")
+	panic("syscall/dart needs the gart compiler")
 }
 
 func SyscallKqueue() (int, int) {
@@ -2244,7 +2250,6 @@ func NativeRead(fd int, p []byte) (int, int) {
 func NativeWrite(fd int, p []byte) (int, int) {
 	panic("syscall/dart needs the gart compiler")
 }
-
 
 // SyscallAttachLsf requires complete 8-byte Linux SockFilter entries.
 func SyscallAttachLsf(fd int, data []byte) int {

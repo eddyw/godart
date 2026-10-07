@@ -856,3 +856,9 @@ Standalone distributions must retain applicable dependency notices as specified 
 
 The template linker adapter preserves Go `src/text/template/link_test.go` and its 2019 BSD notice.
 It retains the original program, native build command and binary assertion.
+
+The opaque pointer allocation metadata includes Go-derived logical layout rules.
+The reflection pointer methods retain their Go-derived API contracts.
+The source retains the Go copyright notice and BSD license reference.
+The template adapters retain the complete original SDK sources and their Go BSD notices.
+The native package selection includes `src/text/template/link_test.go` and its 2019 BSD notice.

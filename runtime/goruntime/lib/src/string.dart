@@ -6,6 +6,11 @@ import 'int.dart';
 import 'panic.dart';
 import 'slice.dart';
 
+final Expando<(GoString, int)> _stringLocations = Expando('string locations');
+
+(GoString, int) $stringStorage(GoString value) =>
+    _stringLocations[value] ?? (value, 0);
+
 /// A Go string: an immutable sequence of bytes.
 ///
 /// A Dart `String` holds UTF-16 code units, thus it cannot hold the bytes of a
@@ -188,9 +193,12 @@ GoString $substring(
     $panicBound(SliceBound.b, lowIndex, high, lowUns);
   }
   if (low == 0 && high == s.length) return s;
-  return GoString._(
+  final result = GoString._(
     Uint8List.view(s.bytes.buffer, s.bytes.offsetInBytes + low, high - low),
   );
+  final location = $stringStorage(s);
+  _stringLocations[result] = (location.$1, location.$2 + low);
+  return result;
 }
 
 /// The bytes of a string, as a slice that shares the storage.

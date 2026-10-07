@@ -27,7 +27,8 @@ func (p *Pinner) Pin(pointer any) {
 	if pointer == nil {
 		panic(errorString("runtime.Pinner: argument is nil"))
 	}
-	if dart.Kind(pointer) != "ptr" {
+	kind := dart.Kind(pointer)
+	if kind != "ptr" && kind != "unsafe.Pointer" {
 		panic(errorString("runtime.Pinner: argument is not a pointer: " +
 			dart.Format("T", pointer)))
 	}

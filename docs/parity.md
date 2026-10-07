@@ -14,14 +14,15 @@ SDK versions, modes, and exclusions.
 |---|---|
 | Language versions | Package and file versions govern language semantics. The installed SDK still supplies standard library code. |
 | Goroutines | Cooperative execution in 1 Dart isolate. Loops in state machines yield periodically. Busy synchronous functions can block other work. |
+| Pin lifetime | `runtime.Pinner` accepts typed pointers and opaque unsafe pointers, including typed nil values. It retains managed references until `Unpin`. It does not provide cgo object immobility or the native leak panic. |
 | Parallelism | No shared-memory Go execution across native threads. `GOMAXPROCS` reports 1. `NumCPU` records native OS CPU availability at startup. JS and Wasm report 1, as Go js/wasm does. |
 | Type layout | `unsafe.Sizeof`, `unsafe.Alignof`, and `unsafe.Offsetof` use 64-bit Go type metadata, including generic types. They do not describe Dart object storage. |
 | Compiler diagnostics | Native Go optimization messages and instruction selection are outside the Gart compiler contract. Source compilation and runtime behavior require separate coverage. |
-| Native access | Nil `unsafe.Pointer` values and constant-zero conversions are supported. No cgo, native pointer arithmetic, or pointer reinterpretation. |
-| Pointer output | Process-local identities can represent pointers. They are not native memory addresses. |
+| Native access | Typed pointers can convert to opaque `unsafe.Pointer` values with canonical allocation identity and Go byte offsets. Nil and constant-zero conversions remain. No cgo, integer addresses, native pointer arithmetic, or pointer reinterpretation. |
+| Pointer output | Process-local numeric identities preserve canonical allocation identity and logical byte offsets. Data identities use the high unsigned bit, separate from synthetic function PCs. Allocation bases preserve the logical 8-byte alignment. They expose no native memory address. |
 | Map iteration | The runtime can expose insertion order. Programs must not depend on Go's unspecified iteration order. |
 | Experimental methods | With `GOEXPERIMENT=fieldtrack`, `go:nointerface` methods remain callable but cannot satisfy interfaces or appear in reflection method tables. |
-| Reflection | Descriptors cover a substantial subset. Dynamically created function types need an emitted callable factory. |
+| Reflection | `Value.UnsafePointer` returns opaque `unsafe.Pointer` values for all 7 supported kinds. Slice and string values preserve storage identity and byte offsets. Function values retain synthetic source PCs. Dynamically created function types need an emitted callable factory. |
 | Function metadata | Function values expose synthetic PCs and Go source metadata. Return PCs and their preceding call PCs resolve to the same source position. Reflection method wrappers can have no Go source location. PCs do not identify native instructions. |
 | Garbage collection | Native hosts request collection through the Dart embedder API when available. Other hosts use best-effort collection. Cleanup deadlines can differ. |
 | Runtime metrics | `runtime/metrics` exposes GODEBUG event counters and value accessors. Unknown metrics return `KindBad`. Native Go heap, scheduler, and collector measurements remain unavailable. |
@@ -534,7 +535,7 @@ The calls preserve SDK length, capacity, base and active-mapping rules.
 The caller must unmap the complete original mapping and must not access
 its slices after successful unmap. Closing the file descriptor retains
 the mapping. Web targets return `ENOSYS`. The non-atomic errno limit applies.
-General unsafe pointers and `unsafe.Slice` remain unsupported.
+Unsafe integer addresses, pointer reinterpretation and `unsafe.Slice` remain unsupported.
 
 Native 64-bit Linux and macOS programs support `syscall.GetsockoptIPMreq`
 and `syscall.SetsockoptIPMreq` through Dart FFI. Both calls preserve the

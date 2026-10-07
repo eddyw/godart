@@ -4,14 +4,13 @@ import 'goint.dart';
 import 'panic.dart';
 import 'slice.dart';
 
-final List<Never> _zeroArray = List<Never>.empty(growable: false);
-
 final Expando<Map<(int, GoInt), Object>> _arrayViews = Expando('array views');
 
 /// A Go array is a fixed length list with value semantics. The compiler emits
 /// a plain Dart list, and it inserts a copy at each copy point.
-List<T> $makeArray<T>(int n, T Function() zero) =>
-    n == 0 ? _zeroArray : List<T>.generate(n, (_) => zero(), growable: false);
+List<T> $makeArray<T>(int n, T Function() zero) => n == 0
+    ? List<T>.empty(growable: false)
+    : List<T>.generate(n, (_) => zero(), growable: false);
 
 GoInt $arrayLength<T>(List<T> array) =>
     array is $ZeroList<T> ? array.$length : $gi(array.length);
@@ -23,7 +22,7 @@ List<T> $sliceToArray<T>(Slice<T> s, GoInt n) {
   if (s.array is $ZeroList<T>) {
     return $ZeroList<T>(n, (s.array as $ZeroList<T>).zero);
   }
-  if (n == GoInt.zero) return _zeroArray;
+  if (n == GoInt.zero) return List<T>.empty(growable: false);
   return List<T>.generate($ix(n), (i) => s[i], growable: false);
 }
 
@@ -83,7 +82,7 @@ final class $ArrayView<T> extends ListBase<T> {
 /// element and for an array element.
 List<T> $copyArray<T>(List<T> a, [T Function(T)? copy]) {
   if (a is $ZeroList<T>) return $ZeroList<T>(a.$length, a.zero);
-  if (a.isEmpty) return _zeroArray;
+  if (a.isEmpty) return List<T>.empty(growable: false);
   if (copy == null) return List<T>.of(a, growable: false);
   return List<T>.generate(a.length, (i) => copy(a[i]), growable: false);
 }

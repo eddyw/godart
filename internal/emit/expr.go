@@ -1053,9 +1053,9 @@ func (e *emitter) addressOf(x ir.Expr, elem types.Type) string {
 		if e.fieldStorageType(elem) != e.dartType(elem) {
 			read = "(" + read + " as " + e.dartType(elem) + ")"
 		}
-		return fmt.Sprintf("$Ref<%s, %s>(%s, %d, ($r, $i) => %s, ($r, $i, $v) => $r.%s = $v)",
+		return fmt.Sprintf("$Ref<%s, %s>(%s, %d, ($r, $i) => %s, ($r, $i, $v) => $r.%s = $v, %s)",
 			e.dartType(owner), e.dartType(elem), e.pointerValue(x.X), fieldIndex(owner, x.Name),
-			read, field)
+			read, field, e.descriptorOf(owner))
 	case *ir.Composite:
 		// A composite literal holds no name, thus its address takes a box of
 		// its own. Each read of that pointer reaches the same value.
@@ -1123,9 +1123,9 @@ func (e *emitter) composite(x *ir.Composite) string {
 			for i, index := range x.Indices {
 				indices[i] = intConst(constant.MakeInt64(int64(index)), types.Typ[types.Int])
 			}
-			return fmt.Sprintf("$arrayLiteral<%s>(%s, <GoInt>[%s], <%s>[%s])",
+			return e.inlineArray(fmt.Sprintf("$arrayLiteral<%s>(%s, <GoInt>[%s], <%s>[%s])",
 				e.dartType(t.Elem()), e.makeArray(t), strings.Join(indices, ", "),
-				e.dartType(t.Elem()), strings.Join(parts, ", "))
+				e.dartType(t.Elem()), strings.Join(parts, ", ")), t.Elem())
 		case *types.Slice:
 			allocation = fmt.Sprintf("$makeSliceN<%s>($gi(%d), %s)", e.dartType(t.Elem()), x.Length, e.alloc(t.Elem()))
 		}
@@ -1176,7 +1176,7 @@ func (e *emitter) composite(x *ir.Composite) string {
 		for len(parts) < int(u.Len()) {
 			parts = append(parts, e.zero(u.Elem()))
 		}
-		return fmt.Sprintf("<%s>[%s]", e.dartType(u.Elem()), strings.Join(parts, ", "))
+		return e.inlineArray(fmt.Sprintf("<%s>[%s]", e.dartType(u.Elem()), strings.Join(parts, ", ")), u.Elem())
 	case *types.Slice:
 		if len(parts) > 128 && literalData(x) {
 			return e.largeSlice(u.Elem(), parts)

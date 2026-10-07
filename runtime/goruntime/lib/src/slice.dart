@@ -355,6 +355,12 @@ Slice<T> $appendRange<T>(
   } else {
     out.$fill(0, s.len, s.array, s.off);
   }
+  if (assign != null) {
+    for (var i = 0; i < n; i++) {
+      assign(array[s.len + i], src[off + i]);
+    }
+    return out;
+  }
   if (n == 1) {
     out.$put(s.len, src[off]);
   } else {

@@ -84,7 +84,7 @@ func (e *emitter) structClass(class string, params []*types.TypeParam,
 	for i, tp := range params {
 		dicts[i] = "$d" + e.typeParamName(tp)
 	}
-	e.line("final class %s {", head)
+	e.line("final class %s implements $GoStruct {", head)
 	for i, tp := range params {
 		e.line("final Dict<%s> %s;", e.dartType(tp), dicts[i])
 	}
@@ -97,7 +97,7 @@ func (e *emitter) structClass(class string, params []*types.TypeParam,
 		e.line("%s();", class)
 		e.line("%s.$zero();", class)
 	} else {
-		e.line("%s(%s);", class, "this."+strings.Join(all, ", this."))
+		e.line("%s(%s)%s", class, "this."+strings.Join(all, ", this."), e.inlineStructBody(st, fields))
 		zeros := make([]string, 0, len(fields))
 		for i, f := range fields {
 			zeros = append(zeros, fmt.Sprintf("%s = %s", f, e.zero(st.Field(i).Type())))
@@ -110,7 +110,7 @@ func (e *emitter) structClass(class string, params []*types.TypeParam,
 		if len(zeros) == 0 {
 			e.line("%s;", head)
 		} else {
-			e.line("%s : %s;", head, strings.Join(zeros, ", "))
+			e.line("%s : %s%s", head, strings.Join(zeros, ", "), e.inlineStructBody(st, fields))
 		}
 	}
 	baseArgs := ""
@@ -145,6 +145,31 @@ func (e *emitter) structClass(class string, params []*types.TypeParam,
 	}
 	e.line("}")
 	e.line("")
+}
+
+func (e *emitter) inlineStructBody(st *types.Struct, fields []string) string {
+	inline := false
+	for i := range st.NumFields() {
+		if needsElementCopy(st.Field(i).Type()) {
+			inline = true
+			break
+		}
+	}
+	if !inline {
+		return ";"
+	}
+	descs := make([]string, st.NumFields())
+	for i := range descs {
+		descs[i] = e.descriptorOf(st.Field(i).Type())
+	}
+	return " { $bindStruct(this, <TypeDesc>[" + strings.Join(descs, ", ") + "], <Object?>[" + strings.Join(fields, ", ") + "]); }"
+}
+
+func (e *emitter) inlineArray(value string, elem types.Type) string {
+	if !needsElementCopy(elem) {
+		return value
+	}
+	return fmt.Sprintf("$bindArray(%s, %s)", value, e.descriptorOf(elem))
 }
 
 func (e *emitter) writeCopy(class string, st *types.Struct, fields, dicts []string) {
@@ -223,7 +248,7 @@ func (e *emitter) copyOf(read string, t types.Type) string {
 func (e *emitter) copyArray(read string, t types.Type) string {
 	a, _ := types.Unalias(t).Underlying().(*types.Array)
 	if a != nil && needsElementCopy(a.Elem()) {
-		return fmt.Sprintf("$copyArray(%s, (v) => %s)", read, e.copyOf("v", a.Elem()))
+		return e.inlineArray(fmt.Sprintf("$copyArray(%s, (v) => %s)", read, e.copyOf("v", a.Elem())), a.Elem())
 	}
 	return fmt.Sprintf("$copyArray(%s)", read)
 }

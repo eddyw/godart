@@ -63,7 +63,7 @@ func TestUpstreamTargets(t *testing.T) {
 				options.TestSources = importer.TestSources
 			}
 			var env []string
-			if importer != nil || pkg == "go/importer" || pkg == "go/internal/gccgoimporter" || pkg == "internal/types/errors" {
+			if pkg == "text/template" || importer != nil || pkg == "go/importer" || pkg == "go/internal/gccgoimporter" || pkg == "internal/types/errors" {
 				env = append(os.Environ(), "GOROOT="+build.Default.GOROOT)
 			}
 			stats, err := driver.BuildWithStats(options)

@@ -14023,12 +14023,18 @@
       "test": "TestInverse/line_19"
     }
   ],
-  "template-depth-original": [
+  "text/template": [
     {
-      "gart": "skip",
+      "test": "TestLinkerGC",
       "native": "skip",
-      "reason": "The original upstream test skips this case in short mode.",
-      "test": "TestMaxExecDepth"
+      "gart": "skip",
+      "reason": "The original upstream test skips in short mode. Full mode retains the complete original assertion."
+    },
+    {
+      "test": "TestMaxExecDepth",
+      "native": "skip",
+      "gart": "skip",
+      "reason": "The original upstream test skips in short mode. Full mode retains the complete original assertion."
     }
   ],
   "template-linker-original": [

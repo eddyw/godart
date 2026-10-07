@@ -543,17 +543,19 @@ var Pointer = unsafe.Pointer(uintptr(1))
 func TestNilUnsafePointer(t *testing.T) {
 	const prefix = "package a\nimport \"unsafe\"\n"
 	for name, body := range map[string]string{
-		"declaration": "var p unsafe.Pointer",
-		"nil":         "var p = unsafe.Pointer(nil)",
-		"zero":        "func f() unsafe.Pointer { return unsafe.Pointer(uintptr(0)) }",
-		"named":       "type P unsafe.Pointer; var p P; var q = unsafe.Pointer(p); var _ = any(q)",
+		"declaration":     "var p unsafe.Pointer",
+		"nil":             "var p = unsafe.Pointer(nil)",
+		"address":         "var n int; var p = unsafe.Pointer(&n)",
+		"generic pointer": "func f[T any](p *T) unsafe.Pointer { return unsafe.Pointer(p) }",
+		"named pointer":   "type P unsafe.Pointer; func f(p *int) P { return P(p) }",
+		"zero":            "func f() unsafe.Pointer { return unsafe.Pointer(uintptr(0)) }",
+		"named":           "type P unsafe.Pointer; var p P; var q = unsafe.Pointer(p); var _ = any(q)",
 	} {
 		acceptFile(t, name, prefix+body)
 	}
 	for name, body := range map[string]string{
 		"nonzero":               "var p = unsafe.Pointer(uintptr(1))",
 		"variable":              "func f(n uintptr) unsafe.Pointer { return unsafe.Pointer(n) }",
-		"address":               "var n int; var p = unsafe.Pointer(&n)",
 		"integer":               "func f(p unsafe.Pointer) uintptr { return uintptr(p) }",
 		"typed pointer":         "func f(p unsafe.Pointer) *int { return (*int)(p) }",
 		"arithmetic":            "func f(p unsafe.Pointer) unsafe.Pointer { return unsafe.Add(p, 1) }",

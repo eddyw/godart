@@ -5,6 +5,8 @@
 import 'array.dart';
 import 'dict.dart';
 import 'goint.dart';
+import 'iface.dart';
+import 'opaque_pointer.dart';
 import 'panic.dart';
 import 'slice.dart';
 
@@ -74,7 +76,9 @@ final class Box<T> implements $Ptr<T> {
   @override
   T v;
 
-  Box(this.v);
+  Box(this.v) {
+    $bindBox(this, v);
+  }
 }
 
 /// A pointer to a field of a struct, or to an element of a slice or an array.
@@ -85,13 +89,14 @@ final class Box<T> implements $Ptr<T> {
 final class $Ref<O, T> implements $Ptr<T> {
   final O owner;
   final int index;
-  final T Function(O, int) _get;
+  final TypeDesc? structType;
+  final Object? Function(O, int) _get;
   final void Function(O, int, T) _set;
 
-  $Ref(this.owner, this.index, this._get, this._set);
+  $Ref(this.owner, this.index, this._get, this._set, [this.structType]);
 
   @override
-  T get v => _get(owner, index);
+  T get v => _get(owner, index) as T;
 
   @override
   set v(T value) => _set(owner, index, value);
@@ -121,7 +126,7 @@ $Ref<List<T>, T> _cellPtr<T>(List<T> a, int i) {
     at += list.off;
     list = list.array;
   }
-  return $Ref<List<T>, T>(list, at, _listGet<T>, _listSet<T>);
+  return $Ref<List<T>, T>(list, at, _listGet, _listSet);
 }
 
 /// A pointer to 1 element of a slice.
@@ -197,9 +202,9 @@ GoInt $bigAddMulVVWW(
   return carry;
 }
 
-T _listGet<T>(List<T> owner, int i) => owner[i];
+Object? _listGet(List<Object?> owner, int i) => owner[i];
 
-void _listSet<T>(List<T> owner, int i, T value) {
+void _listSet(List<Object?> owner, int i, Object? value) {
   owner[i] = value;
 }
 

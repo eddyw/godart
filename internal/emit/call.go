@@ -333,6 +333,7 @@ func (e *emitter) intrinsic(x *ir.Call, args []string) (string, bool) {
 // intrinsicRaw lists each interop function whose boundary the mapped text
 // handles itself.
 var intrinsicRaw = map[string]bool{
+	"ValuePointer":    true,
 	"BigMulAddVWW":    true,
 	"BigAddMulVVWW":   true,
 	"BigmodUintSlice": true,
@@ -566,6 +567,8 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$asComplex(%s)", args[0]), true
 	case "WithComplex":
 		return fmt.Sprintf("$withComplex(%s, %s)", args[0], args[1]), true
+	case "ValueUnsafePointer":
+		return fmt.Sprintf("$valueUnsafePointer(%s)", args[0]), true
 	case "ValuePointer":
 		return fmt.Sprintf("$valuePointer(%s)", args[0]), true
 	case "DescImplements":
@@ -1380,7 +1383,7 @@ func (e *emitter) sliceLiteral(elem types.Type, parts []string) string {
 		return fmt.Sprintf("Slice.of(%s.fromList(<%s>[%s]))",
 			list, e.dartType(elem), strings.Join(parts, ", "))
 	}
-	return fmt.Sprintf("Slice.of(<%s>[%s])", e.dartType(elem), strings.Join(parts, ", "))
+	return fmt.Sprintf("Slice.of(%s)", e.inlineArray(fmt.Sprintf("<%s>[%s]", e.dartType(elem), strings.Join(parts, ", ")), elem))
 }
 
 // calleeSignature gives the signature of the callee. A call of a generic
@@ -2265,6 +2268,9 @@ func (e *emitter) conv(x *ir.Conv) string {
 	from, to := x.From, x.Type
 	text := e.expr(x.X)
 	if basic := basicOf(to); basic != nil && basic.Kind() == types.UnsafePointer {
+		if pointer, ok := typeset.Core(from).(*types.Pointer); ok {
+			return fmt.Sprintf("$opaquePointer(%s, %s)", text, e.descriptorOf(pointer.Elem()))
+		}
 		if value, ok := x.X.(*ir.Const); ok && value.Value.Kind() == constant.Int && constant.Sign(value.Value) == 0 {
 			return "null"
 		}
@@ -2321,8 +2327,8 @@ func (e *emitter) conv(x *ir.Conv) string {
 		// Go 1.20 converts a slice to an array. It panics when the slice holds
 		// fewer elements than the array.
 		a, _ := typeset.Core(to).(*types.Array)
-		return fmt.Sprintf("$sliceToArray<%s>(%s, %s)",
-			e.dartType(a.Elem()), text, intConst(constant.MakeInt64(a.Len()), types.Typ[types.Int]))
+		return e.inlineArray(fmt.Sprintf("$sliceToArray<%s>(%s, %s)",
+			e.dartType(a.Elem()), text, intConst(constant.MakeInt64(a.Len()), types.Typ[types.Int])), a.Elem())
 	case isPointerType(to) && isSliceType(from):
 		// Go 1.17 converts a slice to a pointer to an array. The array shares
 		// the elements of the slice, thus a write through the pointer reaches

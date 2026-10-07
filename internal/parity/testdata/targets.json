@@ -305,5 +305,19 @@
       "js",
       "wasm"
     ]
+  },
+  {
+    "package": "internal/fmtsort",
+    "targets": [
+      "aot",
+      "js",
+      "wasm"
+    ]
+  },
+  {
+    "package": "text/template",
+    "targets": [
+      "aot"
+    ]
   }
 ]

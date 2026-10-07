@@ -50,7 +50,7 @@ void $println(List<String> parts) =>
     $platformStderr(GoString.fromString('${parts.join(' ')}\n').bytes);
 
 String $referenceText(Iface? value) {
-  final String pointer = '0x${$valuePointer(value).toRadixString(16)}';
+  final String pointer = '0x${$uradix($valuePointer(value), 16)}';
   final Object? data = value?.value;
   return data is Slice<Object?> ? '[${data.len}/${data.cap}]$pointer' : pointer;
 }
@@ -58,7 +58,7 @@ String $referenceText(Iface? value) {
 String $interfaceText(Iface? value) {
   if (value == null) return '(0x0,0x0)';
   return '(0x${identityHashCode(value.desc).toRadixString(16)},'
-      '0x${$valuePointer(value).toRadixString(16)})';
+      '0x${$uradix($valuePointer(value), 16)})';
 }
 
 String $genericPrintText(Object? value, TypeDesc desc) {

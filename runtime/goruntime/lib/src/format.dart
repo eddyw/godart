@@ -8,6 +8,7 @@ import 'goint.dart';
 import 'iface.dart';
 import 'int.dart';
 import 'map.dart';
+import 'opaque_pointer.dart';
 import 'panic.dart';
 import 'print.dart';
 import 'slice.dart';
@@ -629,6 +630,9 @@ String? _pointerText(Object? v, String kind) {
     case 'func':
     case 'unsafe.Pointer':
       if (v == null) return '0x0';
+      if (v is $OpaquePointer) {
+        return '0x${$uradix($opaquePointerNumber(v), 16)}';
+      }
       return '0x${identityHashCode($pointerOwner(v)).toRadixString(16)}';
   }
   return null;

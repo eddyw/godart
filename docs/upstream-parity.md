@@ -404,8 +404,13 @@ The template adapter executes 33 complete original execution and
 multiple-template tests, plus 5 original examples on VM, AOT, JavaScript and Wasm. It selects
 original declarations and their exact dependencies from the active SDK.
 The native reference executes the original package with the same filter.
-No test input, assertion or loop changes. The complete package suite still
-requires unsupported unsafe pointer conversion in separate declarations.
+No test input, assertion or loop changes.
+The pointer adapter also executes 6 original execution and multiple-template roots on all 4 targets.
+The native adapter compiles the complete original package and executes all 61 tests and examples on VM and AOT.
+It preserves the original short-mode skips and full depth of 100000.
+The original linker assertion uses the selected native Go toolchain through Gart process and file operations.
+That assertion does not establish Gart compiler dead-code behavior.
+Web targets retain the portable selection because native files and processes remain outside their contract.
 
 The file adapter executes 2 original file-data tests and 3 original file
 examples on VM and AOT. It retains the SDK template files and original
@@ -424,3 +429,9 @@ The template linker adapter executes the unchanged original `TestLinkerGC` on VM
 Short mode retains its original skip. Full mode uses the actual selected native Go toolchain.
 The assertion verifies that toolchain binary through Gart process and file operations.
 It does not establish Gart compiler dead-code behavior or web process support.
+
+The complete original `internal/fmtsort` package executes all 3 tests on VM, AOT, JS, and Wasm.
+Reflected numeric pointer identities preserve logical byte offsets within 1 allocation.
+The generic package suites retain the selected SDK root for the original template linker assertion.
+The manifest classifies both packages as executable suites.
+The `cmp` and `crypto/md5` suites still require unsupported unsafe operations.

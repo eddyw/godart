@@ -743,5 +743,13 @@
   {
     "package": "crypto/internal/fips140cache",
     "run": ""
+  },
+  {
+    "package": "internal/fmtsort",
+    "run": ""
+  },
+  {
+    "package": "text/template",
+    "run": ""
   }
 ]

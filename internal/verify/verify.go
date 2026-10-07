@@ -127,7 +127,7 @@ func (v *verifier) visit(n ast.Node) bool {
 		}
 	case *ast.CallExpr:
 		if !v.safeUnsafeConversion(n) {
-			v.reject(n.Pos(), "only nil pointer values are supported", "the compiler rejects the package unsafe conversion")
+			v.reject(n.Pos(), "unsafe conversions support typed pointers, nil and constant zero", "the compiler rejects the package unsafe conversion")
 		}
 		v.checkCall(n)
 	case *ast.SelectorExpr:
@@ -244,7 +244,8 @@ func (v *verifier) safeUnsafeConversion(call *ast.CallExpr) bool {
 	}
 	if unsafePointerType(to) && !unsafePointerType(from) && from != types.Typ[types.UntypedNil] {
 		value := v.info.Types[call.Args[0]].Value
-		if value == nil || value.Kind() != constant.Int || constant.Sign(value) != 0 {
+		_, pointer := typeset.Core(from).(*types.Pointer)
+		if !pointer && (value == nil || value.Kind() != constant.Int || constant.Sign(value) != 0) {
 			return false
 		}
 	}
