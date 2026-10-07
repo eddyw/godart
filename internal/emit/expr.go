@@ -1005,8 +1005,12 @@ func (e *emitter) unary(x *ir.Unary) string {
 }
 
 func (e *emitter) pointerValue(x ir.Expr) string {
-	switch x.(type) {
-	case *ir.Field, *ir.Index:
+	switch x := x.(type) {
+	case *ir.Index:
+		if !needsBox(x.GoType()) {
+			return fmt.Sprintf("$inlineSequencePtr<%s>(%s, %s%s)", e.dartType(x.GoType()), e.pointerValue(x.X), e.expr(x.Index), e.unsArg(x.Index))
+		}
+	case *ir.Field:
 		if !needsBox(x.GoType()) {
 			return fmt.Sprintf("$inlinePtr<%s>(%s)", e.dartType(x.GoType()), e.addressOf(x, x.GoType()))
 		}

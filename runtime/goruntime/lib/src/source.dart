@@ -33,6 +33,7 @@ Iterable<(String, String, int)> get $sourceFrames sync* {
   }
 }
 
+@pragma('vm:prefer-inline')
 T $sourceCall<T>(SourceFrame? frame, String file, int line, T Function() call) {
   if (frame == null) return call();
   // Nested argument calls must restore the outer call's source position.

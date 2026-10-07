@@ -29,6 +29,16 @@ T $inlinePtr<T>($Ptr<T> pointer) => $inlineValue(
   pointer is $Ref ? (pointer as $Ref).owner as Object : pointer,
 );
 
+// Inline Go structs and arrays use their objects as pointers. Preserve the
+// storage owner without a scalar cell or its getter and setter closures.
+T $inlineSequencePtr<T>(Object? value, GoInt index, [bool uns = false]) {
+  if (value is Slice<T>) {
+    return $inlineValue(value.$at(index, uns), value.array);
+  }
+  final array = value as List<T>;
+  return $inlineValue($arrayIndex(array, index, uns), array);
+}
+
 Object $storageOwner(Object value) {
   while (true) {
     if (value is $Ref) {
