@@ -75,7 +75,7 @@ func main() {
 			for _, target := range []struct {
 				name string
 				args []string
-			}{{"vm", []string{"dart", "bin/main.dart"}}, {"aot", []string{exe}}} {
+			}{{"vm", []string{"dart", "run", "--verbosity=error", "bin/main.dart"}}, {"aot", []string{exe}}} {
 				t.Run(target.name, func(t *testing.T) {
 					got := runProgram(t, out, "sh", append(prefix, target.args...)...)
 					if got != want {
