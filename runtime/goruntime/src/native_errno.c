@@ -1,4 +1,5 @@
 #include <errno.h>
+#include <poll.h>
 #include <signal.h>
 #include <unistd.h>
 #include <stdint.h>
@@ -62,5 +63,34 @@ struct goruntime_result goruntime_kill(int pid, int signal) {
   struct goruntime_result result;
   result.value = kill(pid, signal);
   result.error = result.value < 0 ? errno : 0;
+  return result;
+}
+
+struct goruntime_result goruntime_read(int fd, void *data, size_t length) {
+  struct goruntime_result result;
+  result.value = read(fd, data, length);
+  result.error = result.value < 0 ? errno : 0;
+  return result;
+}
+
+struct goruntime_result goruntime_write(int fd, const void *data, size_t length) {
+  struct goruntime_result result;
+  result.value = write(fd, data, length);
+  result.error = result.value < 0 ? errno : 0;
+  return result;
+}
+
+struct goruntime_result goruntime_poll(int fd, int write_ready) {
+  struct pollfd entry = {fd, write_ready ? POLLOUT : POLLIN, 0};
+  struct goruntime_result result;
+  result.value = poll(&entry, 1, 0);
+  result.error = result.value < 0 ? errno : 0;
+  if (result.value > 0) {
+    result.value = entry.revents;
+    if (entry.revents & POLLNVAL) {
+      result.value = -1;
+      result.error = EBADF;
+    }
+  }
   return result;
 }

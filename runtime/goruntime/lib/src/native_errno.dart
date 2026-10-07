@@ -79,3 +79,16 @@ external NativeResult nativeUnlinkat(int fd, Pointer<Uint8> path, int flags);
 
 @Native<NativeResult Function(Int, Int)>(symbol: 'goruntime_kill')
 external NativeResult nativeKill(int pid, int signal);
+
+@Native<NativeResult Function(Int, Pointer<Void>, Size)>(
+  symbol: 'goruntime_read',
+)
+external NativeResult nativeRead(int fd, Pointer<Void> data, int length);
+
+@Native<NativeResult Function(Int, Pointer<Void>, Size)>(
+  symbol: 'goruntime_write',
+)
+external NativeResult nativeWrite(int fd, Pointer<Void> data, int length);
+
+@Native<NativeResult Function(Int, Int)>(symbol: 'goruntime_poll')
+external NativeResult nativePoll(int fd, int writeReady);

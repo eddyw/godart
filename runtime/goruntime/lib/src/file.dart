@@ -251,6 +251,28 @@ bool $fileDeadline(int handle, int timeout, int mode, bool clear) {
   }
 }
 
+bool $fileRawPollable(int handle) => _at(handle) is NativePipeHandle;
+
+int $fileRawPrepare(int handle, int mode) {
+  final file = _at(handle)!;
+  return file is NativePipeHandle ? file.rawPrepare(mode) : 0;
+}
+
+(int, int) $fileRawWait(int handle, int mode) {
+  final file = _at(handle)!;
+  if (file is! NativePipeHandle) return (0, 3);
+  $await(
+    file.rawWait(mode).then((value) => ($gi(value.$1), $gi(value.$2))),
+    (cause) => throw cause,
+  );
+  return (0, 0);
+}
+
+void $fileRawCancel(int handle) {
+  final file = _at(handle)!;
+  if (file is NativePipeHandle) file.cancel();
+}
+
 (int, GoString) $fileClose(int handle) {
   final FileHandle? f = _at(handle);
   if (f == null) return (0, GoString.fromString('file already closed'));
@@ -745,7 +767,12 @@ void $stderr(GoString text) => stderr.add(text.bytes);
   if (code == 0 && metadata.array[metadata.off + 1] & 0xf000 == 0x4000) {
     return (-1, fd, flags);
   }
-  return (_slot(NativeFileHandle(fd)), -1, flags);
+  final type = code == 0 ? metadata.array[metadata.off + 1] & 0xf000 : 0;
+  final nonblocking = flags & (Platform.isMacOS ? 4 : 0x800) != 0;
+  final file = nonblocking && (type == 0x1000 || type == 0xc000)
+      ? NativePipeHandle(fd)
+      : NativeFileHandle(fd);
+  return (_slot(file), -1, flags);
 }
 
 (int, int, int) $rootOpenFile(int parent, GoString path, int flags, int mode) {
@@ -763,5 +790,11 @@ void $stderr(GoString text) => stderr.add(text.bytes);
   if (metadata.array[metadata.off + 1] & 0xf000 == 0x4000) {
     return (-1, opened.descriptor, 0);
   }
-  return (_slot(opened), -1, 0);
+  final flags = nativeFileFlags(opened.descriptor);
+  final type = metadata.array[metadata.off + 1] & 0xf000;
+  final nonblocking = flags & (Platform.isMacOS ? 4 : 0x800) != 0;
+  final file = nonblocking && (type == 0x1000 || type == 0xc000)
+      ? NativePipeHandle(opened.descriptor)
+      : opened;
+  return (_slot(file), -1, 0);
 }

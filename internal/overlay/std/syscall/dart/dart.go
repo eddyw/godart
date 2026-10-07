@@ -1035,6 +1035,29 @@ func FileSeek(handle int, offset int64, whence int) (int64, string, int) {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// FileRawPollable identifies native files that support readiness and deadlines.
+func FileRawPollable(handle int) bool {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// FileRawPrepare reports closed or expired native poll state before a callback.
+// Kind 1 means closed, 2 means expired, and 3 means unavailable poll support.
+func FileRawPrepare(handle, mode int) int {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// FileRawWait suspends until actual native readiness, close, or deadline expiry.
+// The results contain native errno and the FileRawPrepare kind.
+func FileRawWait(handle, mode int) (int, int) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// FileRawCancel cancels pending operations without a descriptor close.
+// The file owner closes it after all active callbacks return.
+func FileRawCancel(handle int) {
+	panic("syscall/dart needs the gart compiler")
+}
+
 func FileClose(handle int) (int, string) {
 	panic("syscall/dart needs the gart compiler")
 }

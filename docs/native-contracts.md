@@ -1,9 +1,10 @@
 # Native descriptor and process contracts
 
-This design defines acceptance requirements for APIs that the runtime does not yet provide.
-It does not establish implementation or behavioral parity.
+This design defines acceptance requirements for native descriptor and process APIs.
+File callbacks implement the ownership and readiness contract below.
+Network ownership transfer and process inheritance remain incomplete.
 The runtime code asset captures errno atomically for UDP connect, send, sendto, recvfrom and socket-name calls.
-It also captures actual unlinkat and kill errors within their syscall boundaries.
+It also captures actual unlinkat, kill, read, write and readiness probe errors within their syscall boundaries.
 Other native calls still need atomic error boundaries.
 Optimization and isolates can resume when a concrete parity blocker requires them.
 
@@ -49,6 +50,15 @@ No public API can return a fabricated descriptor or a successful placeholder.
 
 ## RawConn and readiness
 
+`os.File.SyscallConn` supports owned POSIX file descriptors on Linux and macOS.
+Its callbacks execute as Go callbacks and can suspend or panic.
+The file retains the actual descriptor until callback access ends.
+Pollable Close cancels pending probes and waits for active callbacks.
+Blocking file Close can return before a callback, but actual closure waits for the final reference.
+Standard stream Close retains its existing no-op behavior. Pipe Fd retains nonblocking mode.
+These limits differ from Go. Web targets return `ENOSYS`.
+Network RawConn, listener restrictions and duplicate network ownership still require implementation and acceptance.
+
 `Control` retains the descriptor for the complete callback.
 Its guarantee ends when the callback returns.
 The runtime must preserve operation errors, callback panics and the original `net.OpError` metadata.
@@ -67,7 +77,7 @@ A scheduler timer requests another probe after an unready result.
 The timer itself never establishes readiness.
 This design avoids a native wait that blocks the single Dart isolate.
 It does not claim native Go poller performance.
-Callback suspension requires compiler and runtime analysis before implementation.
+Network callback suspension requires the same compiler and runtime contract as file callbacks.
 A synchronous callback wrapper must not silently replace a permitted Go callback contract.
 
 Acceptance must cover:

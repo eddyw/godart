@@ -1002,6 +1002,14 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$fileDeadline(%s, %s, %s, %s)", args[0], args[1], args[2], args[3]), true
 	case "FileSeek":
 		return fmt.Sprintf("$fileSeek(%s, %s, %s)", args[0], args[1], args[2]), true
+	case "FileRawPollable":
+		return fmt.Sprintf("$fileRawPollable(%s)", args[0]), true
+	case "FileRawPrepare":
+		return fmt.Sprintf("$fileRawPrepare(%s, %s)", args[0], args[1]), true
+	case "FileRawWait":
+		return fmt.Sprintf("$fileRawWait(%s, %s)", args[0], args[1]), true
+	case "FileRawCancel":
+		return fmt.Sprintf("$fileRawCancel(%s)", args[0]), true
 	case "FileClose":
 		return fmt.Sprintf("$fileClose(%s)", args[0]), true
 	case "NativeTruncate":

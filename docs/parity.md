@@ -53,7 +53,7 @@ Linux and macOS support `os.File.Fd` for regular files, pipes, directories,
 and standard streams. The file owns the descriptor. Call `Close` explicitly.
 `os.NewFile` adopts native file and directory descriptors on these hosts.
 It preserves descriptor identity, the caller name, append mode, and ownership.
-Native poll integration for adopted descriptors remains unsupported.
+Adopted nonblocking pipes and sockets support native readiness probes and deadlines.
 `os.Pipe` creates actual native descriptors on Linux and macOS.
 The files own their descriptors and use close-on-exec and nonblocking flags.
 Pipe reads and writes suspend the goroutine after actual EAGAIN results.
@@ -64,9 +64,18 @@ A blocking descriptor can stop the Dart scheduler.
 Do not clear O_NONBLOCK before pipe reads or writes through os.File.
 Files from `os.Pipe` support read and write deadlines, including pending I/O.
 A zero deadline cancels the limit. Timeout errors wrap `os.ErrDeadlineExceeded`.
-Regular files and adopted descriptors still return `os.ErrNoDeadline`.
+Regular files and blocking adopted descriptors return `os.ErrNoDeadline`.
 Pipe descriptor inheritance remains unsupported.
-The existing native errno capture limitation also applies to pipes.
+Native read and write calls capture their result and errno within 1 C boundary.
+`os.File.SyscallConn` exposes the actual owned descriptor on Linux and macOS.
+Callbacks can suspend and panic. Read and write callbacks share their respective
+locks with ordinary file reads and writes. A false result requires a real
+readiness probe before another callback. Pollable closure cancels pending probes
+and waits for callbacks. Blocking file closure retains the descriptor until
+active callbacks return. Raw operations preserve deadline and closed-file errors.
+Regular files do not support a wait after a false callback result.
+Web targets return `ENOSYS`. Network RawConn and descriptor inheritance remain incomplete.
+Standard stream closure retains the existing no-op behavior.
 `syscall.Dup` and `Dup2` duplicate actual descriptors and preserve shared file offsets.
 Each duplicate owns its descriptor. `Dup2` replaces the target descriptor through the native syscall.
 Linux also supports `syscall.Dup3`, with atomic target replacement and close-on-exec flags.
@@ -370,8 +379,8 @@ returns EINVAL. A nil listener address retains the missing-address error.
 `syscall.Read` and `syscall.Write` execute 1 actual native descriptor call on
 Linux/macOS 64-bit targets. They preserve byte counts, file offsets and native
 errors. The caller owns each descriptor. A blocking descriptor can stop the
-scheduler. These calls provide no polling, deadlines or inheritance. The
-existing non-atomic errno limitation also applies to these calls.
+scheduler. These calls provide no polling, deadlines or inheritance.
+The native code asset captures each result and errno within 1 C boundary.
 
 Unix datagram dials treat empty local and remote addresses as wildcards.
 An empty local address remains unbound. A named local address can dial

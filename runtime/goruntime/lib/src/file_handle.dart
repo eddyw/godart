@@ -9,6 +9,7 @@ import 'dart:typed_data';
 
 import 'file_attributes.dart';
 import 'file_stat.dart';
+import 'native_errno.dart';
 import 'slice.dart';
 import 'string.dart';
 import 'syscall_directory.dart';
@@ -79,16 +80,6 @@ final _free = _libc
       Void Function(Pointer<Uint8>),
       void Function(Pointer<Uint8>)
     >('free');
-final _read = _libc
-    .lookupFunction<
-      IntPtr Function(Int, Pointer<Uint8>, Size),
-      int Function(int, Pointer<Uint8>, int)
-    >('read');
-final _write = _libc
-    .lookupFunction<
-      IntPtr Function(Int, Pointer<Uint8>, Size),
-      int Function(int, Pointer<Uint8>, int)
-    >('write');
 final _pread = _libc
     .lookupFunction<
       IntPtr Function(Int, Pointer<Uint8>, Size, Int64),
@@ -193,12 +184,12 @@ final class NativeFileHandle implements FileHandle {
     final buffer = _malloc(size);
     if (buffer == nullptr) throw _failure(12);
     try {
-      final errno = _errno;
       int count;
       int code;
       do {
-        count = _read(descriptor, buffer, size);
-        code = count < 0 ? errno().value : 0;
+        final result = nativeRead(descriptor, buffer.cast<Void>(), size);
+        count = result.value;
+        code = result.error;
       } while (code == 4);
       if (code != 0) throw _failure(code);
       bytes.setRange(start, start + count, buffer.asTypedList(count));
@@ -215,12 +206,16 @@ final class NativeFileHandle implements FileHandle {
     if (size != 0 && buffer == nullptr) throw _failure(12);
     try {
       if (size != 0) buffer.asTypedList(size).setRange(0, size, bytes, start);
-      final errno = _errno;
       var offset = 0;
       while (true) {
-        final count = _write(descriptor, buffer + offset, size - offset);
+        final result = nativeWrite(
+          descriptor,
+          (buffer + offset).cast<Void>(),
+          size - offset,
+        );
+        final count = result.value;
         if (count < 0) {
-          final code = errno().value;
+          final code = result.error;
           if (code == 4) continue;
           throw PartialFileWrite(offset, code);
         }
@@ -420,20 +415,42 @@ final class NativePipeHandle extends NativeFileHandle {
 
   @override
   void closeSync() {
+    cancel();
+    super.closeSync();
+  }
+
+  void cancel() {
     _closed = true;
     _wakeRetries();
-    super.closeSync();
+  }
+
+  int rawPrepare(int mode) {
+    if (_closed) return 1;
+    if (_expired(mode == 1 ? _readDeadline : _writeDeadline)) return 2;
+    return 0;
+  }
+
+  Future<(int, int)> rawWait(int mode) async {
+    while (true) {
+      final kind = rawPrepare(mode);
+      if (kind != 0) return (0, kind);
+      final result = nativePoll(descriptor, mode == 2 ? 1 : 0);
+      if (result.error == 4) continue;
+      if (result.error != 0) return (result.error, 0);
+      if (result.value != 0) return (0, 0);
+      // The timer requests another real probe. It does not establish readiness.
+      await _retry();
+    }
   }
 }
 
 (int, int) $nativeRead(int fd, Slice<int> bytes) {
-  final read = _read;
   final buffer = bytes.len == 0 ? nullptr.cast<Uint8>() : _malloc(bytes.len);
   if (bytes.len != 0 && buffer == nullptr) return (-1, 12);
   try {
-    final errno = _errno();
-    final count = read(fd, buffer, bytes.len);
-    final code = count < 0 ? errno.value : 0;
+    final result = nativeRead(fd, buffer.cast<Void>(), bytes.len);
+    final count = result.value;
+    final code = result.error;
     if (count > 0) {
       bytes.array.setRange(
         bytes.off,
@@ -448,7 +465,6 @@ final class NativePipeHandle extends NativeFileHandle {
 }
 
 (int, int) $nativeWrite(int fd, Slice<int> bytes) {
-  final write = _write;
   final buffer = bytes.len == 0 ? nullptr.cast<Uint8>() : _malloc(bytes.len);
   if (bytes.len != 0 && buffer == nullptr) return (-1, 12);
   try {
@@ -457,9 +473,8 @@ final class NativePipeHandle extends NativeFileHandle {
           .asTypedList(bytes.len)
           .setRange(0, bytes.len, bytes.array, bytes.off);
     }
-    final errno = _errno();
-    final count = write(fd, buffer, bytes.len);
-    return (count, count < 0 ? errno.value : 0);
+    final result = nativeWrite(fd, buffer.cast<Void>(), bytes.len);
+    return (result.value, result.error);
   } finally {
     _free(buffer);
   }

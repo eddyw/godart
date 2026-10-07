@@ -575,3 +575,8 @@ int $syscallGetpeername(int fd, Slice<GoInt> data) => -1;
 
 (int, int) $syscallSendmsgN(int fd, Slice<GoInt> data, Slice<GoInt> control, int flags, Slice<GoInt> address) => (0, -1);
 (int, int, int, int) $syscallRecvmsg(int fd, Slice<GoInt> data, Slice<GoInt> control, int flags, Slice<GoInt> address) => (0, 0, 0, -1);
+
+bool $fileRawPollable(int handle) => false;
+int $fileRawPrepare(int handle, int mode) => 3;
+(int, int) $fileRawWait(int handle, int mode) => (-1, 3);
+void $fileRawCancel(int handle) {}

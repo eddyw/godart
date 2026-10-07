@@ -21,6 +21,7 @@ import (
 	"io/fs"
 	"runtime"
 	"slices"
+	"sync"
 	"syscall"
 	"syscall/dart"
 	"time"
@@ -177,7 +178,12 @@ type file struct {
 	// std marks standard output or standard error. Such a file holds no handle.
 	std int
 	// closed marks a file after Close, thus a later call reports ErrClosed.
-	closed bool
+	closed           bool
+	rawRefs          int
+	rawDone          chan struct{}
+	rawCloseDeferred bool
+	rawReadMu        sync.Mutex
+	rawWriteMu       sync.Mutex
 	// dirFD owns the native descriptor.
 	dir    bool
 	inRoot bool
@@ -246,6 +252,11 @@ func (f *File) checkValid(op string) error {
 // Write writes the bytes and gives the count.
 func (f *File) Write(p []byte) (int, error) {
 	defer runtime.KeepAlive(f)
+	if f == nil {
+		return 0, ErrInvalid
+	}
+	f.rawWriteMu.Lock()
+	defer f.rawWriteMu.Unlock()
 	if err := f.checkValid("write"); err != nil {
 		return 0, err
 	}
@@ -283,6 +294,11 @@ func (f *File) WriteString(s string) (int, error) { return f.Write([]byte(s)) }
 // end of the file, and the caller compares the error with that value.
 func (f *File) Read(p []byte) (int, error) {
 	defer runtime.KeepAlive(f)
+	if f == nil {
+		return 0, ErrInvalid
+	}
+	f.rawReadMu.Lock()
+	defer f.rawReadMu.Unlock()
 	if err := f.checkValid("read"); err != nil {
 		return 0, err
 	}
@@ -535,6 +551,21 @@ func (f *File) Close() error {
 	}
 	f.cleanup.Stop()
 	f.closed = true
+	// Blocking files defer the native close without a wait. Pollable files
+	// cancel pending probes and wait for callback references.
+	if f.rawRefs != 0 {
+		if f.dir || !dart.FileRawPollable(f.handle) {
+			f.rawCloseDeferred = true
+			return nil
+		}
+		f.rawDone = make(chan struct{})
+		dart.FileRawCancel(f.handle)
+		<-f.rawDone
+	}
+	return f.closeNative()
+}
+
+func (f *file) closeNative() error {
 	f.dirBuf = nil
 	if f.dir {
 		if errno := dart.DirectoryClose(f.dirFD); errno != 0 {
