@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'native_process.dart';
 import 'sched.dart';
 import 'slice.dart';
 import 'string.dart';
@@ -23,7 +24,7 @@ final class _Pipe {
 /// One child process, by process id. Go names a process by its id, thus the
 /// id is the handle of each call.
 final class _Proc {
-  final Process process;
+  final ChildProcess process;
   final _Pipe out;
   final _Pipe err;
   bool waited = false;
@@ -108,21 +109,21 @@ Future<int> _fill(_Pipe pipe) {
     environment[pair.substring(0, eq)] = pair.substring(eq + 1);
   }
   $await(
-    Process.start(
-      parts.first,
-      parts.sublist(1),
-      workingDirectory: dir.length == 0 ? null : dir.toDartString(),
-      environment: environment,
-      includeParentEnvironment: false,
-    ).then((Process p) {
-      _procs[p.pid] = _Proc(p);
-      return (p.pid, 0, _empty);
-    }),
-    (Object cause) => (
-      -1,
-      cause is ProcessException ? cause.errorCode : 0,
-      _cause(cause),
-    ),
+    (Platform.isLinux || Platform.isMacOS
+            ? NativeChild.start(argv, dir, env)
+            : Process.start(
+                parts.first,
+                parts.sublist(1),
+                workingDirectory: dir.length == 0 ? null : dir.toDartString(),
+                environment: environment,
+                includeParentEnvironment: false,
+              ).then<ChildProcess>((process) => DartChild(process)))
+        .then((ChildProcess p) {
+          _procs[p.pid] = _Proc(p);
+          return (p.pid, 0, _empty);
+        }),
+    (Object cause) =>
+        (-1, cause is ProcessException ? cause.errorCode : 0, _cause(cause)),
   );
   return (-1, 0, _empty);
 }
@@ -131,9 +132,8 @@ Future<int> _fill(_Pipe pipe) {
   final _Proc? proc = _procs[pid];
   if (proc == null) return (0, _unknown(pid));
   if (p.len == 0) return (0, _empty);
-  proc.process.stdin.add(_bytes(p));
   $await(
-    proc.process.stdin.flush().then((_) => (p.len, _empty)),
+    proc.process.write(_bytes(p)).then((count) => (count, _empty)),
     (Object cause) => (0, _cause(cause)),
   );
   return (0, _empty);
@@ -145,7 +145,7 @@ GoString $procCloseStdin(int pid) {
   if (proc.stdinClosed) return _empty;
   proc.stdinClosed = true;
   $await(
-    proc.process.stdin.close().then((_) => _empty),
+    proc.process.closeInput().then((_) => _empty),
     (Object cause) => _cause(cause),
   );
   return _empty;
@@ -173,6 +173,8 @@ GoString $procCloseStdin(int pid) {
 GoString $procCloseIO(int pid) {
   final _Proc? proc = _procs[pid];
   if (proc == null) return _unknown(pid);
+  proc.process.closeOutput(false);
+  proc.process.closeOutput(true);
   _closePipe(proc.out);
   _closePipe(proc.err);
   return _empty;
@@ -181,6 +183,7 @@ GoString $procCloseIO(int pid) {
 GoString $procCloseOutput(int pid, bool errStream) {
   final proc = _procs[pid];
   if (proc == null) return _unknown(pid);
+  proc.process.closeOutput(errStream);
   _closePipe(errStream ? proc.err : proc.out);
   return _empty;
 }
@@ -231,7 +234,7 @@ GoString $killPid(int pid, int number) {
   final _Proc? proc = _procs[pid];
   final bool sent = proc == null
       ? Process.killPid(pid, sig)
-      : proc.process.kill(sig);
+      : proc.process.kill(number, sig);
   if (!sent) {
     return GoString.fromString('os: process already finished');
   }

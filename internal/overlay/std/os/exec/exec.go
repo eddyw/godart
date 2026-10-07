@@ -5,7 +5,9 @@
 
 //go:build dart
 
-// Package exec runs a child process over Process of dart:io.
+// Package exec runs child programs through the runtime process bridge.
+// Linux and macOS use native child pipes and actual setup and exec errors.
+// Other targets use Dart processes.
 //
 // The runtime holds the child in a table by its process id, and 7 interop
 // calls carry the start, the 3 pipes, the wait, and the kill.
@@ -217,11 +219,8 @@ func (c *Cmd) Start() error {
 		}
 	}
 	argv := c.argv()
-	// Go gives the child its directory before the exec, thus a relative Path
-	// resolves against Dir. Process.start of Dart resolves against the
-	// directory of the parent, thus the join stands here.
 	path := c.Path
-	if c.Dir != "" && !filepath.IsAbs(path) {
+	if system := dart.OS(); system != "linux" && system != "darwin" && c.Dir != "" && !filepath.IsAbs(path) {
 		path = filepath.Join(c.Dir, path)
 	}
 	full := append([]string{path}, argv[1:]...)

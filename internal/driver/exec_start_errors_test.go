@@ -20,7 +20,7 @@ func main(){
  denied,format:=filepath.Join(root,"denied"),filepath.Join(root,"format")
  if err:=os.WriteFile(denied,[]byte("#!/bin/sh\nexit 0\n"),0600);err!=nil{panic(err)}
  if err:=os.WriteFile(format,[]byte("not a program\n"),0700);err!=nil{panic(err)}
- for _,item:=range []struct{name,path,dir string}{{"missing",filepath.Join(root,"missing"),""},{"directory",root,""},{"denied",denied,""},{"missing-dir",denied,filepath.Join(root,"missing")},{"file-dir",denied,format}}{
+ for _,item:=range []struct{name,path,dir string}{{"missing",filepath.Join(root,"missing"),""},{"directory",root,""},{"denied",denied,""},{"format",format,""},{"missing-dir",denied,filepath.Join(root,"missing")},{"file-dir",denied,format}}{
   cmd:=exec.Command(item.path);cmd.Dir=item.dir;err:=cmd.Start()
   var pe *os.PathError;ok:=errors.As(err,&pe);op:="";path:=false;if ok{op=pe.Op;path=pe.Path==cmd.Path;if op=="chdir"{path=pe.Path==cmd.Dir}}
   fmt.Printf("%s nil=%t path=%t op=%q missing=%t permission=%t format=%t notdir=%t\n",item.name,err==nil,path,op,errors.Is(err,syscall.ENOENT),errors.Is(err,syscall.EACCES),errors.Is(err,syscall.ENOEXEC),errors.Is(err,syscall.ENOTDIR))

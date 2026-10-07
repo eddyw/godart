@@ -104,10 +104,8 @@ func prepareUpstreamSelfExec(t *testing.T, out, entry string) string {
 	}
 	writeFile(t, executableSource, strings.Replace(string(source), executable,
 		"(GoString.fromString("+name+"), GoString.empty)", 1))
-	kernel := filepath.Join(out, "test.dill")
-	run(t, out, dart, "compile", "kernel", "-o", kernel, entry)
 	quote := func(s string) string { return "'" + strings.ReplaceAll(s, "'", "'\\''") + "'" }
-	script := "#!/bin/sh\nexec " + quote(dart) + " " + quote(kernel) + " \"$@\"\n"
+	script := "#!/bin/sh\nexec " + quote(dart) + " " + quote(entry) + " \"$@\"\n"
 	if err := os.WriteFile(launcher, []byte(script), 0700); err != nil {
 		t.Fatal(err)
 	}

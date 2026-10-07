@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -65,8 +64,7 @@ func TestSignalProcessesUpstream(t *testing.T) {
 				if strings.Count(string(source), start) != 1 {
 					t.Fatal("expected 1 generated test entry point")
 				}
-				name := strings.ReplaceAll(strconv.Quote(launcher), "$", `\$`)
-				writeFile(t, entry, upstreamOSImport(t, out)+strings.Replace(string(source), start, "$upstreamOS.Args[0] = GoString.fromString("+name+");\n"+start, 1))
+				writeFile(t, entry, upstreamOSImport(t, out)+strings.Replace(string(source), start, "$upstreamOS.Args[0] = $upstreamOS.Executable().$1;\n"+start, 1))
 				run(t, out, "dart", "compile", "exe", entry, "-o", launcher)
 			}
 			for _, name := range []string{"TestNotifyContextNotifications", "TestNohup"} {

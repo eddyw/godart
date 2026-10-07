@@ -124,8 +124,30 @@ Acceptance must distinguish:
 - Actual child signal dispositions and descriptor leak prevention.
 - Launch failure cleanup and successful child wait results.
 
-The production native launch boundary needs a separate implementation decision.
-The UDP code asset provides a C toolchain path. Native process launch still needs its own implementation and acceptance.
+Linux and macOS implement the child error pipe and parent-owned native stdio through the existing C code asset.
+The child uses only async-signal-safe operations until `execve`.
+The bridge preserves actual launch errors, raw argument bytes, environment bytes, relative paths and child wait results.
+It distinguishes valid exit 127 from invalid format and retains cleanup for failed launches.
+Native child signals use the Go platform number, rather than a Dart enum number.
+
+Dart's child reaper can consume an unregistered native child status on Linux and macOS.
+The bridge first uses `waitpid` and retains a real Linux pidfd when the kernel supplies it.
+On `ECHILD`, `PIDFD_GET_INFO` can provide the actual retained exit status.
+The bridge uses that value only when the kernel returns the exit-status mask bit.
+Linux 7.0 defines this public metadata contract in [`include/uapi/linux/pidfd.h`](https://github.com/torvalds/linux/blob/v7.0/include/uapi/linux/pidfd.h).
+Older kernels cannot recover that status after another reaper consumes it.
+Their wait retains the actual `ECHILD` error, without an inferred exit value.
+
+On macOS, the parent registers the child PID with an owned kqueue before the child executes.
+The child cannot exit before native status registration.
+After `ECHILD`, the bridge reads the actual captured status only when `NOTE_EXITSTATUS` is present.
+Apple defines this public contract in [`bsd/sys/event.h`](https://github.com/apple-oss-distributions/xnu/blob/main/bsd/sys/event.h).
+The parent closes the status descriptor after wait or launch cleanup.
+
+`ExtraFiles`, `SysProcAttr`, caller-selected `argv[0]` and full descriptor-map inheritance remain incomplete.
+The bridge preserves Dart's inherited ignored dispositions and signal mask.
+Thus, inherited SIGPIPE and SIGTTOU behavior still has the documented host limits.
+These limits do not establish complete process parity.
 
 ## IPv6 and UDP creation
 

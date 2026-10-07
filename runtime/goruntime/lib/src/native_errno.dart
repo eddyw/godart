@@ -92,3 +92,50 @@ external NativeResult nativeWrite(int fd, Pointer<Void> data, int length);
 
 @Native<NativeResult Function(Int, Int)>(symbol: 'goruntime_poll')
 external NativeResult nativePoll(int fd, int writeReady);
+
+final class NativeProcessResult extends Struct {
+  @Int()
+  external int pid;
+  @Int()
+  external int error;
+  @Int()
+  external int input;
+  @Int()
+  external int output;
+  @Int()
+  external int diagnostic;
+  @Int()
+  external int launch;
+  @Int()
+  external int statusfd;
+}
+
+final class NativeProcessState extends Struct {
+  @Int()
+  external int value;
+  @Int()
+  external int error;
+  @Int()
+  external int complete;
+}
+
+@Native<
+  NativeProcessResult Function(
+    Pointer<Uint8>,
+    Pointer<Pointer<Uint8>>,
+    Pointer<Pointer<Uint8>>,
+    Pointer<Uint8>,
+  )
+>(symbol: 'goruntime_process_start')
+external NativeProcessResult nativeProcessStart(
+  Pointer<Uint8> path,
+  Pointer<Pointer<Uint8>> argv,
+  Pointer<Pointer<Uint8>> environment,
+  Pointer<Uint8> directory,
+);
+
+@Native<NativeProcessState Function(Int, Int)>(symbol: 'goruntime_process_wait')
+external NativeProcessState nativeProcessWait(int pid, int statusfd);
+
+@Native<NativeResult Function(Int, Int, Int)>(symbol: 'goruntime_process_kill')
+external NativeResult nativeProcessKill(int pid, int statusfd, int signal);

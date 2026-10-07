@@ -146,8 +146,21 @@ The native errno capture limitation also applies to these access calls.
 
 After `Start`, `StdoutPipe` and `StderrPipe` support explicit `Close` and preserve closed-pipe errors.
 Pipe adapters still lack pre-Start operations and native descriptor access.
-Dart stream buffering does not preserve native pipe backpressure.
-Dart can start a shell for an invalid executable format where Go returns `ENOEXEC`.
+Linux and macOS use native child pipes and actual nonblocking read and write operations.
+The child reports setup and `execve` errno through a close-on-exec pipe.
+An invalid executable returns `ENOEXEC` from `Start`, without shell execution.
+A valid child exit of 127 remains a successful launch followed by an exit error.
+Relative executable paths resolve after the child changes its directory.
+Argument and environment values retain their original bytes.
+`Cmd.Args[0]` still follows the program path. `ExtraFiles` and `SysProcAttr` remain unsupported.
+
+Native child wait uses the actual `waitpid` status.
+On Linux and macOS, a concurrent Dart process reaper can consume that status first.
+Linux recovers the actual retained status through `PIDFD_GET_INFO` when the kernel supports it.
+macOS registers a native kqueue before the child executes and recovers its captured `NOTE_EXITSTATUS`.
+An older kernel cannot supply that recovery and the wait reports actual `ECHILD`.
+This limit applies to concurrent Dart child processes in the same host.
+Other targets retain their Dart process adapter.
 
 Linux and macOS support `syscall.Kill` and `syscall.Getpid` through native APIs.
 `os.Process.Signal` supports the standard signals that Dart exposes, plus SIGIO and the native signal-0 query.
