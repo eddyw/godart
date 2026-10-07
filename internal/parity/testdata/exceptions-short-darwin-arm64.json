@@ -14014,5 +14014,13 @@
       "reason": "The original upstream test skips this case in short mode.",
       "test": "TestMaxExecDepth"
     }
+  ],
+  "template-linker-original": [
+    {
+      "test": "TestLinkerGC",
+      "native": "skip",
+      "gart": "skip",
+      "reason": "The original upstream test skips in short mode. Full mode retains its native Go toolchain build and binary assertion."
+    }
   ]
 }

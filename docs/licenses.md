@@ -853,3 +853,6 @@ Their package licenses permit source and binary distribution under the Dart BSD 
 `native_toolchain_c` also resolves `code_assets` 1.2.1 and its Dart BSD terms.
 Pub retains these dependency licenses. Flutter collects their package licenses.
 Standalone distributions must retain applicable dependency notices as specified above.
+
+The template linker adapter preserves Go `src/text/template/link_test.go` and its 2019 BSD notice.
+It retains the original program, native build command and binary assertion.

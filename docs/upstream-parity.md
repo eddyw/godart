@@ -419,3 +419,8 @@ Short mode retains the original skip. A skip does not establish depth parity.
 The standard descriptor fixture compares `syscall.Stdin`, `Stdout` and `Stderr`
 with native Go on all 4 targets. It covers their int type, initial values,
 address-based mutation and restore. Web values do not establish native descriptor access.
+
+The template linker adapter executes the unchanged original `TestLinkerGC` on VM and AOT.
+Short mode retains its original skip. Full mode uses the actual selected native Go toolchain.
+The assertion verifies that toolchain binary through Gart process and file operations.
+It does not establish Gart compiler dead-code behavior or web process support.
