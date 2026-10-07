@@ -106,8 +106,9 @@ final class NativeChild implements ChildProcess {
     GoString executable,
     Slice<GoString> arguments,
     GoString directory,
-    Slice<GoString> environment,
-  ) async {
+    Slice<GoString> environment, {
+    bool pipeIgnored = false,
+  }) async {
     final allocations = <Pointer<NativeType>>[];
     Pointer<Uint8> string(GoString value) {
       final bytes = value.bytes;
@@ -142,6 +143,7 @@ final class NativeChild implements ChildProcess {
         argv,
         strings(environment),
         string(directory),
+        pipeIgnored ? 1 : 0,
       );
       if (result.error != 0) {
         throw ProcessException(

@@ -1834,6 +1834,12 @@ func KillPid(pid int, number int) string {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// SignalPipeIgnore records the Go SIGPIPE disposition for native children.
+// It does not change the Dart process disposition.
+func SignalPipeIgnore(ignored bool) {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // SignalWatch starts a watch of 1 operating system signal and gives its
 // handle. The number is the number of the system, for example 2 for SIGINT.
 // A signal that the platform cannot catch gives a cause.

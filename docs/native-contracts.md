@@ -147,8 +147,10 @@ The parent closes the status descriptor after wait or launch cleanup.
 Native POSIX launch preserves the child name from `argv[0]`.
 The name can be empty or contain non-UTF-8 bytes.
 `ExtraFiles`, `SysProcAttr` and full descriptor-map inheritance remain incomplete.
-The bridge preserves Dart's inherited ignored dispositions and signal mask.
-Thus, inherited SIGPIPE and SIGTTOU behavior still has the documented host limits.
+Native POSIX children use the current Go SIGPIPE Ignore state.
+Notify for SIGPIPE restores the default child disposition. Reset retains an explicit Ignore, as native Go does.
+The bridge retains other inherited Dart dispositions and the signal mask.
+External startup dispositions and SIGTTOU still have host limits.
 These limits do not establish complete process parity.
 
 ## IPv6 and UDP creation

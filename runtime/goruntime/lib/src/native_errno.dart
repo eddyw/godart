@@ -125,6 +125,7 @@ final class NativeProcessState extends Struct {
     Pointer<Pointer<Uint8>>,
     Pointer<Pointer<Uint8>>,
     Pointer<Uint8>,
+    Int,
   )
 >(symbol: 'goruntime_process_start')
 external NativeProcessResult nativeProcessStart(
@@ -132,6 +133,7 @@ external NativeProcessResult nativeProcessStart(
   Pointer<Pointer<Uint8>> argv,
   Pointer<Pointer<Uint8>> environment,
   Pointer<Uint8> directory,
+  int pipeIgnored,
 );
 
 @Native<NativeProcessState Function(Int, Int)>(symbol: 'goruntime_process_wait')

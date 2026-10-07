@@ -102,6 +102,9 @@ func Notify(c chan<- os.Signal, sig ...os.Signal) {
 			continue
 		}
 		delete(ignored, n)
+		if n == int(syscall.SIGPIPE) {
+			dart.SignalPipeIgnore(false)
+		}
 		if w := start(n); w != nil {
 			w.users[c] = true
 		}
@@ -165,6 +168,9 @@ func Ignore(sig ...os.Signal) {
 			continue
 		}
 		ignored[n] = true
+		if n == int(syscall.SIGPIPE) {
+			dart.SignalPipeIgnore(true)
+		}
 		if w := start(n); w != nil {
 			clear(w.users)
 		}

@@ -89,6 +89,12 @@ Future<int> _fill(_Pipe pipe) {
   return next;
 }
 
+bool _pipeIgnored = false;
+
+void $signalPipeIgnore(bool ignored) {
+  _pipeIgnored = ignored;
+}
+
 /// Starts a process and gives its process id. The results are the id and the
 /// cause of a failure. Go keeps a child alive when the program ends, thus the
 /// table holds no release hook.
@@ -111,7 +117,13 @@ Future<int> _fill(_Pipe pipe) {
   }
   $await(
     (Platform.isLinux || Platform.isMacOS
-            ? NativeChild.start(executable, argv, dir, env)
+            ? NativeChild.start(
+                executable,
+                argv,
+                dir,
+                env,
+                pipeIgnored: _pipeIgnored,
+              )
             : Process.start(
                 executable.toDartString(),
                 parts.sublist(1),

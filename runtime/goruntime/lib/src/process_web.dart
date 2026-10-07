@@ -17,6 +17,8 @@ import 'string.dart';
 /// the same text for the errno ENOSYS.
 final GoString _noSys = GoString.fromString('function not implemented');
 
+void $signalPipeIgnore(bool ignored) {}
+
 (int, int, GoString) $procStart(
   GoString executable,
   Slice<GoString> argv,

@@ -160,7 +160,8 @@ static void goruntime_process_error(int fd, int code) {
 struct goruntime_process goruntime_process_start(const char *path,
                                                 char *const argv[],
                                                 char *const env[],
-                                                const char *directory) {
+                                                const char *directory,
+                                                int pipe_ignored) {
   struct goruntime_process result = {-1, 0, -1, -1, -1, -1, -1};
   int pipes[5][2];
   for (int i = 0; i < 5; i++) pipes[i][0] = pipes[i][1] = -1;
@@ -228,7 +229,9 @@ struct goruntime_process goruntime_process_start(const char *path,
     for (int number = 1; number < NSIG; number++) {
       struct sigaction old;
       if (sigaction(number, NULL, &old) == 0 &&
-          old.sa_handler != SIG_IGN && old.sa_handler != SIG_DFL) {
+          (number == SIGPIPE ||
+           (old.sa_handler != SIG_IGN && old.sa_handler != SIG_DFL))) {
+        action.sa_handler = number == SIGPIPE && pipe_ignored ? SIG_IGN : SIG_DFL;
         if (sigaction(number, &action, NULL) < 0) {
           goruntime_process_error(pipes[3][1], errno);
         }

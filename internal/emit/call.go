@@ -1198,6 +1198,8 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$signalWatch(%s)", args[0]), true
 	case "SignalWait":
 		return fmt.Sprintf("$signalWait(%s)", args[0]), true
+	case "SignalPipeIgnore":
+		return fmt.Sprintf("$signalPipeIgnore(%s)", args[0]), true
 	case "SignalStop":
 		return fmt.Sprintf("$signalStop(%s)", args[0]), true
 	case "ProcRead":
