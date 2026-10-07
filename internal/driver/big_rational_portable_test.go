@@ -40,7 +40,7 @@ func TestBigRationalPortable(t *testing.T) {
 	}
 	{
 		path := filepath.Join(dir, "ratconv_test.go")
-		sources[path] = []byte(selectedUpstreamSource(t, path, []string{"StringTest", "TestFloat32SpecialCases", "TestFloat64SpecialCases", "TestFloatPrec", "TestFloatString", "TestIssue31184", "TestRatScan", "TestRatSetString", "TestRatSetStringZero", "TestScanExponent", "exponentTests", "float64inputs", "floatStringTests", "isFinite", "setStringTests", "setStringTests2"}))
+		sources[path] = []byte(selectedUpstreamSource(t, path, []string{"StringTest", "TestFloat32SpecialCases", "TestFloat64SpecialCases", "TestFloatPrec", "TestFloatString", "TestIssue31184", "TestIssue45910", "TestRatScan", "TestRatSetString", "TestRatSetStringZero", "TestScanExponent", "exponentTests", "float64inputs", "floatStringTests", "isFinite", "setStringTests", "setStringTests2"}))
 	}
 	{
 		path := filepath.Join(dir, "ratmarsh_test.go")
@@ -56,7 +56,7 @@ func TestBigRationalPortable(t *testing.T) {
 		t.Fatal(stats.Binaries)
 	}
 	prepareDart(t, out)
-	const filter = "^(TestZeroRat|TestRatSign|TestRatCmp|TestIsInt|TestRatAbs|TestRatNeg|TestRatInv|TestRatBin|TestIssue820|TestRatSetFrac64Rat|TestIssue2379|TestIssue3521|TestFloat32Distribution|TestFloat64Distribution|TestSetFloat64NonFinite|TestIsFinite|TestRatSetInt64|TestRatSetUint64|TestIssue34919|TestDenomRace|TestScanExponent|TestRatSetString|TestRatSetStringZero|TestRatScan|TestFloatString|TestFloat32SpecialCases|TestFloat64SpecialCases|TestIssue31184|TestFloatPrec|TestRatGobEncoding|TestGobEncodingNilRatInSlice|TestRatJSONEncoding|TestRatXMLEncoding|TestRatGobDecodeShortBuffer|TestRatAppendText|TestIntGobEncoding|TestGobEncodingNilIntInSlice|TestIntJSONEncoding|TestIntJSONEncodingNil|TestIntXMLEncoding|TestIntAppendText|TestIntAppendTextNil)$"
+	const filter = "^(TestZeroRat|TestRatSign|TestRatCmp|TestIsInt|TestRatAbs|TestRatNeg|TestRatInv|TestRatBin|TestIssue820|TestRatSetFrac64Rat|TestIssue2379|TestIssue3521|TestFloat32Distribution|TestFloat64Distribution|TestSetFloat64NonFinite|TestIsFinite|TestRatSetInt64|TestRatSetUint64|TestIssue34919|TestDenomRace|TestScanExponent|TestRatSetString|TestRatSetStringZero|TestRatScan|TestFloatString|TestFloat32SpecialCases|TestFloat64SpecialCases|TestIssue31184|TestIssue45910|TestFloatPrec|TestRatGobEncoding|TestGobEncodingNilRatInSlice|TestRatJSONEncoding|TestRatXMLEncoding|TestRatGobDecodeShortBuffer|TestRatAppendText|TestIntGobEncoding|TestGobEncodingNilIntInSlice|TestIntJSONEncoding|TestIntJSONEncodingNil|TestIntXMLEncoding|TestIntAppendText|TestIntAppendTextNil)$"
 	args := upstreamTestArgs("-test.run=" + filter)
 	for _, target := range []string{"vm", "aot", "js", "wasm"} {
 		t.Run(target, func(t *testing.T) {
