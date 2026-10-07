@@ -104,8 +104,30 @@ func prepareUpstreamSelfExec(t *testing.T, out, entry string) string {
 	}
 	writeFile(t, executableSource, strings.Replace(string(source), executable,
 		"(GoString.fromString("+name+"), GoString.empty)", 1))
+	kernel := filepath.Join(out, "test_executable.dill")
+	run(t, out, "dart", "run", "--verbosity=error", "goruntime:build_assets")
+	run(t, out, "dart", "compile", "kernel", "-Ddart.vm.product=false", "-o", kernel, entry)
+	sdk := filepath.Dir(filepath.Dir(dart))
+	assets := filepath.Join(out, "test_native_assets.dill")
+	run(t, out, filepath.Join(sdk, "bin", "dartaotruntime"),
+		filepath.Join(sdk, "bin", "snapshots", "frontend_server_aot.dart.snapshot"),
+		"--sdk-root", sdk, "--platform", filepath.Join(sdk, "lib", "_internal", "vm_platform_strong.dill"),
+		"--target=vm", "--native-assets-only",
+		"--native-assets="+filepath.Join(out, ".dart_tool", "native_assets.yaml"),
+		"--output-dill", assets, entry)
+	kernelData, err := os.ReadFile(kernel)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assetData, err := os.ReadFile(assets)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(kernel, append(kernelData, assetData...), 0600); err != nil {
+		t.Fatal(err)
+	}
 	quote := func(s string) string { return "'" + strings.ReplaceAll(s, "'", "'\\''") + "'" }
-	script := "#!/bin/sh\nexec " + quote(dart) + " " + quote(entry) + " \"$@\"\n"
+	script := "#!/bin/sh\nexec " + quote(dart) + " " + quote(kernel) + " \"$@\"\n"
 	if err := os.WriteFile(launcher, []byte(script), 0700); err != nil {
 		t.Fatal(err)
 	}
