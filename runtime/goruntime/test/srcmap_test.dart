@@ -105,5 +105,4 @@ void main() {
     expect($functionPC(alias), firstPC);
     expect(alias(), 4);
   });
-
 }

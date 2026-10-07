@@ -88,8 +88,9 @@ int $syscallRemovexattr(GoString path, GoString attr) {
   int Function(Pointer<Uint8>, Pointer<Uint8>, Pointer<Uint8>, int) call,
   bool copyBack,
 ) {
-  if (path.bytes.contains(0) || (attr?.bytes.contains(0) ?? false))
+  if (path.bytes.contains(0) || (attr?.bytes.contains(0) ?? false)) {
     return (0, 22);
+  }
   final nameSize = path.length + 1;
   final attrSize = attr == null ? 0 : attr.length + 1;
   final memory = _malloc(nameSize + attrSize + bytes.len + 1);
@@ -99,10 +100,11 @@ int $syscallRemovexattr(GoString path, GoString attr) {
       ..setRange(0, path.length, path.bytes)
       ..[path.length] = 0;
     final attribute = attr == null ? nullptr.cast<Uint8>() : memory + nameSize;
-    if (attr != null)
+    if (attr != null) {
       attribute.asTypedList(attrSize)
         ..setRange(0, attr.length, attr.bytes)
         ..[attr.length] = 0;
+    }
     final buffer = memory + nameSize + attrSize;
     buffer
         .asTypedList(bytes.len)
@@ -111,12 +113,13 @@ int $syscallRemovexattr(GoString path, GoString attr) {
     final result = call(memory, attribute, buffer, bytes.len);
     final code = result < 0 ? errorAddress.value : 0;
     // Preserve all native buffer writes, including writes before an error.
-    if (copyBack && bytes.len > 0)
+    if (copyBack && bytes.len > 0) {
       bytes.array.setRange(
         bytes.off,
         bytes.off + bytes.len,
         buffer.asTypedList(bytes.len),
       );
+    }
     return (result, code);
   } finally {
     _free(memory);

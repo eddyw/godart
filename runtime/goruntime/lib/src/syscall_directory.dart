@@ -19,19 +19,25 @@ final _free = _libc
       Void Function(Pointer<Uint8>),
       void Function(Pointer<Uint8>)
     >('free');
-final _mknodat = _libc.lookupFunction<
-  Int Function(Int, Pointer<Uint8>, UnsignedInt, Uint64),
-  int Function(int, Pointer<Uint8>, int, int)
->('mknodat');
-final _nanosleep = _libc.lookupFunction<
-  Int Function(Pointer<Uint8>, Pointer<Uint8>),
-  int Function(Pointer<Uint8>, Pointer<Uint8>)
->('nanosleep');
-final _exchangedata = _libc.lookupFunction<
-  Int Function(Pointer<Uint8>, Pointer<Uint8>, UnsignedInt),
-  int Function(Pointer<Uint8>, Pointer<Uint8>, int)
->('exchangedata');
-final _revoke = _libc.lookupFunction<Int Function(Pointer<Uint8>), int Function(Pointer<Uint8>)>('revoke');
+final _mknodat = _libc
+    .lookupFunction<
+      Int Function(Int, Pointer<Uint8>, UnsignedInt, Uint64),
+      int Function(int, Pointer<Uint8>, int, int)
+    >('mknodat');
+final _nanosleep = _libc
+    .lookupFunction<
+      Int Function(Pointer<Uint8>, Pointer<Uint8>),
+      int Function(Pointer<Uint8>, Pointer<Uint8>)
+    >('nanosleep');
+final _exchangedata = _libc
+    .lookupFunction<
+      Int Function(Pointer<Uint8>, Pointer<Uint8>, UnsignedInt),
+      int Function(Pointer<Uint8>, Pointer<Uint8>, int)
+    >('exchangedata');
+final _revoke = _libc
+    .lookupFunction<Int Function(Pointer<Uint8>), int Function(Pointer<Uint8>)>(
+      'revoke',
+    );
 
 int $syscallRevoke(GoString path) {
   final text = _malloc(path.length + 1);
@@ -48,7 +54,10 @@ int $syscallRevoke(GoString path) {
   }
 }
 
-final _undelete = _libc.lookupFunction<Int Function(Pointer<Uint8>), int Function(Pointer<Uint8>)>('undelete');
+final _undelete = _libc
+    .lookupFunction<Int Function(Pointer<Uint8>), int Function(Pointer<Uint8>)>(
+      'undelete',
+    );
 
 int $syscallUndelete(GoString path) {
   final text = _malloc(path.length + 1);
@@ -65,12 +74,32 @@ int $syscallUndelete(GoString path) {
   }
 }
 
-final _kevent = _libc.lookupFunction<
-  Int Function(Int, Pointer<Uint8>, Int, Pointer<Uint8>, Int, Pointer<Uint8>),
-  int Function(int, Pointer<Uint8>, int, Pointer<Uint8>, int, Pointer<Uint8>)
->('kevent');
+final _kevent = _libc
+    .lookupFunction<
+      Int Function(
+        Int,
+        Pointer<Uint8>,
+        Int,
+        Pointer<Uint8>,
+        Int,
+        Pointer<Uint8>,
+      ),
+      int Function(
+        int,
+        Pointer<Uint8>,
+        int,
+        Pointer<Uint8>,
+        int,
+        Pointer<Uint8>,
+      )
+    >('kevent');
 
-(int, int) $syscallKevent(int kq, Slice<int> changes, Slice<int> events, Slice<int> timeout) {
+(int, int) $syscallKevent(
+  int kq,
+  Slice<int> changes,
+  Slice<int> events,
+  Slice<int> timeout,
+) {
   if (!Platform.isMacOS) return (-1, 78);
   final buffers = Map<List<int>, Pointer<Uint8>>.identity();
   try {
@@ -81,14 +110,33 @@ final _kevent = _libc.lookupFunction<
       buffers[data.array] = buffer;
       buffer.asTypedList(data.array.length).setAll(0, data.array);
     }
-    final change = changes.len == 0 ? nullptr.cast<Uint8>() : buffers[changes.array]! + changes.off;
-    final event = events.len == 0 ? nullptr.cast<Uint8>() : buffers[events.array]! + events.off;
-    final limit = timeout.len == 0 ? nullptr.cast<Uint8>() : buffers[timeout.array]! + timeout.off;
+    final change = changes.len == 0
+        ? nullptr.cast<Uint8>()
+        : buffers[changes.array]! + changes.off;
+    final event = events.len == 0
+        ? nullptr.cast<Uint8>()
+        : buffers[events.array]! + events.off;
+    final limit = timeout.len == 0
+        ? nullptr.cast<Uint8>()
+        : buffers[timeout.array]! + timeout.off;
     final call = _kevent;
     final errorAddress = _errno();
-    final n = call(kq, change, changes.len ~/ 32, event, events.len ~/ 32, limit);
+    final n = call(
+      kq,
+      change,
+      changes.len ~/ 32,
+      event,
+      events.len ~/ 32,
+      limit,
+    );
     final code = n < 0 ? errorAddress.value : 0;
-    if (events.len != 0) events.array.setRange(events.off, events.off + events.len, event.asTypedList(events.len));
+    if (events.len != 0) {
+      events.array.setRange(
+        events.off,
+        events.off + events.len,
+        event.asTypedList(events.len),
+      );
+    }
     return (n, code);
   } finally {
     for (final buffer in buffers.values) {
@@ -97,12 +145,18 @@ final _kevent = _libc.lookupFunction<
   }
 }
 
-final _bpfIoctl = _libc.lookupFunction<
-  Int Function(Int, UnsignedLong, VarArgs<(Pointer<Uint8>,)>),
-  int Function(int, int, Pointer<Uint8>)
->('ioctl');
+final _bpfIoctl = _libc
+    .lookupFunction<
+      Int Function(Int, UnsignedLong, VarArgs<(Pointer<Uint8>,)>),
+      int Function(int, int, Pointer<Uint8>)
+    >('ioctl');
 
-int $syscallBpfIoctl(int fd, int request, Slice<int> data, Slice<int> instructions) {
+int $syscallBpfIoctl(
+  int fd,
+  int request,
+  Slice<int> data,
+  Slice<int> instructions,
+) {
   if (!Platform.isMacOS) return 78;
   switch (request) {
     case 0x40044266:
@@ -129,17 +183,27 @@ int $syscallBpfIoctl(int fd, int request, Slice<int> data, Slice<int> instructio
   final buffer = size == 0 ? nullptr.cast<Uint8>() : _malloc(size);
   if (size != 0 && buffer == nullptr) return 12;
   try {
-    if (data.len != 0) buffer.asTypedList(data.len).setRange(0, data.len, data.array, data.off);
+    if (data.len != 0) {
+      buffer.asTypedList(data.len).setRange(0, data.len, data.array, data.off);
+    }
     if (request == 0x80104267) {
       final filters = buffer + data.len;
-      filters.asTypedList(instructions.len).setRange(0, instructions.len, instructions.array, instructions.off);
+      filters
+          .asTypedList(instructions.len)
+          .setRange(0, instructions.len, instructions.array, instructions.off);
       (buffer + 8).cast<Pointer<Uint8>>().value = filters;
     }
     final call = _bpfIoctl;
     final errorAddress = _errno();
     final code = call(fd, request, buffer) < 0 ? errorAddress.value : 0;
     // A native filter pointer must never enter a Go byte object.
-    if (data.len != 0 && request != 0x80104267) data.array.setRange(data.off, data.off + data.len, buffer.asTypedList(data.len));
+    if (data.len != 0 && request != 0x80104267) {
+      data.array.setRange(
+        data.off,
+        data.off + data.len,
+        buffer.asTypedList(data.len),
+      );
+    }
     return code;
   } finally {
     if (buffer != nullptr) _free(buffer);
@@ -155,8 +219,12 @@ final _kqueue = _libc.lookupFunction<Int Function(), int Function()>('kqueue');
   return (fd, fd < 0 ? errorAddress.value : 0);
 }
 
-final _getdtablesize = _libc.lookupFunction<Int Function(), int Function()>('getdtablesize');
-final _issetugid = _libc.lookupFunction<Int Function(), int Function()>('issetugid');
+final _getdtablesize = _libc.lookupFunction<Int Function(), int Function()>(
+  'getdtablesize',
+);
+final _issetugid = _libc.lookupFunction<Int Function(), int Function()>(
+  'issetugid',
+);
 
 int $syscallGetdtablesize() => _getdtablesize();
 bool $syscallIssetugid() => _issetugid() != 0;
@@ -179,89 +247,149 @@ final _socketpair = _libc
       Int Function(Int, Int, Int, Pointer<Int32>),
       int Function(int, int, int, Pointer<Int32>)
     >('socketpair');
-final _accept = _libc.lookupFunction<
-  Int Function(Int, Pointer<Uint8>, Pointer<Uint32>),
-  int Function(int, Pointer<Uint8>, Pointer<Uint32>)
->('accept');
-final _accept4 = _libc.lookupFunction<
-  Int Function(Int, Pointer<Uint8>, Pointer<Uint32>, Int),
-  int Function(int, Pointer<Uint8>, Pointer<Uint32>, int)
->('accept4');
-final _recvfrom = _libc.lookupFunction<
-  IntPtr Function(Int, Pointer<Uint8>, Size, Int, Pointer<Uint8>, Pointer<Uint32>),
-  int Function(int, Pointer<Uint8>, int, int, Pointer<Uint8>, Pointer<Uint32>)
->('recvfrom');
-final _getsockname = _libc.lookupFunction<
-  Int Function(Int, Pointer<Uint8>, Pointer<Uint32>),
-  int Function(int, Pointer<Uint8>, Pointer<Uint32>)
->('getsockname');
-final _getpeername = _libc.lookupFunction<
-  Int Function(Int, Pointer<Uint8>, Pointer<Uint32>),
-  int Function(int, Pointer<Uint8>, Pointer<Uint32>)
->('getpeername');
+final _accept = _libc
+    .lookupFunction<
+      Int Function(Int, Pointer<Uint8>, Pointer<Uint32>),
+      int Function(int, Pointer<Uint8>, Pointer<Uint32>)
+    >('accept');
+final _accept4 = _libc
+    .lookupFunction<
+      Int Function(Int, Pointer<Uint8>, Pointer<Uint32>, Int),
+      int Function(int, Pointer<Uint8>, Pointer<Uint32>, int)
+    >('accept4');
+final _recvfrom = _libc
+    .lookupFunction<
+      IntPtr Function(
+        Int,
+        Pointer<Uint8>,
+        Size,
+        Int,
+        Pointer<Uint8>,
+        Pointer<Uint32>,
+      ),
+      int Function(
+        int,
+        Pointer<Uint8>,
+        int,
+        int,
+        Pointer<Uint8>,
+        Pointer<Uint32>,
+      )
+    >('recvfrom');
+final _getsockname = _libc
+    .lookupFunction<
+      Int Function(Int, Pointer<Uint8>, Pointer<Uint32>),
+      int Function(int, Pointer<Uint8>, Pointer<Uint32>)
+    >('getsockname');
+final _getpeername = _libc
+    .lookupFunction<
+      Int Function(Int, Pointer<Uint8>, Pointer<Uint32>),
+      int Function(int, Pointer<Uint8>, Pointer<Uint32>)
+    >('getpeername');
 final _socketBind = _libc
-    .lookupFunction<Int Function(Int, Pointer<Uint8>, Uint32), int Function(int, Pointer<Uint8>, int)>('bind');
+    .lookupFunction<
+      Int Function(Int, Pointer<Uint8>, Uint32),
+      int Function(int, Pointer<Uint8>, int)
+    >('bind');
 final _socketConnect = _libc
-    .lookupFunction<Int Function(Int, Pointer<Uint8>, Uint32), int Function(int, Pointer<Uint8>, int)>('connect');
+    .lookupFunction<
+      Int Function(Int, Pointer<Uint8>, Uint32),
+      int Function(int, Pointer<Uint8>, int)
+    >('connect');
 final _socketSendto = _libc
-    .lookupFunction<IntPtr Function(Int, Pointer<Uint8>, Size, Int, Pointer<Uint8>, Uint32), int Function(int, Pointer<Uint8>, int, int, Pointer<Uint8>, int)>('sendto');
+    .lookupFunction<
+      IntPtr Function(Int, Pointer<Uint8>, Size, Int, Pointer<Uint8>, Uint32),
+      int Function(int, Pointer<Uint8>, int, int, Pointer<Uint8>, int)
+    >('sendto');
 final _select = _libc
     .lookupFunction<
-      Int Function(Int, Pointer<Uint8>, Pointer<Uint8>, Pointer<Uint8>, Pointer<Uint8>),
-      int Function(int, Pointer<Uint8>, Pointer<Uint8>, Pointer<Uint8>, Pointer<Uint8>)
+      Int Function(
+        Int,
+        Pointer<Uint8>,
+        Pointer<Uint8>,
+        Pointer<Uint8>,
+        Pointer<Uint8>,
+      ),
+      int Function(
+        int,
+        Pointer<Uint8>,
+        Pointer<Uint8>,
+        Pointer<Uint8>,
+        Pointer<Uint8>,
+      )
     >('select');
-final _sysinfo = _libc.lookupFunction<
-  Int Function(Pointer<Uint8>),
-  int Function(Pointer<Uint8>)
->('sysinfo');
+final _sysinfo = _libc
+    .lookupFunction<Int Function(Pointer<Uint8>), int Function(Pointer<Uint8>)>(
+      'sysinfo',
+    );
 final _gettid = _libc.lookupFunction<Int Function(), int Function()>('gettid');
-final _times = _libc.lookupFunction<
-  Int64 Function(Pointer<Uint8>),
-  int Function(Pointer<Uint8>)
->('times');
-final _inotifyInit = _libc.lookupFunction<Int Function(), int Function()>('inotify_init');
-final _inotifyInit1 = _libc.lookupFunction<Int Function(Int), int Function(int)>('inotify_init1');
-final _inotifyAddWatch = _libc.lookupFunction<
-  Int Function(Int, Pointer<Uint8>, Uint32),
-  int Function(int, Pointer<Uint8>, int)
->('inotify_add_watch');
-final _inotifyRmWatch = _libc.lookupFunction<
-  Int Function(Int, Uint32),
-  int Function(int, int)
->('inotify_rm_watch');
-final _epollCreate1 = _libc.lookupFunction<Int Function(Int), int Function(int)>('epoll_create1');
-final _epollCtl = _libc.lookupFunction<
-  Int Function(Int, Int, Int, Pointer<Uint8>),
-  int Function(int, int, int, Pointer<Uint8>)
->('epoll_ctl');
-final _epollWait = _libc.lookupFunction<
-  Int Function(Int, Pointer<Uint8>, Int, Int),
-  int Function(int, Pointer<Uint8>, int, int)
->('epoll_wait');
-final _rawPipe = _libc.lookupFunction<
-  Int Function(Pointer<Int32>),
-  int Function(Pointer<Int32>)
->('pipe');
-final _pipe2 = _libc.lookupFunction<
-  Int Function(Pointer<Int32>, Int),
-  int Function(Pointer<Int32>, int)
->('pipe2');
-final _splice = _libc.lookupFunction<
-  IntPtr Function(Int, Pointer<Int64>, Int, Pointer<Int64>, Size, UnsignedInt),
-  int Function(int, Pointer<Int64>, int, Pointer<Int64>, int, int)
->('splice');
-final _tee = _libc.lookupFunction<
-  IntPtr Function(Int, Int, Size, UnsignedInt),
-  int Function(int, int, int, int)
->('tee');
-final _sendfile = _libc.lookupFunction<
-  IntPtr Function(Int, Int, Pointer<Int64>, Size),
-  int Function(int, int, Pointer<Int64>, int)
->('sendfile');
-final _syncFileRange = _libc.lookupFunction<
-  Int Function(Int, Int64, Int64, UnsignedInt),
-  int Function(int, int, int, int)
->('sync_file_range');
+final _times = _libc
+    .lookupFunction<
+      Int64 Function(Pointer<Uint8>),
+      int Function(Pointer<Uint8>)
+    >('times');
+final _inotifyInit = _libc.lookupFunction<Int Function(), int Function()>(
+  'inotify_init',
+);
+final _inotifyInit1 = _libc
+    .lookupFunction<Int Function(Int), int Function(int)>('inotify_init1');
+final _inotifyAddWatch = _libc
+    .lookupFunction<
+      Int Function(Int, Pointer<Uint8>, Uint32),
+      int Function(int, Pointer<Uint8>, int)
+    >('inotify_add_watch');
+final _inotifyRmWatch = _libc
+    .lookupFunction<Int Function(Int, Uint32), int Function(int, int)>(
+      'inotify_rm_watch',
+    );
+final _epollCreate1 = _libc
+    .lookupFunction<Int Function(Int), int Function(int)>('epoll_create1');
+final _epollCtl = _libc
+    .lookupFunction<
+      Int Function(Int, Int, Int, Pointer<Uint8>),
+      int Function(int, int, int, Pointer<Uint8>)
+    >('epoll_ctl');
+final _epollWait = _libc
+    .lookupFunction<
+      Int Function(Int, Pointer<Uint8>, Int, Int),
+      int Function(int, Pointer<Uint8>, int, int)
+    >('epoll_wait');
+final _rawPipe = _libc
+    .lookupFunction<Int Function(Pointer<Int32>), int Function(Pointer<Int32>)>(
+      'pipe',
+    );
+final _pipe2 = _libc
+    .lookupFunction<
+      Int Function(Pointer<Int32>, Int),
+      int Function(Pointer<Int32>, int)
+    >('pipe2');
+final _splice = _libc
+    .lookupFunction<
+      IntPtr Function(
+        Int,
+        Pointer<Int64>,
+        Int,
+        Pointer<Int64>,
+        Size,
+        UnsignedInt,
+      ),
+      int Function(int, Pointer<Int64>, int, Pointer<Int64>, int, int)
+    >('splice');
+final _tee = _libc
+    .lookupFunction<
+      IntPtr Function(Int, Int, Size, UnsignedInt),
+      int Function(int, int, int, int)
+    >('tee');
+final _sendfile = _libc
+    .lookupFunction<
+      IntPtr Function(Int, Int, Pointer<Int64>, Size),
+      int Function(int, int, Pointer<Int64>, int)
+    >('sendfile');
+final _syncFileRange = _libc
+    .lookupFunction<
+      Int Function(Int, Int64, Int64, UnsignedInt),
+      int Function(int, int, int, int)
+    >('sync_file_range');
 final _fallocate = _libc
     .lookupFunction<
       Int Function(Int, Int, Int64, Int64),
@@ -751,7 +879,12 @@ int $syscallSetsockoptTimeval(int fd, int level, int option, Slice<int> data) {
   }
 }
 
-int $syscallGetsockoptICMPv6Filter(int fd, int level, int option, Slice<int> data) {
+int $syscallGetsockoptICMPv6Filter(
+  int fd,
+  int level,
+  int option,
+  Slice<int> data,
+) {
   final buffer = _malloc(36);
   if (buffer == nullptr) return 12;
   try {
@@ -769,7 +902,12 @@ int $syscallGetsockoptICMPv6Filter(int fd, int level, int option, Slice<int> dat
   }
 }
 
-int $syscallSetsockoptICMPv6Filter(int fd, int level, int option, Slice<int> data) {
+int $syscallSetsockoptICMPv6Filter(
+  int fd,
+  int level,
+  int option,
+  Slice<int> data,
+) {
   final buffer = data.isNil ? nullptr.cast<Uint8>() : _malloc(32);
   if (!data.isNil && buffer == nullptr) return 12;
   try {
@@ -808,12 +946,16 @@ int $syscallSysinfo(Slice<int> data) {
   final buffer = data.isNil ? nullptr.cast<Uint8>() : _malloc(112);
   if (!data.isNil && buffer == nullptr) return 12;
   try {
-    if (!data.isNil) buffer.asTypedList(112).setRange(0, 112, data.array, data.off);
+    if (!data.isNil) {
+      buffer.asTypedList(112).setRange(0, 112, data.array, data.off);
+    }
     final sysinfo = _sysinfo;
     final errorAddress = _errno();
     final result = sysinfo(buffer);
     final code = result < 0 ? errorAddress.value : 0;
-    if (!data.isNil) data.array.setRange(data.off, data.off + 112, buffer.asTypedList(112));
+    if (!data.isNil) {
+      data.array.setRange(data.off, data.off + 112, buffer.asTypedList(112));
+    }
     return code;
   } finally {
     if (buffer != nullptr) _free(buffer);
@@ -826,12 +968,16 @@ int $syscallGettid() => _gettid();
   final buffer = data.isNil ? nullptr.cast<Uint8>() : _malloc(32);
   if (!data.isNil && buffer == nullptr) return (-1, 12);
   try {
-    if (!data.isNil) buffer.asTypedList(32).setRange(0, 32, data.array, data.off);
+    if (!data.isNil) {
+      buffer.asTypedList(32).setRange(0, 32, data.array, data.off);
+    }
     final times = _times;
     final errorAddress = _errno();
     final ticks = times(buffer);
     final code = ticks == -1 ? errorAddress.value : 0;
-    if (!data.isNil) data.array.setRange(data.off, data.off + 32, buffer.asTypedList(32));
+    if (!data.isNil) {
+      data.array.setRange(data.off, data.off + 32, buffer.asTypedList(32));
+    }
     return (ticks, code);
   } finally {
     if (buffer != nullptr) _free(buffer);
@@ -886,7 +1032,9 @@ int $syscallEpollCtl(int epfd, int op, int fd, Slice<int> data) {
   final buffer = data.isNil ? nullptr.cast<Uint8>() : _malloc(data.len);
   if (!data.isNil && buffer == nullptr) return 12;
   try {
-    if (!data.isNil) buffer.asTypedList(data.len).setRange(0, data.len, data.array, data.off);
+    if (!data.isNil) {
+      buffer.asTypedList(data.len).setRange(0, data.len, data.array, data.off);
+    }
     final control = _epollCtl;
     final errorAddress = _errno();
     return control(epfd, op, fd, buffer) < 0 ? errorAddress.value : 0;
@@ -904,7 +1052,11 @@ int $syscallEpollCtl(int epfd, int op, int fd, Slice<int> data) {
     final errorAddress = _errno();
     final n = wait(epfd, buffer, count, msec);
     final code = n < 0 ? errorAddress.value : 0;
-    data.array.setRange(data.off, data.off + data.len, buffer.asTypedList(data.len));
+    data.array.setRange(
+      data.off,
+      data.off + data.len,
+      buffer.asTypedList(data.len),
+    );
     return (n, code);
   } finally {
     _free(buffer);
@@ -941,7 +1093,14 @@ int $syscallEpollCtl(int epfd, int op, int fd, Slice<int> data) {
   }
 }
 
-(int, int) $syscallSplice(int rfd, Slice<int> read, int wfd, Slice<int> write, int length, int flags) {
+(int, int) $syscallSplice(
+  int rfd,
+  Slice<int> read,
+  int wfd,
+  Slice<int> write,
+  int length,
+  int flags,
+) {
   final splice = _splice;
   Pointer<Uint8> storage = nullptr;
   Pointer<Int64> readPointer = nullptr;
@@ -951,13 +1110,21 @@ int $syscallEpollCtl(int epfd, int op, int fd, Slice<int> data) {
     if (storage == nullptr) return (-1, 12);
     if (!read.isNil) {
       readPointer = storage.cast<Int64>();
-      for (var i = 0; i < 8; i++) { storage[i] = read[i]; }
+      for (var i = 0; i < 8; i++) {
+        storage[i] = read[i];
+      }
     }
     if (!write.isNil) {
-      writePointer = !read.isNil && identical(read.array, write.array) && read.off == write.off
-          ? readPointer : (storage + 8).cast<Int64>();
+      writePointer =
+          !read.isNil &&
+              identical(read.array, write.array) &&
+              read.off == write.off
+          ? readPointer
+          : (storage + 8).cast<Int64>();
       final bytes = writePointer.cast<Uint8>();
-      for (var i = 0; i < 8; i++) { bytes[i] = write[i]; }
+      for (var i = 0; i < 8; i++) {
+        bytes[i] = write[i];
+      }
     }
   }
   try {
@@ -966,11 +1133,15 @@ int $syscallEpollCtl(int epfd, int op, int fd, Slice<int> data) {
     final code = n < 0 ? errorAddress.value : 0;
     if (!read.isNil) {
       final bytes = readPointer.cast<Uint8>();
-      for (var i = 0; i < 8; i++) { read[i] = bytes[i]; }
+      for (var i = 0; i < 8; i++) {
+        read[i] = bytes[i];
+      }
     }
     if (!write.isNil) {
       final bytes = writePointer.cast<Uint8>();
-      for (var i = 0; i < 8; i++) { write[i] = bytes[i]; }
+      for (var i = 0; i < 8; i++) {
+        write[i] = bytes[i];
+      }
     }
     return (n, code);
   } finally {
@@ -1021,7 +1192,9 @@ int $syscallExchangedata(GoString first, GoString second, int options) {
     bytes[first.length] = 0;
     bytes.setRange(first.length + 1, length - 1, second.bytes);
     bytes[length - 1] = 0;
-    final other = Pointer<Uint8>.fromAddress(storage.address + first.length + 1);
+    final other = Pointer<Uint8>.fromAddress(
+      storage.address + first.length + 1,
+    );
     final exchangedata = _exchangedata;
     final errorAddress = _errno();
     return exchangedata(storage, other, options) < 0 ? errorAddress.value : 0;
@@ -1049,7 +1222,9 @@ int $syscallNanosleep(Slice<int> request, Slice<int> leftover) {
     final code = result < 0 ? errorAddress.value : 0;
     if (!leftover.isNil) {
       leftover.array.setRange(
-        0, leftover.len, buffers[leftover.array]!.asTypedList(leftover.len),
+        0,
+        leftover.len,
+        buffers[leftover.array]!.asTypedList(leftover.len),
       );
     }
     return code;
@@ -1118,7 +1293,9 @@ int _socketAddressCall(
   final buffer = _malloc(address.len);
   if (buffer == nullptr) return 12;
   try {
-    buffer.asTypedList(address.len).setRange(0, address.len, address.array, address.off);
+    buffer
+        .asTypedList(address.len)
+        .setRange(0, address.len, address.array, address.off);
     final errorAddress = _errno();
     return call(fd, buffer, address.len) < 0 ? errorAddress.value : 0;
   } finally {
@@ -1133,21 +1310,29 @@ int $syscallConnect(int fd, Slice<int> address) =>
     _socketAddressCall(_socketConnect, fd, address);
 
 int $syscallSendto(int fd, Slice<int> data, int flags, Slice<int> address) {
-  final destination = address.isNil ? nullptr.cast<Uint8>() : _malloc(address.len);
+  final destination = address.isNil
+      ? nullptr.cast<Uint8>()
+      : _malloc(address.len);
   if (!address.isNil && destination == nullptr) return 12;
   try {
     final payload = data.len == 0 ? nullptr.cast<Uint8>() : _malloc(data.len);
     if (data.len != 0 && payload == nullptr) return 12;
     try {
       if (!address.isNil) {
-        destination.asTypedList(address.len).setRange(0, address.len, address.array, address.off);
+        destination
+            .asTypedList(address.len)
+            .setRange(0, address.len, address.array, address.off);
       }
       if (data.len != 0) {
-        payload.asTypedList(data.len).setRange(0, data.len, data.array, data.off);
+        payload
+            .asTypedList(data.len)
+            .setRange(0, data.len, data.array, data.off);
       }
       final sendto = _socketSendto;
       final errorAddress = _errno();
-      return sendto(fd, payload, data.len, flags, destination, address.len) < 0 ? errorAddress.value : 0;
+      return sendto(fd, payload, data.len, flags, destination, address.len) < 0
+          ? errorAddress.value
+          : 0;
     } finally {
       if (payload != nullptr) _free(payload);
     }
@@ -1194,18 +1379,31 @@ int $syscallGetpeername(int fd, Slice<int> data) =>
   try {
     final bytes = nativeAddress.asTypedList(address.len);
     bytes.fillRange(0, bytes.length, 0);
-    final length = Pointer<Uint32>.fromAddress(nativeAddress.address + address.len);
+    final length = Pointer<Uint32>.fromAddress(
+      nativeAddress.address + address.len,
+    );
     length.value = address.len;
     final payload = _malloc(data.len == 0 ? 1 : data.len);
     if (payload == nullptr) return (-1, 12);
     try {
       final recvfrom = _recvfrom;
       final errorAddress = _errno();
-      final count = recvfrom(fd, payload, data.len, flags, nativeAddress, length);
+      final count = recvfrom(
+        fd,
+        payload,
+        data.len,
+        flags,
+        nativeAddress,
+        length,
+      );
       if (count < 0) return (count, errorAddress.value);
       final copied = count < data.len ? count : data.len;
       if (copied != 0) {
-        data.array.setRange(data.off, data.off + copied, payload.asTypedList(copied));
+        data.array.setRange(
+          data.off,
+          data.off + copied,
+          payload.asTypedList(copied),
+        );
       }
       address.array.setRange(address.off, address.off + address.len, bytes);
       return (count, 0);
@@ -1223,7 +1421,9 @@ int $syscallGetpeername(int fd, Slice<int> data) =>
   try {
     final bytes = nativeAddress.asTypedList(address.len);
     bytes.fillRange(0, bytes.length, 0);
-    final length = Pointer<Uint32>.fromAddress(nativeAddress.address + address.len);
+    final length = Pointer<Uint32>.fromAddress(
+      nativeAddress.address + address.len,
+    );
     length.value = address.len;
     final linuxAccept = Platform.isLinux ? _accept4 : null;
     final darwinAccept = Platform.isLinux ? null : _accept;

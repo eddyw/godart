@@ -12,9 +12,10 @@ import 'slice.dart';
 import 'string.dart';
 import 'syscall_directory.dart';
 
+export 'chflags_darwin.dart';
 export 'directory_descriptor.dart';
-export 'file_attributes.dart';
 export 'fcntl_flock.dart';
+export 'file_attributes.dart';
 export 'file_handle.dart'
     show $nativePread, $nativePwrite, $nativeRead, $nativeWrite;
 export 'file_links.dart';
@@ -22,21 +23,20 @@ export 'file_mmap.dart';
 export 'file_readlink.dart';
 export 'file_rename.dart';
 export 'file_stat.dart';
+export 'filesystem_stats.dart';
+export 'mkfifo_native.dart';
+export 'pathconf_darwin.dart';
 export 'removeall.dart' show $syscallUnlink, $rootRemove, $rootRemoveAll;
 export 'resource_limits.dart';
 export 'resource_usage.dart';
-export 'filesystem_stats.dart';
 export 'root.dart' show $rootOpen, $rootOpenAt, $rootOpenDir, $rootMkdir;
-export 'syscall_directory.dart';
-export 'unix_datagram.dart' show $syscallSendmsgN, $syscallRecvmsg;
-export 'sysctl_darwin.dart';
 export 'sendfile_darwin.dart';
-export 'pathconf_darwin.dart';
-export 'chflags_darwin.dart';
-export 'mkfifo_native.dart';
+export 'syscall_directory.dart';
+export 'sysctl_darwin.dart';
 export 'uname_linux.dart';
-export 'xattr_linux.dart';
+export 'unix_datagram.dart' show $syscallSendmsgN, $syscallRecvmsg;
 export 'working_directory.dart';
+export 'xattr_linux.dart';
 
 /// The name of the operating system, in the words of the Go constant GOOS.
 GoString $goos() {

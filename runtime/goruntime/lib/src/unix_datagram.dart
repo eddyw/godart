@@ -537,11 +537,17 @@ final class UnixDatagram {
     if (data.len == 0) {
       (buffer.memory + 64).cast<_Vector>().ref.data = nullptr;
     } else {
-      buffer.data.asTypedList(data.len).setRange(0, data.len, data.array, data.off);
+      buffer.data
+          .asTypedList(data.len)
+          .setRange(0, data.len, data.array, data.off);
     }
-    buffer.control.asTypedList(control.len).setRange(0, control.len, control.array, control.off);
+    buffer.control
+        .asTypedList(control.len)
+        .setRange(0, control.len, control.array, control.off);
     if (!address.isNil) {
-      buffer.name.asTypedList(address.len).setRange(0, address.len, address.array, address.off);
+      buffer.name
+          .asTypedList(address.len)
+          .setRange(0, address.len, address.array, address.off);
     }
     if (Platform.isMacOS) {
       buffer.memory.cast<_DarwinMessage>().ref
@@ -579,7 +585,9 @@ final class UnixDatagram {
     if (data.len == 0) {
       (buffer.memory + 64).cast<_Vector>().ref.data = nullptr;
     }
-    buffer.control.asTypedList(control.len).setRange(0, control.len, control.array, control.off);
+    buffer.control
+        .asTypedList(control.len)
+        .setRange(0, control.len, control.array, control.off);
     if (Platform.isMacOS) {
       buffer.memory.cast<_DarwinMessage>().ref.nameLength = address.len;
     } else {
@@ -593,13 +601,27 @@ final class UnixDatagram {
     final receivedFlags = buffer.flags;
     final copied = count < data.len ? count : data.len;
     if (copied != 0) {
-      data.array.setRange(data.off, data.off + copied, buffer.data.asTypedList(copied));
+      data.array.setRange(
+        data.off,
+        data.off + copied,
+        buffer.data.asTypedList(copied),
+      );
     }
-    final copiedControl = receivedControl < control.len ? receivedControl : control.len;
+    final copiedControl = receivedControl < control.len
+        ? receivedControl
+        : control.len;
     if (copiedControl != 0) {
-      control.array.setRange(control.off, control.off + copiedControl, buffer.control.asTypedList(copiedControl));
+      control.array.setRange(
+        control.off,
+        control.off + copiedControl,
+        buffer.control.asTypedList(copiedControl),
+      );
     }
-    address.array.setRange(address.off, address.off + address.len, buffer.name.asTypedList(address.len));
+    address.array.setRange(
+      address.off,
+      address.off + address.len,
+      buffer.name.asTypedList(address.len),
+    );
     return (count, receivedControl, receivedFlags, 0);
   } finally {
     buffer.release();

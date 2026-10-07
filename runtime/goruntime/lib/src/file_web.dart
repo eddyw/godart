@@ -497,7 +497,8 @@ int $syscallListen(int fd, int how) => -1;
 
 int $syscallSysinfo(Slice<GoInt> data) => 38;
 
-int $syscallGettid() => throw UnsupportedError('syscall.Gettid requires native Linux');
+int $syscallGettid() =>
+    throw UnsupportedError('syscall.Gettid requires native Linux');
 
 (int, int) $syscallTimes(Slice<GoInt> data) => (-1, 38);
 
@@ -513,20 +514,37 @@ int $syscallGettid() => throw UnsupportedError('syscall.Gettid requires native L
 
 int $syscallEpollCtl(int epfd, int op, int fd, Slice<GoInt> data) => 38;
 
-(int, int) $syscallEpollWait(int epfd, Slice<GoInt> data, int count, int msec) => (-1, 38);
+(int, int) $syscallEpollWait(
+  int epfd,
+  Slice<GoInt> data,
+  int count,
+  int msec,
+) => (-1, 38);
 
 (int, int, int) $syscallPipe() => (0, 0, -1);
 
 (int, int, int) $syscallPipe2(int flags) => (0, 0, 38);
 
-(int, int) $syscallSplice(int rfd, Slice<GoInt> read, int wfd, Slice<GoInt> write, int length, int flags) => (-1, 38);
+(int, int) $syscallSplice(
+  int rfd,
+  Slice<GoInt> read,
+  int wfd,
+  Slice<GoInt> write,
+  int length,
+  int flags,
+) => (-1, 38);
 
 (int, int) $syscallTee(int rfd, int wfd, int length, int flags) => (-1, 38);
 
 (int, int) $syscallDarwinSendfile(int outfd, int infd, int offset, int count) =>
     (0, -1);
 
-(int, int) $syscallSendfile(int outfd, int infd, Slice<GoInt> offset, int count) => (-1, 38);
+(int, int) $syscallSendfile(
+  int outfd,
+  int infd,
+  Slice<GoInt> offset,
+  int count,
+) => (-1, 38);
 
 int $syscallNanosleep(Slice<GoInt> request, Slice<GoInt> leftover) => 38;
 
@@ -539,9 +557,19 @@ int $syscallExchangedata(GoString first, GoString second, int options) => 78;
 int $syscallRevoke(GoString path) => -1;
 int $syscallUndelete(GoString path) => -1;
 
-(int, int) $syscallKevent(int kq, Slice<GoInt> changes, Slice<GoInt> events, Slice<GoInt> timeout) => (-1, 78);
+(int, int) $syscallKevent(
+  int kq,
+  Slice<GoInt> changes,
+  Slice<GoInt> events,
+  Slice<GoInt> timeout,
+) => (-1, 78);
 
-int $syscallBpfIoctl(int fd, int request, Slice<GoInt> data, Slice<GoInt> instructions) => 78;
+int $syscallBpfIoctl(
+  int fd,
+  int request,
+  Slice<GoInt> data,
+  Slice<GoInt> instructions,
+) => 78;
 
 (int, int) $syscallKqueue() => (-1, -1);
 
@@ -564,17 +592,40 @@ int $syscallFallocate(int fd, int mode, int offset, int length) => 38;
 
 int $syscallBind(int fd, Slice<GoInt> address) => -1;
 int $syscallConnect(int fd, Slice<GoInt> address) => -1;
-int $syscallSendto(int fd, Slice<GoInt> data, int flags, Slice<GoInt> address) => -1;
+int $syscallSendto(
+  int fd,
+  Slice<GoInt> data,
+  int flags,
+  Slice<GoInt> address,
+) => -1;
 
 int $syscallGetsockname(int fd, Slice<GoInt> data) => -1;
 int $syscallGetpeername(int fd, Slice<GoInt> data) => -1;
 
-(int, int) $syscallRecvfrom(int fd, Slice<GoInt> data, int flags, Slice<GoInt> address) => (-1, -1);
+(int, int) $syscallRecvfrom(
+  int fd,
+  Slice<GoInt> data,
+  int flags,
+  Slice<GoInt> address,
+) => (-1, -1);
 
-(int, int, int) $syscallAccept(int fd, int flags, Slice<GoInt> address) => (-1, 0, -1);
+(int, int, int) $syscallAccept(int fd, int flags, Slice<GoInt> address) =>
+    (-1, 0, -1);
 
-(int, int) $syscallSendmsgN(int fd, Slice<GoInt> data, Slice<GoInt> control, int flags, Slice<GoInt> address) => (0, -1);
-(int, int, int, int) $syscallRecvmsg(int fd, Slice<GoInt> data, Slice<GoInt> control, int flags, Slice<GoInt> address) => (0, 0, 0, -1);
+(int, int) $syscallSendmsgN(
+  int fd,
+  Slice<GoInt> data,
+  Slice<GoInt> control,
+  int flags,
+  Slice<GoInt> address,
+) => (0, -1);
+(int, int, int, int) $syscallRecvmsg(
+  int fd,
+  Slice<GoInt> data,
+  Slice<GoInt> control,
+  int flags,
+  Slice<GoInt> address,
+) => (0, 0, 0, -1);
 
 bool $fileRawPollable(int handle) => false;
 int $fileRawPrepare(int handle, int mode) => 3;

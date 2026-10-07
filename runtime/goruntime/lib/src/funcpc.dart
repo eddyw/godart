@@ -50,7 +50,11 @@ int $pcEntry(int pc) {
   return _entries[text.substring(0, text.indexOf('|'))] ?? pc;
 }
 
-F $functionValue<F extends Function>(F value, GoString info, [String? identity]) {
+F $functionValue<F extends Function>(
+  F value,
+  GoString info, [
+  String? identity,
+]) {
   _functions[value] ??= _FunctionPC($registerFunction(info, identity));
   return value;
 }

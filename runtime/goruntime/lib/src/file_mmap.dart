@@ -55,14 +55,16 @@ int $syscallMunmap(Slice<int> data) {
   return code;
 }
 
-final _mprotectDarwin = _libc.lookupFunction<
-  Int Function(Pointer<Uint8>, Size, Int),
-  int Function(Pointer<Uint8>, int, int)
->('mprotect');
-final _mprotectLinux = _libc.lookupFunction<
-  Long Function(Long, VarArgs<(Pointer<Uint8>, Size, UnsignedLong)>),
-  int Function(int, Pointer<Uint8>, int, int)
->('syscall');
+final _mprotectDarwin = _libc
+    .lookupFunction<
+      Int Function(Pointer<Uint8>, Size, Int),
+      int Function(Pointer<Uint8>, int, int)
+    >('mprotect');
+final _mprotectLinux = _libc
+    .lookupFunction<
+      Long Function(Long, VarArgs<(Pointer<Uint8>, Size, UnsignedLong)>),
+      int Function(int, Pointer<Uint8>, int, int)
+    >('syscall');
 
 int $syscallMprotect(Slice<int> data, int prot) {
   final mapping = _active[data.array];
@@ -81,10 +83,11 @@ int $syscallMprotect(Slice<int> data, int prot) {
   return result < 0 ? errorAddress.value : 0;
 }
 
-final _madvise = _libc.lookupFunction<
-  Int Function(Pointer<Uint8>, Size, Int),
-  int Function(Pointer<Uint8>, int, int)
->('madvise');
+final _madvise = _libc
+    .lookupFunction<
+      Int Function(Pointer<Uint8>, Size, Int),
+      int Function(Pointer<Uint8>, int, int)
+    >('madvise');
 
 int $syscallMadvise(Slice<int> data, int advice) {
   final mapping = _active[data.array];
@@ -96,14 +99,16 @@ int $syscallMadvise(Slice<int> data, int advice) {
   return result < 0 ? errorAddress.value : 0;
 }
 
-final _mlock = _libc.lookupFunction<
-  Int Function(Pointer<Uint8>, Size),
-  int Function(Pointer<Uint8>, int)
->('mlock');
-final _munlock = _libc.lookupFunction<
-  Int Function(Pointer<Uint8>, Size),
-  int Function(Pointer<Uint8>, int)
->('munlock');
+final _mlock = _libc
+    .lookupFunction<
+      Int Function(Pointer<Uint8>, Size),
+      int Function(Pointer<Uint8>, int)
+    >('mlock');
+final _munlock = _libc
+    .lookupFunction<
+      Int Function(Pointer<Uint8>, Size),
+      int Function(Pointer<Uint8>, int)
+    >('munlock');
 
 int $syscallMlock(Slice<int> data) {
   final mapping = _active[data.array];
