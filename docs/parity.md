@@ -19,6 +19,7 @@ SDK versions, modes, and exclusions.
 | Type layout | `unsafe.Sizeof`, `unsafe.Alignof`, and `unsafe.Offsetof` use 64-bit Go type metadata, including generic types. They do not describe Dart object storage. |
 | Compiler diagnostics | Native Go optimization messages and instruction selection are outside the Gart compiler contract. Source compilation and runtime behavior require separate coverage. |
 | Native access | Typed pointers can convert to opaque `unsafe.Pointer` values with canonical allocation identity and Go byte offsets. Nil and constant-zero conversions remain. No cgo, integer addresses, native pointer arithmetic, or pointer reinterpretation. |
+| Atomic pointers | `LoadPointer`, `StorePointer`, `SwapPointer`, and `CompareAndSwapPointer` preserve opaque pointer identity in 1 Dart isolate. They expose no native addresses or shared memory across isolates. |
 | Pointer output | Process-local numeric identities preserve canonical allocation identity and logical byte offsets. Data identities use the high unsigned bit, separate from synthetic function PCs. Allocation bases preserve the logical 8-byte alignment. They expose no native memory address. |
 | Map iteration | The runtime can expose insertion order. Programs must not depend on Go's unspecified iteration order. |
 | Experimental methods | With `GOEXPERIMENT=fieldtrack`, `go:nointerface` methods remain callable but cannot satisfy interfaces or appear in reflection method tables. |
