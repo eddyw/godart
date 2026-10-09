@@ -16,7 +16,7 @@ part of '../greet.dart';
 final GoInt Plain = $gi(0);
 final GoInt Loud = $gi(1);
 
-final class Greeter$ {
+final class Greeter$ implements $GoStruct {
   late GoString Name;
   late GoInt $field$style;
 
