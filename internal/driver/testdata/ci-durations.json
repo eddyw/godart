@@ -2089,6 +2089,7 @@
   "driver/full/TestHTTPUpstream": 153.81,
   "driver/full/TestIntegerSliceEqualityCalls": 40.87,
   "driver/full/TestIntegerSliceEqualityOriginal": 75.7,
+  "driver/full/TestKernelExecutionContract": 0.9,
   "driver/full/TestLinuxMappedMadvise": 52.77,
   "driver/full/TestLinuxPtraceValues": 76.47,
   "driver/full/TestListenerDeadlineUpstream": 36.15,
