@@ -874,3 +874,8 @@ from Go `src/net/file.go` and `src/net/tcpsock.go`. It retains their 2015
 and 2009 BSD notices. The native socket address adapter retains the BSD notice
 from the existing datagram adapter. Native descriptor ownership tests compare
 the real Go and Gart operations. They do not establish Unix listener file parity.
+
+The macOS filesystem-sync differential follows the selected Go SDK
+`src/syscall/zsyscall_darwin_arm64.go` Sync contract under the Go BSD license.
+It preserves actual file bytes, positions, descriptor ownership and the error result.
+The existing runtime calls the actual void libc sync function.
