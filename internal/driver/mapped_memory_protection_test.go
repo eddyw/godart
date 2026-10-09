@@ -100,7 +100,12 @@ func main(){
 						for _, target := range []string{"vm", "aot"} {
 							t.Run(target, func(t *testing.T) {
 								executable := filepath.Join(out, "mapped.exe")
-								if target == "aot" {
+								compilerInfo := filepath.Join(out, "resident-compiler.json")
+								if target == "vm" {
+									t.Cleanup(func() {
+										run(t, out, "dart", "compilation-server", "shutdown", "--resident-compiler-info-file="+compilerInfo)
+									})
+								} else {
 									run(t, out, "dart", "compile", "exe", "bin/main.dart", "-o", executable)
 								}
 								for _, mode := range []string{"normal", "unavailable", "read", "write"} {
@@ -111,7 +116,7 @@ func main(){
 										}
 										var got programResult
 										if target == "vm" {
-											got = upstreamOutcome(t, dir, os.Environ(), runLimit, "dart", append([]string{filepath.Join(out, "bin/main.dart")}, args...)...)
+											got = upstreamOutcome(t, dir, os.Environ(), runLimit, "dart", append([]string{"run", "--resident", "--quiet", "--verbosity=error", "--resident-compiler-info-file=" + compilerInfo, filepath.Join(out, "bin/main.dart")}, args...)...)
 										} else {
 											got = upstreamOutcome(t, dir, os.Environ(), runLimit, executable, args...)
 										}
