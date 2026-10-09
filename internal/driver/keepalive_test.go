@@ -182,9 +182,15 @@ func TestInvalidAndClosed(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	writeFile(t, runtimePath, string(data)+`
+	writeFile(t, runtimePath, "import 'syscall_directory.dart' as native;\n"+string(data)+`
 int $testSocketOption(int fd,int level,int option) {
- final socket=(_at(fd) as _RawConn).socket;
+ final conn=_at(fd);
+ if(conn is _NativeConn) {
+  final(value,code)=native.$syscallGetsockoptInt(conn.socket.descriptor,level,option);
+  if(code!=0) throw tcpError(code);
+  return value;
+ }
+ final socket=(conn as _RawConn).socket;
  final value=RawSocketOption.fromInt(level,option,0);
  final bytes=socket.getRawOption(value);
  return ByteData.sublistView(bytes).getInt32(0,Endian.host);

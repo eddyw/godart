@@ -8,6 +8,47 @@ final class NativeResult extends Struct {
   external int error;
 }
 
+@Native<NativeResult Function(Pointer<Void>, Uint32, Int)>(
+  symbol: 'goruntime_tcp_listen',
+)
+external NativeResult nativeTcpListen(
+  Pointer<Void> address,
+  int length,
+  int ipv6Only,
+);
+
+@Native<NativeResult Function(Int)>(symbol: 'goruntime_tcp_accept')
+external NativeResult nativeTcpAccept(int fd);
+
+@Native<NativeResult Function(Int)>(symbol: 'goruntime_tcp_duplicate')
+external NativeResult nativeTcpDuplicate(int fd);
+
+final class NativeTcpFileResult extends Struct {
+  @Int()
+  external int value;
+  @Int()
+  external int error;
+  @Int()
+  external int operation;
+}
+
+@Native<NativeTcpFileResult Function(Int)>(symbol: 'goruntime_tcp_adopt')
+external NativeTcpFileResult nativeTcpAdopt(int fd);
+
+@Native<NativeResult Function(Int, Int, Int, Pointer<Void>, Uint32)>(
+  symbol: 'goruntime_setsockopt',
+)
+external NativeResult nativeSetsockopt(
+  int fd,
+  int level,
+  int option,
+  Pointer<Void> value,
+  int length,
+);
+
+@Native<NativeResult Function(Int, Int)>(symbol: 'goruntime_shutdown')
+external NativeResult nativeShutdown(int fd, int direction);
+
 @Native<NativeResult Function(Int, Pointer<Void>, Uint32)>(
   symbol: 'goruntime_connect',
 )

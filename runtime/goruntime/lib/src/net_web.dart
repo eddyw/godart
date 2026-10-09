@@ -189,3 +189,8 @@ GoString $packetDeadline(int handle, int read, int write) => _noNet;
     (GoString.fromString('operation not supported'), 38);
 (GoString, int) $unixgramShutdown(int handle, int direction) =>
     (GoString.fromString('operation not supported'), 38);
+
+(int, int) $listenFile(int handle) => (-1, 38);
+
+(int, GoString, int, int, GoString) $fileListener(int fd) =>
+    (-1, GoString.empty, 0, 38, GoString.empty);

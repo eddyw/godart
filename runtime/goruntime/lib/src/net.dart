@@ -15,6 +15,7 @@ import 'goint.dart';
 import 'sched.dart';
 import 'slice.dart';
 import 'string.dart';
+import 'tcp_posix.dart';
 
 export 'interface_native.dart';
 export 'unix_datagram_runtime.dart';
@@ -24,10 +25,9 @@ export 'unix_datagram_runtime.dart';
 /// The rest holds the bytes that a read did not take, because a Go read gives
 /// only the count that the slice holds.
 ///
-/// The class holds 2 forms. A plain TCP connection and a connection of the
-/// Unix domain each ride a RawSocket, thus each 1 reaches the half close of
-/// the system. A TLS connection rides a Socket, because the secure socket of
-/// Dart owns the record layer and it drains the socket under it.
+/// A dialed TCP connection and a Unix connection use RawSocket.
+/// A native TCP listener gives a connection with a native descriptor.
+/// A TLS connection uses Socket because Dart owns the record layer.
 abstract class _Conn {
   Uint8List rest = Uint8List(0);
 
@@ -84,6 +84,76 @@ abstract class _Conn {
   /// option writes 1 socket option.
   void setFlag(SocketOption option, bool on);
   void setRaw(RawSocketOption option);
+}
+
+final class _NativeConn extends _Conn {
+  final NativeTcpSocket socket;
+  Future<void> writes = Future<void>.value();
+
+  _NativeConn(this.socket)
+    : super(
+        socket.local.$1,
+        socket.local.$2,
+        socket.remote.$1,
+        socket.remote.$2,
+      );
+
+  @override
+  Future<int> fill() async {
+    rest = await socket.read();
+    if (rest.isEmpty) {
+      ended = true;
+      return 1;
+    }
+    return 0;
+  }
+
+  @override
+  Future<int> send(Uint8List bytes) {
+    // Native writes can complete in microtasks and prevent socket events.
+    final next = writes.then((_) => Future<int>(() => _send(bytes)));
+    writes = next.then<void>((_) {}, onError: (Object _) {});
+    return next;
+  }
+
+  Future<int> _send(Uint8List bytes) async {
+    var count = 0;
+    try {
+      while (true) {
+        if (socket.closed) {
+          throw const SocketException('use of closed network connection');
+        }
+        if (writeDeadline.expired) throw const SocketException('i/o timeout');
+        if (count == bytes.length) return count;
+        count += socket.write(bytes, count);
+        if (count == bytes.length) return count;
+        final ready = await writeDeadline.limit(
+          Future<bool>.delayed(const Duration(milliseconds: 1), () => true),
+          false,
+        );
+        if (!ready) throw const SocketException('i/o timeout');
+      }
+    } catch (cause) {
+      throw _WriteFailure(count, cause);
+    }
+  }
+
+  @override
+  void endWrite() => socket.shutdown(1);
+  @override
+  String endRead() {
+    socket.shutdown(0);
+    return '';
+  }
+
+  @override
+  void destroy() => socket.close();
+  @override
+  void setFlag(SocketOption option, bool on) => socket.setOption(
+    RawSocketOption.fromInt(RawSocketOption.levelTcp, 1, on ? 1 : 0),
+  );
+  @override
+  void setRaw(RawSocketOption option) => socket.setOption(option);
 }
 
 final class _WriteFailure implements Exception {
@@ -357,8 +427,8 @@ final List<_Conn?> _open = <_Conn?>[];
 /// iterator closes the server socket, and a pending accept then gives no
 /// connection.
 ///
-/// A plain listener gives a RawSocket and a TLS listener gives a SecureSocket,
-/// thus the element type of the stream is Object and each accept casts it.
+/// A listener gives NativeTcpSocket, RawSocket or SecureSocket.
+/// The stream uses Object, and each accept selects the connection type.
 final class _Listener {
   final StreamIterator<Object> incoming;
   Future<void> ready = Future<void>.value();
@@ -371,8 +441,9 @@ final class _Listener {
   final Future<void> Function() close;
 
   final String tcpHost;
+  final NativeTcpServer? native;
 
-  _Listener(Stream<Object> stream, this.close, [this.tcpHost = ''])
+  _Listener(Stream<Object> stream, this.close, [this.tcpHost = '', this.native])
     : incoming = StreamIterator<Object>(stream);
 
   Future<Object?> next() {
@@ -409,6 +480,7 @@ final class _Listener {
         source.then<void>((socket) {
           if (socket is RawSocket) socket.close();
           if (socket is Socket) socket.destroy();
+          if (socket is NativeTcpSocket) socket.close();
         }, onError: (Object error, StackTrace stack) {}),
       );
     }
@@ -1060,10 +1132,12 @@ Future<(int, GoString, int)> _readConn(int handle, _Conn c, Slice<int> p) {
   if (c == null) return (0, _closed(), 0);
   if (c.writeDeadline.expired) return (0, _timeout(), 0);
   if (c.writeEnded) return (0, GoString.fromString('broken pipe'), 0);
-  if (p.len == 0 && c is! _RawConn) return (0, _empty, 0);
+  if (p.len == 0 && c is! _RawConn && c is! _NativeConn) return (0, _empty, 0);
   final next = c.send(_bytes(p)).then((int n) => (n, _empty, 0));
   $await(
-    c is _RawConn ? next : c.writeDeadline.limit(next, (0, _timeout(), 0)),
+    c is _RawConn || c is _NativeConn
+        ? next
+        : c.writeDeadline.limit(next, (0, _timeout(), 0)),
     (Object cause) {
       if (cause is _WriteFailure) {
         return (cause.count, _cause(cause.cause), _socketErrno(cause.cause));
@@ -1240,8 +1314,12 @@ String $connCloseWrite(int handle) {
   final _Conn? c = _at(handle);
   if (c == null) return 'use of closed network connection';
   if (!c.writeEnded) {
+    try {
+      c.endWrite();
+    } on SocketException catch (cause) {
+      return _cause(cause).toDartString();
+    }
     c.writeEnded = true;
-    c.endWrite();
   }
   return '';
 }
@@ -1257,7 +1335,12 @@ String $connCloseRead(int handle) {
   final _Conn? c = _at(handle);
   if (c == null) return 'use of closed network connection';
   if (c.readEnded) return '';
-  final String cause = c.endRead();
+  String cause;
+  try {
+    cause = c.endRead();
+  } on SocketException catch (error) {
+    return _cause(error).toDartString();
+  }
   if (cause != '') return cause;
   c.readEnded = true;
   c.ended = true;
@@ -1279,6 +1362,26 @@ GoString $connDeadline(int handle, int read, int write) {
 /// A port of 0 asks the system for a free port.
 /// The call yields control. The synchronous return value is unused.
 (int, int, GoString) $listenTCP(GoString host, int port, bool ipv6Only) {
+  if (Platform.isLinux || Platform.isMacOS) {
+    $await(
+      _bindNativeTCP(host.toDartString(), port, ipv6Only).then(
+        (server) => (
+          _listenSlot(
+            _Listener(
+              server.incoming,
+              server.close,
+              server.address.address,
+              server,
+            ),
+          ),
+          server.port,
+          _empty,
+        ),
+      ),
+      (Object cause) => (-1, 0, _cause(cause)),
+    );
+    return (-1, 0, _empty);
+  }
   $await(
     _bindTCP(host.toDartString(), port, ipv6Only).then(
       (RawServerSocket s) => (
@@ -1290,6 +1393,71 @@ GoString $connDeadline(int handle, int read, int write) {
     (Object cause) => (-1, 0, _cause(cause)),
   );
   return (-1, 0, _empty);
+}
+
+Future<NativeTcpServer> _bindNativeTCP(
+  String host,
+  int port,
+  bool ipv6Only,
+) async {
+  if (host.isNotEmpty) {
+    return NativeTcpServer.bind(await _address(host), port, ipv6Only);
+  }
+  try {
+    return NativeTcpServer.bind(InternetAddress.anyIPv6, port, false);
+  } on SocketException catch (error) {
+    final code = error.osError?.errorCode;
+    final unavailable = Platform.isMacOS
+        ? code == 47 || code == 49
+        : code == 97 || code == 99;
+    if (!unavailable) rethrow;
+    return NativeTcpServer.bind(InternetAddress.anyIPv4, port, false);
+  }
+}
+
+(int, int) $listenFile(int handle) {
+  final listener = _listenerAt(handle);
+  if (listener == null) return (-1, 9);
+  final server = listener.native;
+  if (server == null) return (-1, Platform.isMacOS ? 78 : 38);
+  try {
+    return (server.duplicate(), 0);
+  } on SocketException catch (error) {
+    return (-1, error.osError!.errorCode);
+  }
+}
+
+(int, GoString, int, int, GoString) $fileListener(int descriptor) {
+  if (!Platform.isLinux && !Platform.isMacOS) {
+    return (-1, _empty, 0, 38, _empty);
+  }
+  try {
+    final server = NativeTcpServer.fromFile(descriptor);
+    return (
+      _listenSlot(
+        _Listener(
+          server.incoming,
+          server.close,
+          server.address.address,
+          server,
+        ),
+      ),
+      GoString.fromString(server.address.address),
+      server.port,
+      0,
+      _empty,
+    );
+  } on SocketException catch (error) {
+    return (
+      -1,
+      _empty,
+      0,
+      error.osError!.errorCode,
+      GoString.fromString(error.message),
+    );
+  } on UnsupportedError {
+    return (-1, _empty, 0, 0, GoString.fromString('unsupported'));
+  }
 }
 
 Future<RawServerSocket> _bindTCP(String host, int port, bool ipv6Only) async {
@@ -1387,7 +1555,14 @@ GoString $listenTCPHost(int handle) =>
     l.next().then((Object? socket) {
       if (socket == null) return (-1, _closed());
       if (identical(socket, _acceptExpired)) return (-1, _timeout());
-      return (_slot(_RawConn(socket as RawSocket)), _empty);
+      return (
+        _slot(
+          socket is NativeTcpSocket
+              ? _NativeConn(socket)
+              : _RawConn(socket as RawSocket),
+        ),
+        _empty,
+      );
     }),
     (Object cause) => (-1, _cause(cause)),
   );

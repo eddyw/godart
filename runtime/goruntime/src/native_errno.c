@@ -11,6 +11,8 @@
 #include <unistd.h>
 #include <stdint.h>
 #include <sys/socket.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
 #ifdef __linux__
 #include <sys/syscall.h>
 #elif defined(__APPLE__)
@@ -21,6 +23,98 @@ struct goruntime_result {
   intptr_t value;
   int error;
 };
+
+
+struct goruntime_result goruntime_tcp_listen(const void *address, uint32_t length, int ipv6_only) {
+  struct goruntime_result result = {-1, 0};
+  const struct sockaddr *addr = address;
+  int fd = socket(addr->sa_family, SOCK_STREAM, 0);
+  if (fd < 0) { result.error = errno; return result; }
+  int enabled = 1;
+  if (fcntl(fd, F_SETFD, FD_CLOEXEC) < 0 ||
+      fcntl(fd, F_SETFL, O_NONBLOCK) < 0 ||
+      setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &enabled, sizeof(enabled)) < 0 ||
+      (addr->sa_family == AF_INET6 && setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY, &ipv6_only, sizeof(ipv6_only)) < 0) ||
+      bind(fd, addr, length) < 0 || listen(fd, SOMAXCONN) < 0) {
+    result.error = errno;
+    close(fd);
+    return result;
+  }
+  result.value = fd;
+  return result;
+}
+
+struct goruntime_result goruntime_tcp_accept(int fd) {
+  struct goruntime_result result = {-1, 0};
+#ifdef __linux__
+  int accepted = accept4(fd, NULL, NULL, SOCK_NONBLOCK | SOCK_CLOEXEC);
+#else
+  int accepted = accept(fd, NULL, NULL);
+#endif
+  if (accepted < 0) { result.error = errno; return result; }
+  int enabled = 1;
+  if (fcntl(accepted, F_SETFD, FD_CLOEXEC) < 0 ||
+      fcntl(accepted, F_SETFL, O_NONBLOCK) < 0 ||
+#ifdef __APPLE__
+      setsockopt(accepted, SOL_SOCKET, SO_NOSIGPIPE, &enabled, sizeof(enabled)) < 0 ||
+#endif
+      setsockopt(accepted, IPPROTO_TCP, TCP_NODELAY, &enabled, sizeof(enabled)) < 0) {
+    result.error = errno;
+    close(accepted);
+    return result;
+  }
+  result.value = accepted;
+  return result;
+}
+
+struct goruntime_result goruntime_tcp_duplicate(int fd) {
+  struct goruntime_result result = {-1, 0};
+  result.value = fcntl(fd, F_DUPFD_CLOEXEC, 0);
+  result.error = result.value < 0 ? errno : 0;
+  return result;
+}
+
+struct goruntime_tcp_file {
+  int value;
+  int error;
+  int operation;
+};
+
+struct goruntime_tcp_file goruntime_tcp_adopt(int fd) {
+  struct goruntime_tcp_file result = {-1, 0, 1};
+  struct goruntime_result copied = goruntime_tcp_duplicate(fd);
+  if (copied.value < 0) { result.error = copied.error; return result; }
+  int type = 0;
+  socklen_t length = sizeof(type);
+  result.operation = 2;
+  if (getsockopt(copied.value, SOL_SOCKET, SO_TYPE, &type, &length) < 0) {
+    result.error = errno;
+    close(copied.value);
+    return result;
+  }
+  result.operation = 0;
+  if (type != SOCK_STREAM) {
+    result.error = EINVAL;
+    close(copied.value);
+    return result;
+  }
+  result.value = copied.value;
+  return result;
+}
+
+struct goruntime_result goruntime_setsockopt(int fd, int level, int option, const void *value, uint32_t length) {
+  struct goruntime_result result;
+  result.value = setsockopt(fd, level, option, value, length);
+  result.error = result.value < 0 ? errno : 0;
+  return result;
+}
+
+struct goruntime_result goruntime_shutdown(int fd, int direction) {
+  struct goruntime_result result;
+  result.value = shutdown(fd, direction);
+  result.error = result.value < 0 ? errno : 0;
+  return result;
+}
 
 struct goruntime_result goruntime_connect(int fd, const void *address, uint32_t length) {
   struct goruntime_result result;

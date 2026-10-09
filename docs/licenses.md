@@ -868,3 +868,9 @@ The reflection pointer methods retain their Go-derived API contracts.
 The source retains the Go copyright notice and BSD license reference.
 The template adapters retain the complete original SDK sources and their Go BSD notices.
 The native package selection includes `src/text/template/link_test.go` and its 2019 BSD notice.
+
+The TCP listener file overlay derives its public contract and file address type
+from Go `src/net/file.go` and `src/net/tcpsock.go`. It retains their 2015
+and 2009 BSD notices. The native socket address adapter retains the BSD notice
+from the existing datagram adapter. Native descriptor ownership tests compare
+the real Go and Gart operations. They do not establish Unix listener file parity.

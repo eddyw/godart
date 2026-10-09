@@ -28,7 +28,8 @@ import (
 // `CloseWrite` and `CloseRead` each ride `RawSocket.shutdown`, which ends 1
 // direction of the socket, exactly as the same call of Go does.
 //
-// A TCP listener has no `File` or `SyscallConn` method because Dart owns the descriptor.
+// Linux and macOS TCP listeners own native descriptors. File duplicates the descriptor.
+// Listener SyscallConn and connection descriptor APIs remain incomplete.
 //
 // Go embeds the unexported type `conn` in `TCPConn`. The overlay names each
 // method of the connection again, because a promoted method of an unexported
@@ -254,6 +255,23 @@ func (l *TCPListener) Close() error {
 		return syscall.EINVAL
 	}
 	return l.l.Close()
+}
+
+// File returns a duplicate descriptor. The caller owns the returned file.
+// Close on either owner does not close the other owner.
+func (l *TCPListener) File() (*os.File, error) {
+	if l == nil || l.l.network == "" {
+		return nil, syscall.EINVAL
+	}
+	fd, code := dart.ListenFile(l.l.handle)
+	if code != 0 {
+		var err error = &os.SyscallError{Syscall: "fcntl", Err: syscall.Errno(code)}
+		if l.l.handle < 0 {
+			err = ErrClosed
+		}
+		return nil, &OpError{Op: "file", Net: l.l.network, Addr: l.l.addr, Err: err}
+	}
+	return os.NewFile(uintptr(fd), l.l.network+":"+l.l.addr.String()+"->"), nil
 }
 
 // SetDeadline sets the accept deadline. Zero removes the deadline.

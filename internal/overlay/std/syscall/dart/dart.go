@@ -1493,6 +1493,17 @@ func ListenTCPHost(handle int) string {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// ListenFile duplicates the native listener descriptor. The caller owns the copy.
+func ListenFile(handle int) (int, int) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+// FileListener duplicates a TCP listener descriptor and gives its handle, address,
+// port, native error code and operation. The caller retains source ownership.
+func FileListener(fd int) (int, string, int, int, string) {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // ListenTLS opens a TLS listener on a host and a port. The certificate chain
 // and the key each hold the PEM form, and alpn holds each protocol that the
 // server offers. The 3 results are the handle, the port that the system took,
