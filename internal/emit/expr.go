@@ -1176,6 +1176,9 @@ func (e *emitter) composite(x *ir.Composite) string {
 		for len(parts) < int(u.Len()) {
 			parts = append(parts, e.zero(u.Elem()))
 		}
+		if len(parts) > 128 && literalData(x) {
+			return e.largeArray(u.Elem(), parts)
+		}
 		return e.inlineArray(fmt.Sprintf("<%s>[%s]", e.dartType(u.Elem()), strings.Join(parts, ", ")), u.Elem())
 	case *types.Slice:
 		if len(parts) > 128 && literalData(x) {

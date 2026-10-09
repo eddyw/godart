@@ -27,6 +27,21 @@ func (e *emitter) largeSlice(elem types.Type, parts []string) string {
 	return text.String()
 }
 
+// Keep large array data out of a single Dart optimizer graph.
+func (e *emitter) largeArray(elem types.Type, parts []string) string {
+	var text strings.Builder
+	text.WriteString("(() {\n")
+	var calls []string
+	for start := 0; start < len(parts); start += 128 {
+		name := fmt.Sprintf("$chunk%d", start/128)
+		fmt.Fprintf(&text, "@pragma('dart2js:noInline')\n@pragma('wasm:never-inline')\nList<%s> %s() => <%s>[%s];\n",
+			e.dartType(elem), name, e.dartType(elem), strings.Join(parts[start:min(start+128, len(parts))], ", "))
+		calls = append(calls, "..."+name+"()")
+	}
+	fmt.Fprintf(&text, "return <%s>[%s];\n})()", e.dartType(elem), strings.Join(calls, ", "))
+	return e.inlineArray(text.String(), elem)
+}
+
 // A helper must not add a source frame for a Go call or a recoverable panic.
 func literalData(x ir.Expr) bool {
 	switch x := x.(type) {
