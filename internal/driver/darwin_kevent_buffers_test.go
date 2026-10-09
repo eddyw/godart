@@ -7,6 +7,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestDarwinKeventBuffers(t *testing.T) {
@@ -127,6 +128,47 @@ func mockKevent(kq int,changes,events,timeout []byte)(int,int){
 			prepareDart(t, out)
 			for _, target := range []string{"vm", "aot", "js", "wasm"} {
 				t.Run(target, func(t *testing.T) {
+					var command string
+					var commandArgs []string
+					if target != "vm" {
+						runner := "import 'bin/main.dart' as tests;\nvoid main(List<String> args) { tests.main(args); }\n"
+						if target == "js" || target == "wasm" {
+							runner = `import 'dart:js_interop';
+import 'bin/main.dart' as tests;
+@JS('godartKeventArguments')
+external JSArray<JSString> get arguments;
+void main() {
+  tests.main(arguments.toDart.map((argument) => argument.toDart).toList());
+}
+`
+						}
+						writeFile(t, filepath.Join(out, "runner.dart"), runner)
+						var compiled programResult
+						switch target {
+						case "aot":
+							command = filepath.Join(out, "tests.exe")
+							compiled = upstreamOutcome(t, out, nil, runLimit, "dart", "compile", "exe", "runner.dart", "-o", command)
+						case "js":
+							compiled = upstreamOutcome(t, out, nil, runLimit, "dart", "compile", "js", "runner.dart", "-o", "main.js")
+							writeFile(t, filepath.Join(out, "run.js"), "globalThis.self = globalThis;\nglobalThis.godartKeventArguments = process.argv.slice(2);\nrequire('./main.js');\n")
+							command = "node"
+							commandArgs = []string{filepath.Join(out, "run.js")}
+						case "wasm":
+							compiled = upstreamOutcome(t, out, nil, 16*time.Minute, "dart", "compile", "wasm", "runner.dart", "-o", "main.wasm")
+							writeFile(t, filepath.Join(out, "run.mjs"), `import {compile} from './main.mjs';
+import {readFile} from 'node:fs/promises';
+globalThis.godartKeventArguments = process.argv.slice(2);
+const app = await compile(await readFile(new URL('./main.wasm', import.meta.url)));
+const instance = await app.instantiate({});
+instance.invokeMain();
+`)
+							command = "node"
+							commandArgs = []string{filepath.Join(out, "run.mjs")}
+						}
+						if compiled.Exit != 0 {
+							t.Fatalf("Kevent compile %s: %+v", target, compiled)
+						}
+					}
 					for _, mode := range []string{"bytes", "unsupported", "backend"} {
 						t.Run(mode, func(t *testing.T) {
 							args := []string{}
@@ -146,7 +188,7 @@ func mockKevent(kq int,changes,events,timeout []byte)(int,int){
 							if target == "vm" {
 								got = upstreamOutcome(t, dir, os.Environ(), runLimit, "dart", append([]string{filepath.Join(out, "bin/main.dart")}, args...)...)
 							} else {
-								got = runUpstreamTarget(t, target, out, "bin/main.dart", dir, args)
+								got = upstreamOutcome(t, dir, nil, upstreamLimit(), command, append(append([]string{}, commandArgs...), args...)...)
 							}
 							if got != expected {
 								t.Fatalf("Kevent %s differs: Go=%+v Gart=%+v", mode, expected, got)
