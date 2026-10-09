@@ -164,6 +164,11 @@ func main(){
 			prepareDart(t, out)
 			for _, target := range []string{"vm", "aot", "js", "wasm"} {
 				t.Run(target, func(t *testing.T) {
+					var command string
+					var commandArgs []string
+					if target != "vm" {
+						command, commandArgs = compileFixtureTarget(t, target, out)
+					}
 					for _, mode := range []string{"normal", "unsupported"} {
 						t.Run(mode, func(t *testing.T) {
 							args := []string{}
@@ -176,7 +181,7 @@ func main(){
 							if target == "vm" {
 								got = upstreamOutcome(t, dir, os.Environ(), runLimit, "dart", append([]string{filepath.Join(out, "bin/main.dart")}, args...)...)
 							} else {
-								got = runUpstreamTarget(t, target, out, "bin/main.dart", dir, args)
+								got = upstreamOutcome(t, dir, nil, upstreamLimit(), command, append(append([]string{}, commandArgs...), args...)...)
 							}
 							if got != expected {
 								t.Fatalf("routing bytes %s differ: want=%+v Gart=%+v", mode, expected, got)
