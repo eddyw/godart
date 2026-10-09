@@ -24,11 +24,8 @@ GoInt Runes(GoString text) {
     GoInt n = $gi(0);
     $source?.at('example.com/multi/count/count.go', 6);
     GoString $range6_12 = text;
-    $source?.at('example.com/multi/count/count.go', 6);
     GoInt $i6_2 = $gi(0);
-    $source?.at('example.com/multi/count/count.go', 6);
     GoInt $size6_2 = $gi(0);
-    $source?.at('example.com/multi/count/count.go', 6);
     GoInt $rune6_2 = $gi(0);
     $source?.at('example.com/multi/count/count.go', 6);
     for (; ($i6_2 < $gi($range6_12.length)); $i6_2 = ($i6_2 + $size6_2)) {

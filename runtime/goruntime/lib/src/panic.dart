@@ -81,7 +81,7 @@ final class GoPanic implements Exception {
     : goroutineID = $current?.id ?? 1,
       trace = StackTrace.current,
       callers = [
-        ...$sourceFrames,
+        if ($webSourceFrames) ...$sourceFrames,
         for (final frame in $activeCallerFrames)
           (frame.$name, frame.$goFile, frame.$goLine),
       ],

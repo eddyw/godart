@@ -23,10 +23,25 @@ func (e *emitter) stmt(s ir.Stmt) {
 func (e *emitter) list(stmts []ir.Stmt) {
 	prev := e.captures
 	open := 0
+	var previous token.Position
 	for _, s := range stmts {
 		e.captures = nil
 		mark := e.buf.Len()
-		e.stmtOne(s)
+		pos := ir.PosOf(s)
+		var current token.Position
+		switch s.(type) {
+		case *ir.ExprStmt, *ir.Declare, *ir.Assign, *ir.AssignMulti:
+			if e.cfg.Fset != nil && pos.IsValid() {
+				current = e.cfg.Fset.Position(pos)
+			}
+		}
+		// Only adjacent simple statements share a source position. A branch,
+		// label or coroutine state can enter with a different frame position.
+		if current.Line != 0 && current.Filename == previous.Filename && current.Line == previous.Line {
+			pos = token.NoPos
+		}
+		e.stmtOne(s, pos)
+		previous = current
 		if len(e.captures) == 0 {
 			continue
 		}
@@ -56,10 +71,11 @@ func (e *emitter) openCaptures(mark int) {
 	e.buf.WriteString(body)
 }
 
-func (e *emitter) stmtOne(s ir.Stmt) {
+func (e *emitter) stmtOne(s ir.Stmt, sourcePos token.Pos) {
 	e.mark(ir.PosOf(s))
+	positioned := e.sourceFrame && !e.sourceLabel && sourcePos.IsValid()
 	if !e.sourceLabel {
-		e.sourcePosition(ir.PosOf(s))
+		e.sourcePosition(sourcePos)
 	}
 	e.sourceLabel = false
 	switch s := s.(type) {
@@ -68,6 +84,20 @@ func (e *emitter) stmtOne(s ir.Stmt) {
 		e.list(s.List)
 		e.line("}")
 	case *ir.ExprStmt:
+		if call, ok := s.X.(*ir.Call); ok && positioned && !call.Async {
+			statement := e.cfg.Fset.Position(sourcePos)
+			position := e.cfg.Fset.Position(call.Pos)
+			// The statement sets this position before argument evaluation.
+			// Argument wrappers restore it before the direct call.
+			if statement.Filename == position.Filename && statement.Line == position.Line {
+				text := e.callText(call)
+				if call.Sync {
+					text = "$syncCall(() => " + text + ")"
+				}
+				e.line("%s;", text)
+				return
+			}
+		}
 		e.line("%s;", e.statementExpr(s.X))
 	case *ir.Declare:
 		e.declare(s)

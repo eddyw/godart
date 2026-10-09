@@ -17,7 +17,6 @@ final class SourceFrame {
 }
 
 SourceFrame? $sourceEnter(String name, String file, int line) {
-  if (!$webSourceFrames) return null;
   final frame = SourceFrame(name, file, line);
   _sourceFrames.add(frame);
   return frame;

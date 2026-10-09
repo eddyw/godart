@@ -176,12 +176,9 @@ int _floor(List<int> list, int value) {
 /// "function|file|line". The count of skip drops the first frames, and frame 0
 /// is the function that calls this one.
 Slice<GoString> $stack(int skip) {
-  var frames = $webSourceFrames
-      ? [
-          for (final (name, file, line) in $sourceFrames)
-            GoPos(name, file, line),
-        ]
-      : $goStack(StackTrace.current);
+  var frames = [
+    for (final (name, file, line) in $sourceFrames) GoPos(name, file, line),
+  ];
   for (final frame in $activeCallerFrames) {
     frames.add(GoPos(frame.$name, frame.$goFile, frame.$goLine));
   }

@@ -34,13 +34,7 @@ void _main() {
       ).toDartString(),
     ]);
     $source?.at('example.com/multi/main.go', 11);
-
-    $sourceCall<void>(
-      $source,
-      'example.com/multi/main.go',
-      11,
-      () => $pkg$greet.Greeter$SetStyle(g, $gi(1)),
-    );
+    $pkg$greet.Greeter$SetStyle(g, $gi(1));
     $source?.at('example.com/multi/main.go', 12);
     $println(<String>[
       $sourceCall<GoString>(
