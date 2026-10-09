@@ -26,11 +26,6 @@ final _free = _libc
       Void Function(Pointer<Uint8>),
       void Function(Pointer<Uint8>)
     >('free');
-final _openat = _libc
-    .lookupFunction<
-      Int Function(Int, Pointer<Uint8>, Int),
-      int Function(int, Pointer<Uint8>, int)
-    >('openat');
 final _close = _libc.lookupFunction<Int Function(Int), int Function(int)>(
   'close',
 );
@@ -122,8 +117,8 @@ int $rootRemove(int parent, GoString path) {
   try {
     final p = _name(name);
     try {
-      final fd = _openat(parent, p, flags);
-      return (fd, fd < 0 ? _errnoLocation().value : 0);
+      final result = nativeOpenat(parent, p, flags, 0);
+      return (result.value, result.error);
     } finally {
       _free(p);
     }

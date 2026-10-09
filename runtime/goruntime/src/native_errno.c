@@ -165,6 +165,13 @@ struct goruntime_result goruntime_unlinkat(int fd, const char *path, int flags) 
   return result;
 }
 
+struct goruntime_result goruntime_openat(int fd, const char *path, int flags, unsigned int mode) {
+  struct goruntime_result result;
+  result.value = openat(fd, path, flags, mode);
+  result.error = result.value < 0 ? errno : 0;
+  return result;
+}
+
 struct goruntime_result goruntime_kill(int pid, int signal) {
   struct goruntime_result result;
   result.value = kill(pid, signal);

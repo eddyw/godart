@@ -118,6 +118,16 @@ external NativeResult nativeGetpeername(
 )
 external NativeResult nativeUnlinkat(int fd, Pointer<Uint8> path, int flags);
 
+@Native<NativeResult Function(Int, Pointer<Uint8>, Int, UnsignedInt)>(
+  symbol: 'goruntime_openat',
+)
+external NativeResult nativeOpenat(
+  int fd,
+  Pointer<Uint8> path,
+  int flags,
+  int mode,
+);
+
 @Native<NativeResult Function(Int, Int)>(symbol: 'goruntime_kill')
 external NativeResult nativeKill(int pid, int signal);
 
