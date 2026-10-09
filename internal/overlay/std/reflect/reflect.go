@@ -1212,6 +1212,12 @@ func (v Value) SetBool(x bool) {
 	v.write(dart.WithBool(v.descOf(), x))
 }
 
+func (v Value) SetPointer(x unsafe.Pointer) {
+	v.mustBeAssignable("reflect.Value.SetPointer")
+	v.mustBe("SetPointer", UnsafePointer)
+	v.write(x)
+}
+
 // SetString writes text into the location that v names.
 func (v Value) SetString(x string) {
 	v.mustBeAssignable("reflect.Value.SetString")
