@@ -31,7 +31,7 @@ func TestDirectoryCreationUmask(t *testing.T) {
 			if want.Exit != 0 {
 				t.Fatal(want.Text)
 			}
-			vm := programOutcome(t, out, "sh", "-c", script, "directory-mode", mask, "dart", "bin/main.dart")
+			vm := programOutcome(t, out, "sh", "-c", script, "directory-mode", mask, "dart", "run", "--verbosity=error", "bin/main.dart")
 			if vm != want {
 				t.Errorf("VM directory modes differ: got %+v, want %+v", vm, want)
 			}
