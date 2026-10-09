@@ -29,7 +29,8 @@ import (
 // direction of the socket, exactly as the same call of Go does.
 //
 // Linux and macOS TCP listeners own native descriptors. File duplicates the descriptor.
-// Listener SyscallConn and connection descriptor APIs remain incomplete.
+// Listener SyscallConn retains its descriptor for each Control callback.
+// Connection descriptor APIs remain incomplete.
 //
 // Go embeds the unexported type `conn` in `TCPConn`. The overlay names each
 // method of the connection again, because a promoted method of an unexported

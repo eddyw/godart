@@ -194,3 +194,8 @@ GoString $packetDeadline(int handle, int read, int write) => _noNet;
 
 (int, GoString, int, int, GoString) $fileListener(int fd) =>
     (-1, GoString.empty, 0, 38, GoString.empty);
+
+(int, int) $listenRawAcquire(int handle) => (-1, 2);
+
+void $listenRawRelease(int descriptor) =>
+    throw UnsupportedError('net.TCPListener.SyscallConn');

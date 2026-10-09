@@ -879,3 +879,8 @@ The macOS filesystem-sync differential follows the selected Go SDK
 `src/syscall/zsyscall_darwin_arm64.go` Sync contract under the Go BSD license.
 It preserves actual file bytes, positions, descriptor ownership and the error result.
 The existing runtime calls the actual void libc sync function.
+
+The TCP listener RawConn overlay follows the selected Go SDK
+`src/net/rawconn.go` and `src/net/tcpsock.go` contracts under the Go BSD license.
+It preserves actual descriptor ownership, callback lifetime, Close, listener
+Read and Write errors, and raw-control error metadata.

@@ -83,6 +83,8 @@ final class NativeTcpServer {
   final InternetAddress address;
   final int port;
   bool _closed = false;
+  int _rawReferences = 0;
+  Completer<void>? _rawDone;
 
   NativeTcpServer._(this.descriptor, this.address, this.port);
 
@@ -195,9 +197,24 @@ final class NativeTcpServer {
     }
   }
 
+  int retainRaw() {
+    _rawReferences++;
+    return descriptor;
+  }
+
+  int releaseRaw() {
+    _rawReferences--;
+    if (_rawReferences == 0) _rawDone?.complete();
+    return _rawReferences;
+  }
+
   Future<void> close() async {
     if (_closed) return;
     _closed = true;
+    if (_rawReferences != 0) {
+      _rawDone = Completer<void>();
+      await _rawDone!.future;
+    }
     NativeFileHandle(descriptor).closeSync();
   }
 }

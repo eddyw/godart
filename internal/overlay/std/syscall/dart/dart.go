@@ -1493,6 +1493,16 @@ func ListenTCPHost(handle int) string {
 	panic("syscall/dart needs the gart compiler")
 }
 
+// ListenRawAcquire retains the native listener descriptor for a Go callback.
+// The caller must release it after the callback returns or panics.
+func ListenRawAcquire(handle int) (int, int) {
+	panic("syscall/dart needs the gart compiler")
+}
+
+func ListenRawRelease(descriptor int) {
+	panic("syscall/dart needs the gart compiler")
+}
+
 // ListenFile duplicates the native listener descriptor. The caller owns the copy.
 func ListenFile(handle int) (int, int) {
 	panic("syscall/dart needs the gart compiler")

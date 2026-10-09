@@ -63,7 +63,10 @@ Linux and macOS TCP listeners own native descriptors through the C bridge.
 Each owner can close independently. The accepted TCP connection retains its descriptor after listener close.
 The native stream preserves read and write deadlines, partial writes, half close and socket options.
 Dialed TCP connections and Unix listeners still use Dart socket ownership.
-Network RawConn, Unix listener descriptors and connection descriptor APIs remain incomplete.
+TCPListener.SyscallConn retains the native descriptor for the complete Control callback.
+Close waits for active callbacks. Callback panic releases ownership.
+Listener RawConn Read and Write return EINVAL without a callback.
+Unix listener descriptors and connection descriptor APIs remain incomplete.
 
 `Control` retains the descriptor for the complete callback.
 Its guarantee ends when the callback returns.

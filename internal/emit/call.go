@@ -1251,6 +1251,10 @@ func (e *emitter) intrinsicText(name string, args []string) (string, bool) {
 		return fmt.Sprintf("$listenTCP(%s, %s, %s)", args[0], args[1], args[2]), true
 	case "ListenTCPHost":
 		return fmt.Sprintf("$listenTCPHost(%s)", args[0]), true
+	case "ListenRawAcquire":
+		return fmt.Sprintf("$listenRawAcquire(%s)", args[0]), true
+	case "ListenRawRelease":
+		return fmt.Sprintf("$listenRawRelease(%s)", args[0]), true
 	case "ListenFile":
 		return fmt.Sprintf("$listenFile(%s)", args[0]), true
 	case "FileListener":

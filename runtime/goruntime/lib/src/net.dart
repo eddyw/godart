@@ -1415,6 +1415,23 @@ Future<NativeTcpServer> _bindNativeTCP(
   }
 }
 
+final _rawTCPListeners = <int, NativeTcpServer>{};
+
+(int, int) $listenRawAcquire(int handle) {
+  final listener = _listenerAt(handle);
+  if (listener == null) return (-1, 1);
+  final server = listener.native;
+  if (server == null) return (-1, 2);
+  final descriptor = server.retainRaw();
+  _rawTCPListeners[descriptor] = server;
+  return (descriptor, 0);
+}
+
+void $listenRawRelease(int descriptor) {
+  final server = _rawTCPListeners[descriptor]!;
+  if (server.releaseRaw() == 0) _rawTCPListeners.remove(descriptor);
+}
+
 (int, int) $listenFile(int handle) {
   final listener = _listenerAt(handle);
   if (listener == null) return (-1, 9);
