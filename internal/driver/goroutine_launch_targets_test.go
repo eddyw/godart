@@ -46,12 +46,16 @@ func launch[F ~func()](f F){go f()}
 	prepareDart(t, out)
 	for _, target := range []string{"vm", "aot", "js", "wasm"} {
 		t.Run(target, func(t *testing.T) {
+			kernel := filepath.Join(out, "main.dill")
+			if target == "vm" {
+				run(t, out, "dart", "compile", "kernel", "--verbosity=error", "-Ddart.vm.product=false", "bin/main.dart", "-o", kernel)
+			}
 			for i, name := range names {
 				t.Run(name, func(t *testing.T) {
 					env := append(os.Environ(), "PANIC_SCENARIO="+name)
 					var result programResult
 					if target == "vm" {
-						result = upstreamOutcome(t, dir, env, runLimit, "dart", filepath.Join(out, "bin/main.dart"))
+						result = upstreamOutcome(t, dir, env, runLimit, "dart", "run", "--verbosity=error", kernel)
 					} else if i == 0 {
 						result = runUpstreamTargetEnv(t, target, out, "bin/main.dart", dir, []string{}, env)
 					} else {
