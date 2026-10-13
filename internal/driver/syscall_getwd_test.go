@@ -14,6 +14,13 @@ func TestSyscallGetwd(t *testing.T) {
 	}
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "go.mod"), "module syscallgetwd\n\ngo 1.27\n")
+	writeFile(t, filepath.Join(dir, "contract.go"), `package main
+import "syscall"
+const implementsGetwd = syscall.ImplementsGetwd
+func init() {
+ if !implementsGetwd { panic("syscall.Getwd contract is unavailable") }
+}
+`)
 	writeFile(t, filepath.Join(dir, "main.go"), `package main
 
 import (

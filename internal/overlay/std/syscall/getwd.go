@@ -4,6 +4,8 @@ package syscall
 
 import "syscall/dart"
 
+const ImplementsGetwd = true
+
 func Getwd() (string, error) {
 	path, code := dart.SyscallGetwd()
 	if code != 0 {
