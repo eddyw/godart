@@ -82,7 +82,6 @@ func main() {
 `)
 	native := filepath.Join(dir, "native")
 	run(t, dir, "go", "build", "-o", native, ".")
-	want := runProgram(t, dir, native)
 	if err := driver.Build(driver.Options{Dir: dir, Patterns: []string{"."}, Out: out, Runtime: runtimeDir(t), TrimPath: true}); err != nil {
 		t.Fatal(err)
 	}
@@ -95,6 +94,8 @@ func main() {
 			} else {
 				got = runUpstreamTarget(t, target, out, "bin/main.dart", dir, []string{})
 			}
+			// Interface addresses can change while a target compiles.
+			want := runProgram(t, dir, native)
 			if got.Exit != 0 || got.Text != want {
 				t.Fatalf("interface addresses differ from native Go: exit %d\nGo: %s\nGart: %s", got.Exit, want, got.Text)
 			}
