@@ -42,7 +42,8 @@ target selects the library and not the code.
 `goint_js.dart` holds the pair of GopherJS: a signed high half and an
 unsigned low half, each of 32 bits. Each step stays under 53 bits, thus each
 step is exact in a JS number. The multiply splits each half into 16-bit
-parts. Division and remainder use JavaScript BigInt. Their results wrap to
+parts. Division and remainder use JS numbers when both operands are nonnegative
+32-bit values. Other operands use JavaScript BigInt. Their results wrap to
 64 bits before each half returns to a JS number. Decimal text uses Dart
 BigInt. The VM operation table uses Dart BigInt to execute the pair model.
 A bitwise operation of dart2js gives an unsigned 32-bit result, thus each

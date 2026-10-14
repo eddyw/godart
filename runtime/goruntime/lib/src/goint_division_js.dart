@@ -22,8 +22,13 @@ JSAny _value(int high, int low) =>
   );
 }
 
-(int, int) divide(int ah, int al, int bh, int bl) =>
-    _parts(_value(ah, al).divide(_value(bh, bl)));
+// Nonnegative 32-bit operands fit exactly in a JS number.
+(int, int) divide(int ah, int al, int bh, int bl) {
+  if (ah == 0 && bh == 0) return (0, al ~/ bl);
+  return _parts(_value(ah, al).divide(_value(bh, bl)));
+}
 
-(int, int) remainder(int ah, int al, int bh, int bl) =>
-    _parts(_value(ah, al).modulo(_value(bh, bl)));
+(int, int) remainder(int ah, int al, int bh, int bl) {
+  if (ah == 0 && bh == 0) return (0, al % bl);
+  return _parts(_value(ah, al).modulo(_value(bh, bl)));
+}

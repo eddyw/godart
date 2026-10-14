@@ -12,8 +12,8 @@ import 'panic.dart';
 // holds 53 bits of an integer, thus a 64-bit value is a pair of 32-bit
 // halves. The high half holds a signed value, and the low half holds an
 // unsigned value. Each step below stays under 53 bits, thus each step is
-// exact. The division, the remainder, and the decimal text ride BigInt,
-// because they are rare next to the other operations. goint_native.dart
+// exact. Division and remainder use JS numbers for nonnegative 32-bit
+// operands. Other operands and decimal text use BigInt. goint_native.dart
 // holds the form of the other targets, and the 2 files hold 1 surface.
 // Read docs/js-integers.md.
 
