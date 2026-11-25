@@ -9,13 +9,8 @@ Flutter widgets. Go structs, composition, and signals form the application
 model. The generated Dart can use different structures where they preserve
 Go behavior and improve performance.
 
-This is a personal project that the maintainer shares publicly. The
-maintainer develops the implementation and directs its design. Reports and
-use cases help identify problems and guide priorities.
+Godart is a personal experiment with no release schedule or support
+commitment. APIs, configuration, and generated output can change.
 
-The first public release is a functional alpha. It supports useful
-programs, but it does not promise complete Go compatibility. Before 1.0,
-APIs, configuration, and generated output can change between releases.
-
-GitHub Releases describe user-visible changes. [SECURITY.md](SECURITY.md)
-describes the security limits.
+The [compatibility guide](docs/parity.md) describes which Go features work.
+The [security policy](SECURITY.md) describes the security limits.

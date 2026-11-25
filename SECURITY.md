@@ -12,14 +12,9 @@ use with sensitive data or in security-critical systems.
 
 Submit a private report through [GitHub Security Advisories](https://github.com/eddyw/godart/security/advisories/new).
 
-If the form is unavailable, open an issue that requests a private report
-channel. Do not include vulnerability details in that issue.
-
-Do not include credentials, private data, or exploit details in public
-issues. The maintainer does not promise a response deadline or a fixed
-support period for alpha releases.
+Keep credentials, private data, and vulnerability details out of public
+issues. The project has no response deadline or support commitment.
 
 ## Compatibility
 
-Before 1.0, changes can break APIs, configuration, or generated output.
-GitHub Releases describe changes and any required migration steps.
+APIs, configuration, and generated output can change.

@@ -1,12 +1,16 @@
 # Godart
 
+> [!NOTE]
+> Godart is my personal experiment. I share it as it stands, with no release
+> schedule or support commitment.
+
 Godart compiles Go to Dart. `gart` builds and runs Go programs.
 `glutter` builds Flutter applications from Go structs, composition, and signals.
 The generated Dart can target the VM, AOT, JavaScript, WebAssembly, and Flutter.
 
-This project is an alpha. Useful applications work, but APIs can change before
-1.0. The project has no independent security audit. Read the
-[compatibility limits](docs/parity.md) and [security policy](SECURITY.md).
+APIs and generated output can change. The project has no independent security
+audit. Read the [compatibility limits](docs/parity.md) and
+[security policy](SECURITY.md).
 
 ## Start
 
@@ -47,9 +51,6 @@ See the [Glutter guide](docs/glutter.md) and [binding guide](flutter/nodegen/REA
 - [Compatibility](docs/parity.md) and [upstream parity tests](docs/upstream-parity.md)
 - [Architecture and developer guides](docs/README.md)
 - [Project purpose](ABOUT.md), [contribution policy](CONTRIBUTING.md), and [security](SECURITY.md)
-
-The maintainer currently implements changes. Reports and requests are welcome
-through GitHub Issues. Release notes belong in GitHub Releases.
 
 ## License
 
