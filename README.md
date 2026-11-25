@@ -12,6 +12,11 @@ APIs and generated output can change. The project has no independent security
 audit. Read the [compatibility limits](docs/parity.md) and
 [security policy](SECURITY.md).
 
+## Go compatibility
+
+Use Go 1.27.0 to build Godart. Gart supports a subset of Go 1.27.
+See the [compatibility guide](docs/parity.md) for package and target limits.
+
 ## Start
 
 Install Go and Dart, then run these commands from this checkout:
